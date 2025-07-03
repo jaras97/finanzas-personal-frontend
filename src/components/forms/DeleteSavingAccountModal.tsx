@@ -54,12 +54,13 @@ export default function DeleteSavingAccountModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className='bg-card text-foreground'>
         <DialogHeader>
           <DialogTitle>Eliminar cuenta</DialogTitle>
         </DialogHeader>
-        <p>
-          ¿Estás seguro de que deseas eliminar <strong>{account.name}</strong>?
+        <p className='text-sm text-muted-foreground'>
+          ¿Estás seguro de que deseas eliminar{' '}
+          <span className='font-semibold'>{account.name}</span>?
         </p>
         <div className='flex justify-end gap-2 mt-4'>
           <Button variant='outline' onClick={() => onOpenChange(false)}>

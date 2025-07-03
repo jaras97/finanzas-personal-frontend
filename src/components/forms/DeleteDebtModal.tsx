@@ -39,20 +39,24 @@ export default function DeleteDebtModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className='max-w-sm'>
         <DialogHeader>
-          <DialogTitle>Eliminar deuda</DialogTitle>
+          <DialogTitle>Eliminar Deuda</DialogTitle>
         </DialogHeader>
-        <p>
-          ¿Estás seguro de que deseas eliminar <strong>{debt.name}</strong>?
-        </p>
-        <div className='flex justify-end gap-2 mt-4'>
-          <Button variant='outline' onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button variant='destructive' onClick={handleDelete}>
-            Eliminar
-          </Button>
+
+        <div className='space-y-4 text-sm'>
+          <p>
+            ¿Estás seguro de que deseas eliminar <strong>{debt.name}</strong>?
+          </p>
+
+          <div className='flex justify-end gap-2'>
+            <Button variant='outline' onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button variant='destructive' onClick={handleDelete}>
+              Eliminar
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

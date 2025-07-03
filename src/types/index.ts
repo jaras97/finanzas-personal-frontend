@@ -5,6 +5,8 @@ export type LoginResponse = {
 
 export type TransactionType = "income" | "expense" | "transfer";
 
+export type DebtKind = "loan" | "credit_card";
+
 export type LoginRequest = {
   username: string; // Email
   password: string;
@@ -65,6 +67,8 @@ export type Debt = {
   due_date?: string; // ISO
   currency: currencyType;
   status: "active" | "closed";
+  transactions_count?: number;
+  kind: DebtKind;
 };
 
 export interface DebtTransaction {
@@ -94,4 +98,5 @@ export interface TransactionWithCategoryRead {
   debt_id?: number | null;
   debt_name?: string | null;
   debt?: Debt | null;
+  source_type?: string | null; 
 }

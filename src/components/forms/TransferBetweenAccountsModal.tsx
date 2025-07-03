@@ -56,7 +56,7 @@ export default function TransferBetweenAccountsModal({
     amountNumber > 0 &&
     rateNumber > 0
       ? amountNumber * rateNumber
-      : null; // Evita mostrar NaN
+      : null;
 
   const handleTransfer = async () => {
     if (!fromAccountId || !toAccountId || !amount) {
@@ -95,18 +95,18 @@ export default function TransferBetweenAccountsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className='bg-card text-foreground'>
         <DialogHeader>
           <DialogTitle>Transferir entre cuentas</DialogTitle>
         </DialogHeader>
-        <div className='space-y-2 text-sm text-gray-600'>
+
+        <div className='space-y-3 text-sm text-muted-foreground'>
           {requiresConversion ? (
             <p>
-              Ingresarás el{' '}
-              <strong>monto en la moneda de la cuenta origen</strong> (
-              {fromAccount?.currency}) y la <strong>tasa de conversión</strong>{' '}
-              indica cuántas unidades de {toAccount?.currency} se obtienen por 1
-              unidad de {fromAccount?.currency}.
+              Ingresarás el <strong>monto en {fromAccount?.currency}</strong> y
+              la <strong>tasa de conversión</strong> indica cuántas unidades de{' '}
+              {toAccount?.currency} se obtienen por 1 unidad de{' '}
+              {fromAccount?.currency}.
             </p>
           ) : (
             <p>
@@ -114,6 +114,7 @@ export default function TransferBetweenAccountsModal({
               {fromAccount?.currency ?? '---'}).
             </p>
           )}
+
           <Select value={fromAccountId} onValueChange={setFromAccountId}>
             <SelectTrigger>
               <SelectValue placeholder='Cuenta origen' />
@@ -141,9 +142,7 @@ export default function TransferBetweenAccountsModal({
           </Select>
 
           <Input
-            placeholder={`Monto en (${
-              fromAccount?.currency ?? 'moneda origen'
-            })`}
+            placeholder={`Monto en ${fromAccount?.currency ?? 'moneda origen'}`}
             type='number'
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
@@ -165,15 +164,15 @@ export default function TransferBetweenAccountsModal({
           {requiresConversion && (
             <>
               <Input
-                placeholder={`Conversión de ${
-                  fromAccount?.currency ?? 'origen'
-                } a ${toAccount?.currency ?? 'destino'} (ej: 0.00025)`}
+                placeholder={`Tasa de conversión a ${
+                  toAccount?.currency ?? 'destino'
+                }`}
                 type='number'
                 value={exchangeRate}
                 onChange={(e) => setExchangeRate(e.target.value)}
               />
               {convertedAmount !== null && (
-                <p>
+                <p className='text-sm text-muted-foreground'>
                   Se depositarán:{' '}
                   <strong>
                     {formatCurrency(convertedAmount)} {toAccount?.currency}

@@ -54,11 +54,11 @@ export default function DepositToAccountModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className='bg-card text-foreground'>
         <DialogHeader>
           <DialogTitle>Depositar en {account.name}</DialogTitle>
         </DialogHeader>
-        <div className='space-y-2'>
+        <div className='space-y-3'>
           <Input
             placeholder='Monto'
             type='number'
@@ -70,7 +70,9 @@ export default function DepositToAccountModal({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-          <Button onClick={handleDeposit}>Depositar</Button>
+          <Button onClick={handleDeposit} className='w-full'>
+            Depositar
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

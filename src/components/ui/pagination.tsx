@@ -29,9 +29,9 @@ export function Pagination({
         <ChevronLeft className='h-5 w-5' />
       </Button>
 
-      <span className='text-sm text-gray-700 dark:text-gray-300'>
-        Página <span className='font-semibold'>{page}</span> de{' '}
-        <span className='font-semibold'>{totalPages}</span>
+      <span className='text-sm text-muted-foreground'>
+        Página <span className='font-semibold text-foreground'>{page}</span> de{' '}
+        <span className='font-semibold text-foreground'>{totalPages}</span>
       </span>
 
       <Button

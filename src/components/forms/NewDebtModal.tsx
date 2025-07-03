@@ -1,5 +1,4 @@
-// ✅ Componente actualizado para NewDebtModal con selección de moneda
-'t use client';
+'use client';
 
 import { useState } from 'react';
 import {
@@ -32,9 +31,10 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
   const [interestRate, setInterestRate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [currency, setCurrency] = useState<'COP' | 'USD' | 'EUR'>('COP');
+  const [kind, setKind] = useState<'loan' | 'credit_card'>('loan'); // 🚩 nuevo estado
 
   const handleSubmit = async () => {
-    if (!name || !totalAmount || !interestRate) {
+    if (!name || !totalAmount || !interestRate || !kind) {
       toast.error('Completa todos los campos obligatorios');
       return;
     }
@@ -46,15 +46,19 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
         interest_rate: parseFloat(interestRate),
         due_date: dueDate || null,
         currency,
+        kind, // 🚩 enviar tipo de deuda al backend
       });
       toast.success('Deuda creada correctamente');
       onCreated();
       onOpenChange(false);
+
+      // Limpiar estados al cerrar
       setName('');
       setTotalAmount('');
       setInterestRate('');
       setDueDate('');
       setCurrency('COP');
+      setKind('loan');
     } catch (error: any) {
       toast.error(error?.response?.data?.detail || 'Error al crear deuda');
     }
@@ -62,13 +66,13 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className='max-w-sm'>
         <DialogHeader>
           <DialogTitle>Nueva Deuda</DialogTitle>
         </DialogHeader>
-        <div className='space-y-2'>
+        <div className='space-y-3'>
           <Input
-            placeholder='Nombre'
+            placeholder='Nombre de la deuda'
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -90,7 +94,6 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
           />
-
           <Select
             value={currency}
             onValueChange={(v) => setCurrency(v as 'COP' | 'USD' | 'EUR')}
@@ -99,13 +102,29 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
               <SelectValue placeholder='Selecciona la moneda' />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value='COP'>COP</SelectItem>
-              <SelectItem value='USD'>USD</SelectItem>
-              <SelectItem value='EUR'>EUR</SelectItem>
+              <SelectItem value='COP'>COP - Peso Colombiano</SelectItem>
+              <SelectItem value='USD'>USD - Dólar</SelectItem>
+              <SelectItem value='EUR'>EUR - Euro</SelectItem>
             </SelectContent>
           </Select>
 
-          <Button onClick={handleSubmit}>Crear Deuda</Button>
+          {/* 🚩 Selector de tipo de deuda */}
+          <Select
+            value={kind}
+            onValueChange={(v) => setKind(v as 'loan' | 'credit_card')}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder='Selecciona el tipo de deuda' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='loan'>Préstamo</SelectItem>
+              <SelectItem value='credit_card'>Tarjeta de Crédito</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button onClick={handleSubmit} className='w-full'>
+            Crear Deuda
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

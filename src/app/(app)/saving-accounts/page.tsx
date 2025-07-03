@@ -12,7 +12,7 @@ import DeleteSavingAccountModal from '@/components/forms/DeleteSavingAccountModa
 import DepositToAccountModal from '@/components/forms/DepositToAccountModal';
 import TransferBetweenAccountsModal from '@/components/forms/TransferBetweenAccountsModal';
 import RegisterYieldModal from '@/components/forms/RegisterYieldModal';
-import AccountTransactionsModal from '@/components/forms/AccountTransactionsModal'; // ✅ NUEVO
+import AccountTransactionsModal from '@/components/forms/AccountTransactionsModal';
 
 import { formatCurrency } from '@/lib/format';
 import { toast } from 'sonner';
@@ -31,9 +31,8 @@ export default function SavingAccountsPage() {
   );
   const [yieldAccount, setYieldAccount] = useState<SavingAccount | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
-
   const [viewTransactionsAccount, setViewTransactionsAccount] =
-    useState<SavingAccount | null>(null); // ✅ NUEVO
+    useState<SavingAccount | null>(null);
 
   const handleCloseAccount = async (account: SavingAccount) => {
     try {
@@ -49,9 +48,9 @@ export default function SavingAccountsPage() {
 
   return (
     <div className='space-y-4'>
-      <div className='flex justify-between items-center'>
+      <div className='flex justify-between items-center flex-wrap gap-2'>
         <h1 className='text-xl font-semibold'>Cuentas</h1>
-        <div className='flex gap-2'>
+        <div className='flex gap-2 flex-wrap'>
           <Button onClick={() => setTransferOpen(true)}>
             Transferir entre cuentas
           </Button>
@@ -62,24 +61,30 @@ export default function SavingAccountsPage() {
       {loading ? (
         <p className='text-center p-4'>Cargando cuentas...</p>
       ) : (
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2'>
+        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
           {accounts.map((account) => (
-            <Card key={account.id} className='p-4 space-y-1'>
-              <p className='font-medium'>{account.name}</p>
-              <p className='text-gray-500 text-sm'>
-                Saldo: {formatCurrency(account.balance)} {account.currency}
-              </p>
-              <p className='text-gray-500 text-sm capitalize'>
-                Tipo:{' '}
-                {account.type === 'cash'
-                  ? 'Efectivo'
-                  : account.type === 'bank'
-                  ? 'Banco'
-                  : 'Inversión'}
-              </p>
-              <p className='text-gray-500 text-sm'>
-                Estado: {account.status === 'active' ? 'Activa' : 'Cerrada'}
-              </p>
+            <Card
+              key={account.id}
+              className='p-4 flex flex-col justify-between bg-card text-foreground space-y-2'
+            >
+              <div className='space-y-1'>
+                <p className='font-medium'>{account.name}</p>
+                <p className='text-sm text-muted-foreground'>
+                  Saldo: {formatCurrency(account.balance)} {account.currency}
+                </p>
+                <p className='text-sm text-muted-foreground capitalize'>
+                  Tipo:{' '}
+                  {account.type === 'cash'
+                    ? 'Efectivo'
+                    : account.type === 'bank'
+                    ? 'Banco'
+                    : 'Inversión'}
+                </p>
+                <p className='text-sm text-muted-foreground'>
+                  Estado: {account.status === 'active' ? 'Activa' : 'Cerrada'}
+                </p>
+              </div>
+
               <div className='flex flex-wrap gap-2 mt-2'>
                 <Button
                   size='sm'
@@ -88,6 +93,7 @@ export default function SavingAccountsPage() {
                 >
                   Ver movimientos
                 </Button>
+
                 {account.status === 'active' && (
                   <>
                     <Button
@@ -106,7 +112,6 @@ export default function SavingAccountsPage() {
                     {account.type === 'investment' && (
                       <Button
                         size='sm'
-                        variant='default'
                         onClick={() => setYieldAccount(account)}
                       >
                         Agregar rendimiento
@@ -136,7 +141,7 @@ export default function SavingAccountsPage() {
             </Card>
           ))}
           {accounts.length === 0 && (
-            <p className='text-center p-4 text-gray-500'>
+            <p className='text-center p-4 text-muted-foreground'>
               No tienes cuentas registradas.
             </p>
           )}

@@ -44,24 +44,27 @@ export default function DebtTransactionsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className='max-w-md'>
         <DialogHeader>
           <DialogTitle>Movimientos de {debt.name}</DialogTitle>
         </DialogHeader>
-        <div className='space-y-2 max-h-[400px] overflow-y-auto'>
+        <div className='space-y-2 max-h-[60vh] overflow-y-auto'>
           {loading ? (
             <p className='text-center'>Cargando movimientos...</p>
           ) : transactions.length === 0 ? (
-            <p className='text-center text-gray-500'>
+            <p className='text-center text-muted-foreground'>
               No hay movimientos registrados.
             </p>
           ) : (
             transactions.map((tx) => (
-              <div key={tx.id} className='border p-2 rounded'>
+              <div
+                key={tx.id}
+                className='rounded border p-3 bg-card text-card-foreground shadow-sm'
+              >
                 <p className='font-medium'>
                   {tx.description || 'Sin descripción'}
                 </p>
-                <p className='text-sm text-gray-600'>
+                <p className='text-sm text-muted-foreground'>
                   {tx.type === 'payment' ? 'Pago' : 'Cargo'} |{' '}
                   {format(new Date(tx.date), 'dd MMM yyyy')} |{' '}
                   {tx.amount.toLocaleString()} {debt.currency}

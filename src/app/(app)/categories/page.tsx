@@ -82,12 +82,12 @@ export default function CategoriesPage() {
           {categories.map((cat) => (
             <Card
               key={cat.id}
-              className='p-4 flex flex-col md:flex-row md:justify-between md:items-center'
+              className='p-4 flex flex-col md:flex-row md:justify-between md:items-center bg-card text-card-foreground'
             >
               <div>
                 <p
                   className={`font-medium ${
-                    !cat.is_active && 'line-through text-gray-400'
+                    !cat.is_active ? 'line-through text-muted-foreground' : ''
                   }`}
                 >
                   {cat.name}
@@ -108,6 +108,7 @@ export default function CategoriesPage() {
                   </Badge>
                 </div>
               </div>
+
               <div className='mt-2 md:mt-0 flex gap-2 flex-wrap'>
                 {cat.is_active ? (
                   <>
@@ -141,7 +142,7 @@ export default function CategoriesPage() {
             </Card>
           ))}
           {categories.length === 0 && (
-            <p className='text-center p-4 text-gray-500'>
+            <p className='text-center p-4 text-muted-foreground'>
               No hay categorías creadas aún.
             </p>
           )}

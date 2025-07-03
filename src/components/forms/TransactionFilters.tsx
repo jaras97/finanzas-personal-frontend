@@ -31,6 +31,7 @@ export interface Filters {
   endDate?: string; // ISO string
   type?: 'income' | 'expense';
   categoryId?: number;
+  source?: 'all' | 'credit_card' | 'account'; // ✅ nuevo
 }
 
 type Category = {
@@ -45,6 +46,9 @@ export default function TransactionFilters({ onFilterChange }: Props) {
   const [type, setType] = useState<string>('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryId, setCategoryId] = useState<string>('');
+  const [source, setSource] = useState<'all' | 'credit_card' | 'account'>(
+    'all',
+  );
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -59,12 +63,14 @@ export default function TransactionFilters({ onFilterChange }: Props) {
   }, []);
 
   const applyFilters = () => {
-    const filters: Record<string, any> = {};
+    const filters: Filters = {};
     if (selectedRange?.from)
       filters.startDate = selectedRange.from.toISOString();
     if (selectedRange?.to) filters.endDate = selectedRange.to.toISOString();
-    if (type) filters.type = type;
+    if (type) filters.type = type as 'income' | 'expense';
     if (categoryId) filters.categoryId = parseInt(categoryId);
+    if (source && source !== 'all') filters.source = source; // ✅ agregado
+
     onFilterChange(filters);
   };
 
@@ -72,19 +78,20 @@ export default function TransactionFilters({ onFilterChange }: Props) {
     setSelectedRange(undefined);
     setType('');
     setCategoryId('');
+    setSource('all');
     onFilterChange({});
   };
 
   return (
-    <div className='space-y-3'>
-      <div className='grid grid-cols-1 md:grid-cols-3 gap-2'>
+    <div className='space-y-4'>
+      <div className='grid grid-cols-1 md:grid-cols-4 gap-3'>
         {/* Date Range Picker */}
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant='outline'
               className={cn(
-                'justify-start text-left font-normal',
+                'justify-start text-left font-normal w-full',
                 !selectedRange && 'text-muted-foreground',
               )}
             >
@@ -103,7 +110,10 @@ export default function TransactionFilters({ onFilterChange }: Props) {
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className='w-auto p-0' align='start'>
+          <PopoverContent
+            align='start'
+            className='p-2 bg-card text-card-foreground rounded-md shadow-md'
+          >
             <DayPicker
               mode='range'
               selected={selectedRange}
@@ -115,7 +125,7 @@ export default function TransactionFilters({ onFilterChange }: Props) {
 
         {/* Tipo */}
         <Select onValueChange={setType} value={type}>
-          <SelectTrigger>
+          <SelectTrigger className='w-full'>
             <SelectValue placeholder='Filtrar por tipo' />
           </SelectTrigger>
           <SelectContent>
@@ -126,7 +136,7 @@ export default function TransactionFilters({ onFilterChange }: Props) {
 
         {/* Categoría */}
         <Select onValueChange={setCategoryId} value={categoryId}>
-          <SelectTrigger>
+          <SelectTrigger className='w-full'>
             <SelectValue placeholder='Filtrar por categoría' />
           </SelectTrigger>
           <SelectContent>
@@ -137,11 +147,34 @@ export default function TransactionFilters({ onFilterChange }: Props) {
             ))}
           </SelectContent>
         </Select>
+
+        {/* Origen */}
+        <Select
+          onValueChange={(v) =>
+            setSource(v as 'all' | 'credit_card' | 'account')
+          }
+          value={source}
+        >
+          <SelectTrigger className='w-full'>
+            <SelectValue placeholder='Filtrar por origen' />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='all'>Todos</SelectItem>
+            <SelectItem value='account'>Cuentas</SelectItem>
+            <SelectItem value='credit_card'>Tarjetas de crédito</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className='flex gap-2'>
-        <Button onClick={applyFilters}>Aplicar filtros</Button>
-        <Button variant='outline' onClick={clearFilters}>
+      <div className='flex flex-wrap gap-2'>
+        <Button onClick={applyFilters} className='font-semibold'>
+          Aplicar filtros
+        </Button>
+        <Button
+          variant='secondary'
+          onClick={clearFilters}
+          className='font-semibold'
+        >
           Limpiar
         </Button>
       </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -27,17 +27,14 @@ import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 import { toast } from 'sonner';
-import {
-  Transaction,
-  TransactionType,
-  TransactionWithCategoryRead,
-} from '@/types';
+import { TransactionType, TransactionWithCategoryRead } from '@/types';
 
 type Category = {
   id: number;
   name: string;
   type: 'income' | 'expense' | 'both';
 };
+
 type Account = { id: number; name: string };
 
 interface Props {
@@ -69,7 +66,6 @@ export default function EditTransactionModal({
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
 
-  // Cargar categorías según tipo
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -82,7 +78,6 @@ export default function EditTransactionModal({
     fetchCategories();
   }, [type]);
 
-  // Cargar cuentas
   useEffect(() => {
     const fetchAccounts = async () => {
       try {
@@ -100,7 +95,6 @@ export default function EditTransactionModal({
       toast.error('Completa todos los campos');
       return;
     }
-
     try {
       await api.put(`/transactions/${transaction.id}`, {
         description,
@@ -122,7 +116,7 @@ export default function EditTransactionModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className='bg-card text-foreground max-w-md'>
         <DialogHeader>
           <DialogTitle>Editar Transacción</DialogTitle>
         </DialogHeader>
@@ -172,7 +166,7 @@ export default function EditTransactionModal({
               <Button
                 variant='outline'
                 className={cn(
-                  'justify-start text-left font-normal',
+                  'justify-start text-left font-normal w-full',
                   !date && 'text-muted-foreground',
                 )}
               >
@@ -184,7 +178,10 @@ export default function EditTransactionModal({
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent align='start' className='p-0'>
+            <PopoverContent
+              align='start'
+              className='p-0 bg-card text-foreground'
+            >
               <DayPicker
                 mode='single'
                 selected={date}
@@ -194,7 +191,9 @@ export default function EditTransactionModal({
             </PopoverContent>
           </Popover>
 
-          <Button onClick={handleSubmit}>Guardar cambios</Button>
+          <Button onClick={handleSubmit} className='w-full'>
+            Guardar cambios
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

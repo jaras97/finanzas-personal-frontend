@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { SavingAccount } from '@/types';
+import { formatCurrency } from '@/lib/format';
 
 interface Props {
   open: boolean;
@@ -27,27 +28,24 @@ export default function EditSavingAccountModal({
   onUpdated,
 }: Props) {
   const [name, setName] = useState(account.name);
-  const [balance, setBalance] = useState(account.balance.toString());
   const [type, setType] = useState(account.type || '');
 
   useEffect(() => {
     if (account) {
       setName(account.name);
-      setBalance(account.balance.toString());
       setType(account.type || '');
     }
   }, [account]);
 
   const handleUpdate = async () => {
-    if (!name || !balance) {
-      toast.error('Completa todos los campos');
+    if (!name) {
+      toast.error('El nombre es obligatorio');
       return;
     }
 
     try {
       await api.put(`/saving-accounts/${account.id}`, {
         name,
-        balance: parseFloat(balance),
         type: type || 'general',
       });
       toast.success('Cuenta actualizada correctamente');
@@ -62,24 +60,30 @@ export default function EditSavingAccountModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className='bg-card text-foreground'>
         <DialogHeader>
           <DialogTitle>Editar cuenta de ahorro</DialogTitle>
         </DialogHeader>
-        <div className='space-y-2'>
+        <div className='space-y-3'>
           <Input
             placeholder='Nombre de la cuenta'
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
           <Input
-            placeholder='Saldo'
-            type='number'
-            value={balance}
-            onChange={(e) => setBalance(e.target.value)}
+            placeholder='Saldo actual'
+            value={formatCurrency(account.balance) + ' ' + account.currency}
+            disabled
           />
-          {/* 🚩 Agrega aquí un Select para type si deseas permitir edición */}
-          <Button onClick={handleUpdate}>Actualizar cuenta</Button>
+          <p className='text-sm text-muted-foreground'>
+            El saldo no puede editarse manualmente. Para modificarlo, realiza
+            depósitos o retiros desde la cuenta.
+          </p>
+
+          {/* 🚩 Si deseas habilitar edición de tipo, agrega un Select aquí */}
+          <Button onClick={handleUpdate} className='w-full'>
+            Actualizar cuenta
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

@@ -3,6 +3,7 @@
 import { useDebts } from '@/hooks/useDebts';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/format';
 import { format } from 'date-fns';
 import { useState } from 'react';
@@ -27,6 +28,14 @@ export default function DebtsPage() {
     null,
   );
 
+  const getKindLabel = (kind: string) => {
+    return kind === 'credit_card' ? 'Tarjeta de Crédito' : 'Préstamo';
+  };
+
+  const getKindBadgeVariant = (kind: string) => {
+    return kind === 'credit_card' ? 'secondary' : 'outline';
+  };
+
   return (
     <div className='space-y-4'>
       <div className='flex justify-between items-center'>
@@ -35,29 +44,40 @@ export default function DebtsPage() {
       </div>
 
       {loading ? (
-        <p className='text-center p-4'>Cargando deudas...</p>
+        <p className='text-center p-4 text-muted-foreground'>
+          Cargando deudas...
+        </p>
       ) : (
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2'>
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
           {debts.map((debt) => (
-            <Card key={debt.id} className='p-4 space-y-1'>
-              <p className='font-medium'>{debt.name}</p>
-              <p className='text-gray-500 text-sm'>
+            <Card
+              key={debt.id}
+              className='p-4 space-y-1 bg-card text-foreground border border-border rounded-md'
+            >
+              <div className='flex items-center justify-between'>
+                <p className='font-medium'>{debt.name}</p>
+                {/* Badge de tipo de deuda */}
+                <Badge variant={getKindBadgeVariant(debt.kind)}>
+                  {getKindLabel(debt.kind)}
+                </Badge>
+              </div>
+              <p className='text-sm text-muted-foreground'>
                 Saldo: {formatCurrency(debt.total_amount)} {debt.currency}
               </p>
-              <p className='text-gray-500 text-sm'>
+              <p className='text-sm text-muted-foreground'>
                 Tasa de interés: {debt.interest_rate}%
               </p>
               {debt.due_date && (
-                <p className='text-gray-500 text-sm'>
+                <p className='text-sm text-muted-foreground'>
                   Vence: {format(new Date(debt.due_date), 'dd MMM yyyy')}
                 </p>
               )}
-              <p className='text-gray-500 text-sm'>
+              <p className='text-sm text-muted-foreground'>
                 Estado:{' '}
                 {debt.status === 'active' ? (
                   <span className='text-green-600 font-medium'>Activa</span>
                 ) : (
-                  <span className='text-gray-600'>Cerrada</span>
+                  <span className='text-muted-foreground'>Cerrada</span>
                 )}
               </p>
               <div className='flex flex-wrap gap-2 mt-2'>
@@ -102,7 +122,7 @@ export default function DebtsPage() {
             </Card>
           ))}
           {debts.length === 0 && (
-            <p className='text-center p-4 text-gray-500'>
+            <p className='text-center p-4 text-muted-foreground'>
               No tienes deudas registradas.
             </p>
           )}

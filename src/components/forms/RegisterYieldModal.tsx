@@ -54,11 +54,14 @@ export default function RegisterYieldModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className='bg-card text-foreground'>
         <DialogHeader>
-          <DialogTitle>Registrar rendimiento en {account.name}</DialogTitle>
+          <DialogTitle>
+            Registrar rendimiento en{' '}
+            <span className='font-semibold'>{account.name}</span>
+          </DialogTitle>
         </DialogHeader>
-        <div className='space-y-2'>
+        <div className='space-y-3'>
           <Input
             placeholder='Monto del rendimiento'
             type='number'
@@ -70,7 +73,9 @@ export default function RegisterYieldModal({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-          <Button onClick={handleRegisterYield}>Registrar rendimiento</Button>
+          <Button onClick={handleRegisterYield} className='w-full'>
+            Registrar rendimiento
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

@@ -14,9 +14,11 @@ export default function LoginForm() {
   const [password, setPassword] = useState('');
   const { setToken } = useAuthStore();
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const formData = new URLSearchParams();
       formData.append('username', email);
@@ -37,17 +39,23 @@ export default function LoginForm() {
       router.push('/dashboard');
     } catch (error: any) {
       toast.error(error?.response?.data?.detail || 'Error al iniciar sesión');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className='space-y-4 w-full max-w-sm mx-auto'>
+    <form
+      onSubmit={handleSubmit}
+      className='space-y-4 w-full max-w-sm mx-auto bg-card p-6 rounded-lg shadow-sm'
+    >
       <Input
         type='email'
         placeholder='Correo electrónico'
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         required
+        disabled={loading}
       />
       <Input
         type='password'
@@ -55,9 +63,10 @@ export default function LoginForm() {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         required
+        disabled={loading}
       />
-      <Button type='submit' className='w-full'>
-        Iniciar Sesión
+      <Button type='submit' className='w-full' disabled={loading}>
+        {loading ? 'Iniciando...' : 'Iniciar Sesión'}
       </Button>
     </form>
   );

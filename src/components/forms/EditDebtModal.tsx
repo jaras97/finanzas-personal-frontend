@@ -41,6 +41,8 @@ export default function EditDebtModal({
   const [dueDate, setDueDate] = useState(debt.due_date || '');
   const [currency, setCurrency] = useState<currencyType>(debt.currency);
 
+  const hasTransactions = (debt.transactions_count ?? 0) > 0; // ✅ control dinámico
+
   useEffect(() => {
     if (debt) {
       setName(debt.name);
@@ -75,13 +77,13 @@ export default function EditDebtModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className='max-w-sm'>
         <DialogHeader>
           <DialogTitle>Editar Deuda</DialogTitle>
         </DialogHeader>
-        <div className='space-y-2'>
+        <div className='space-y-3'>
           <Input
-            placeholder='Nombre'
+            placeholder='Nombre de la deuda'
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -90,6 +92,7 @@ export default function EditDebtModal({
             type='number'
             value={totalAmount}
             onChange={(e) => setTotalAmount(e.target.value)}
+            disabled={hasTransactions} // ✅ Bloquea edición
           />
           <Input
             placeholder='Tasa de interés (%)'
@@ -106,9 +109,10 @@ export default function EditDebtModal({
           <Select
             value={currency}
             onValueChange={(v) => setCurrency(v as currencyType)}
+            disabled={hasTransactions} // ✅ Bloquea edición
           >
             <SelectTrigger>
-              <SelectValue placeholder='Moneda' />
+              <SelectValue placeholder='Selecciona la moneda' />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value='COP'>COP - Peso Colombiano</SelectItem>
@@ -116,7 +120,17 @@ export default function EditDebtModal({
               <SelectItem value='EUR'>EUR - Euro</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={handleUpdate}>Actualizar Deuda</Button>
+
+          {hasTransactions && (
+            <p className='text-xs text-muted-foreground'>
+              ⚠️ No puedes editar el monto ni la moneda porque esta deuda tiene
+              movimientos registrados.
+            </p>
+          )}
+
+          <Button onClick={handleUpdate} className='w-full'>
+            Actualizar Deuda
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

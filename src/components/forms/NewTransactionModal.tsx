@@ -34,7 +34,8 @@ type Category = {
   name: string;
   type: 'income' | 'expense' | 'both';
 };
-type Account = { id: number; name: string };
+
+type Account = { id: string; name: string }; // id puede ser "debt-3" para tarjetas
 
 interface Props {
   onCreated: () => void;
@@ -52,24 +53,47 @@ export default function NewTransactionModal({ onCreated }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
 
-  // Cargar cuentas al inicio
+  // Cargar cuentas y tarjetas de crédito según el tipo
   useEffect(() => {
-    const fetchAccounts = async () => {
+    const fetchAccountsAndCards = async () => {
       try {
-        const { data } = await api.get('/saving-accounts');
-        setAccounts(data);
+        const accountsRes = await api.get('/saving-accounts');
+        let combined: Account[] = accountsRes.data.map((acc: any) => ({
+          id: acc.id.toString(),
+          name: acc.name,
+        }));
+
+        if (type === 'expense') {
+          const cardsRes = await api.get('/debts');
+          const cards = cardsRes.data
+            .filter(
+              (d: any) => d.kind === 'credit_card' && d.status === 'active',
+            )
+            .map((card: any) => ({
+              id: `debt-${card.id}`,
+              name: `💳 ${card.name}`,
+            }));
+          combined = [...combined, ...cards];
+        }
+
+        setAccounts(combined);
       } catch {
-        toast.error('Error al cargar cuentas');
+        toast.error('Error al cargar cuentas y tarjetas');
       }
     };
-    fetchAccounts();
-  }, []);
 
-  // Cargar categorías dinámicamente según tipo
+    if (type) {
+      fetchAccountsAndCards();
+    } else {
+      setAccounts([]);
+      setAccountId('');
+    }
+  }, [type]);
+
   useEffect(() => {
     const fetchCategories = async () => {
       if (!type) {
-        setCategories([]); // limpiar si el usuario deselecciona
+        setCategories([]);
         setCategoryId('');
         return;
       }
@@ -97,15 +121,27 @@ export default function NewTransactionModal({ onCreated }: Props) {
     }
 
     try {
-      await api.post('/transactions', {
-        description,
-        amount: parseFloat(amount),
-        type,
-        category_id: parseInt(categoryId),
-        saving_account_id: parseInt(accountId),
-        date: date.toISOString(),
-      });
-      toast.success('Transacción creada');
+      if (accountId.startsWith('debt-')) {
+        // ✅ Registrar compra con tarjeta de crédito correctamente
+        const debtId = parseInt(accountId.replace('debt-', ''));
+        await api.post(`/debts/${debtId}/purchase`, {
+          amount: parseFloat(amount),
+          description,
+          date: date.toISOString(),
+        });
+      } else {
+        // ✅ Registrar transacción normal
+        await api.post('/transactions', {
+          description,
+          amount: parseFloat(amount),
+          type,
+          category_id: parseInt(categoryId),
+          saving_account_id: parseInt(accountId),
+          date: date.toISOString(),
+        });
+      }
+
+      toast.success('Transacción creada correctamente');
       setOpen(false);
       setDescription('');
       setAmount('');
@@ -126,12 +162,14 @@ export default function NewTransactionModal({ onCreated }: Props) {
       <DialogTrigger asChild>
         <Button>+ Nueva Transacción</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className='bg-card text-card-foreground rounded-lg shadow-lg max-w-md w-full border border-border'>
         <DialogHeader>
-          <DialogTitle>Nueva Transacción</DialogTitle>
+          <DialogTitle className='text-primary text-lg font-semibold'>
+            Nueva Transacción
+          </DialogTitle>
         </DialogHeader>
 
-        <div className='space-y-3'>
+        <div className='space-y-3 mt-4'>
           <Input
             placeholder='Descripción'
             value={description}
@@ -175,13 +213,17 @@ export default function NewTransactionModal({ onCreated }: Props) {
             </SelectContent>
           </Select>
 
-          <Select value={accountId} onValueChange={setAccountId}>
+          <Select
+            value={accountId}
+            onValueChange={setAccountId}
+            disabled={!type || accounts.length === 0}
+          >
             <SelectTrigger>
-              <SelectValue placeholder='Seleccionar cuenta' />
+              <SelectValue placeholder='Seleccionar cuenta o tarjeta' />
             </SelectTrigger>
             <SelectContent>
               {accounts.map((a) => (
-                <SelectItem key={a.id} value={a.id.toString()}>
+                <SelectItem key={a.id} value={a.id}>
                   {a.name}
                 </SelectItem>
               ))}
@@ -193,7 +235,7 @@ export default function NewTransactionModal({ onCreated }: Props) {
               <Button
                 variant='outline'
                 className={cn(
-                  'justify-start text-left font-normal',
+                  'justify-start text-left font-normal w-full',
                   !date && 'text-muted-foreground',
                 )}
               >
@@ -205,7 +247,10 @@ export default function NewTransactionModal({ onCreated }: Props) {
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent align='start' className='p-0'>
+            <PopoverContent
+              align='start'
+              className='p-0 bg-popover text-popover-foreground border border-border rounded-md'
+            >
               <DayPicker
                 mode='single'
                 selected={date}
@@ -215,7 +260,9 @@ export default function NewTransactionModal({ onCreated }: Props) {
             </PopoverContent>
           </Popover>
 
-          <Button onClick={handleSubmit}>Crear transacción</Button>
+          <Button onClick={handleSubmit} className='w-full mt-2'>
+            Crear transacción
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

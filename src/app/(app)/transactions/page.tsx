@@ -31,17 +31,18 @@ export default function TransactionsPage() {
       case 'income':
         return 'text-green-600';
       case 'expense':
-        return 'text-red-600';
+        return 'text-destructive';
       case 'transfer':
-        return 'text-blue-600';
+        return 'text-primary';
       default:
-        return 'text-gray-600';
+        return 'text-muted-foreground';
     }
   };
 
   const getStatusLabel = (tx: TransactionWithCategoryRead) => {
     if (tx.is_cancelled) return 'Reversada';
     if (tx.reversed_transaction_id) return 'Reversa';
+    if (tx.source_type === 'credit_card_purchase') return 'Compra con tarjeta';
     if (tx.type === 'income') return 'Ingreso';
     if (tx.type === 'expense') return 'Egreso';
     return 'Transferencia';
@@ -62,37 +63,67 @@ export default function TransactionsPage() {
       />
 
       {loading ? (
-        <p className='text-center p-4'>Cargando transacciones...</p>
+        <p className='text-center p-4 text-muted-foreground'>
+          Cargando transacciones...
+        </p>
       ) : (
         <>
           <div className='space-y-2'>
             {transactions.map((tx) => {
+              const isCreditCardPurchase =
+                tx.source_type === 'credit_card_purchase';
+
               const isEditable =
-                !tx.is_cancelled && !tx.reversed_transaction_id;
+                !tx.is_cancelled &&
+                !tx.reversed_transaction_id &&
+                !isCreditCardPurchase;
+
               const isReversible =
                 !tx.is_cancelled &&
                 !tx.reversed_transaction_id &&
-                tx.type !== 'transfer';
+                tx.type !== 'transfer' &&
+                !isCreditCardPurchase;
 
               return (
                 <Card
                   key={tx.id}
-                  className='p-4 flex flex-col md:flex-row md:justify-between md:items-center'
+                  className='p-4 flex flex-col md:flex-row md:justify-between md:items-center border border-border bg-card'
                 >
                   <div className='space-y-1'>
-                    <p className={`font-semibold ${typeColor(tx.type)}`}>
+                    <p
+                      className={`font-medium flex items-center gap-1 ${
+                        isCreditCardPurchase
+                          ? 'text-purple-600'
+                          : typeColor(tx.type)
+                      }`}
+                    >
+                      {isCreditCardPurchase && '💳'}
                       {tx.description}
                     </p>
-                    <p className='text-sm text-gray-500'>
+                    <p className='text-sm text-muted-foreground'>
                       {format(new Date(tx.date), 'dd MMM yyyy')}
                     </p>
-                    {tx.category && (
-                      <Badge variant='outline'>{tx.category.name}</Badge>
-                    )}
-                    {tx.debt?.name && (
-                      <Badge variant='secondary'>Deuda: {tx?.debt?.name}</Badge>
-                    )}
-                    <div className='text-sm text-gray-600 space-y-0.5'>
+
+                    <div className='flex flex-wrap gap-1'>
+                      {tx.category && (
+                        <Badge variant='outline'>{tx.category.name}</Badge>
+                      )}
+                      {tx.debt?.name && (
+                        <Badge
+                          variant={
+                            tx.debt.kind === 'credit_card'
+                              ? 'secondary'
+                              : 'outline'
+                          }
+                        >
+                          {tx.debt.kind === 'credit_card'
+                            ? `💳 Tarjeta: ${tx.debt.name}`
+                            : `Deuda: ${tx.debt.name}`}
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className='text-sm text-muted-foreground space-y-0.5'>
                       {tx.from_account && (
                         <p>
                           De: {tx.from_account.name} ({tx.from_account.currency}
@@ -123,12 +154,18 @@ export default function TransactionsPage() {
                   </div>
 
                   <div className='text-right mt-2 md:mt-0 space-y-1'>
-                    <p className={`text-lg font-bold ${typeColor(tx.type)}`}>
+                    <p
+                      className={`text-lg font-bold ${
+                        isCreditCardPurchase
+                          ? 'text-purple-600'
+                          : typeColor(tx.type)
+                      }`}
+                    >
                       {tx.type === 'income' ? '+' : '-'}{' '}
                       {tx.amount.toLocaleString()}{' '}
-                      {tx.saving_account?.currency ?? ''}
+                      {tx.saving_account?.currency ?? tx.debt?.currency ?? ''}
                     </p>
-                    <p className='text-sm text-gray-500'>
+                    <p className='text-sm text-muted-foreground'>
                       {getStatusLabel(tx)}
                     </p>
 
@@ -140,7 +177,7 @@ export default function TransactionsPage() {
                         disabled={!isEditable}
                         title={
                           !isEditable
-                            ? 'No se puede editar transacciones reversadas o de reversa'
+                            ? 'No se puede editar transacciones reversadas, de reversa o compras con tarjeta'
                             : 'Editar transacción'
                         }
                       >
@@ -153,7 +190,7 @@ export default function TransactionsPage() {
                         disabled={!isReversible}
                         title={
                           !isReversible
-                            ? 'No se puede reversar transacciones reversadas, de reversa o transferencias'
+                            ? 'No se puede reversar transacciones reversadas, de reversa, transferencias o compras con tarjeta'
                             : 'Reversar transacción'
                         }
                       >
@@ -166,7 +203,7 @@ export default function TransactionsPage() {
             })}
 
             {transactions.length === 0 && (
-              <p className='text-center p-4 text-gray-500'>
+              <p className='text-center p-4 text-muted-foreground'>
                 No hay transacciones con estos filtros.
               </p>
             )}

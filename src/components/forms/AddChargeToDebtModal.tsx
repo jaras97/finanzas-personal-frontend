@@ -47,6 +47,7 @@ export default function AddChargeToDebtModal({
       onOpenChange(false);
       setAmount('');
       setDescription('');
+      setDate('');
     } catch (error: any) {
       toast.error(error?.response?.data?.detail || 'Error al agregar cargo');
     }
@@ -54,19 +55,19 @@ export default function AddChargeToDebtModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className='max-w-sm'>
         <DialogHeader>
           <DialogTitle>Agregar cargo a {debt.name}</DialogTitle>
         </DialogHeader>
-        <div className='space-y-2'>
+        <div className='space-y-3'>
           <Input
-            placeholder='Fecha del cargo (opcional)'
             type='date'
+            placeholder='Fecha del cargo (opcional)'
             value={date}
             onChange={(e) => setDate(e.target.value)}
           />
           <Input
-            placeholder='Monto del cargo'
+            placeholder={`Monto del cargo (${debt.currency})`}
             type='number'
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
@@ -76,7 +77,9 @@ export default function AddChargeToDebtModal({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-          <Button onClick={handleAddCharge}>Agregar Cargo</Button>
+          <Button onClick={handleAddCharge} className='w-full'>
+            Agregar Cargo
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

@@ -62,11 +62,11 @@ export default function NewSavingAccountModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className='bg-card text-foreground'>
         <DialogHeader>
           <DialogTitle>Nueva cuenta</DialogTitle>
         </DialogHeader>
-        <div className='space-y-2'>
+        <div className='space-y-3'>
           <Input
             placeholder='Nombre de la cuenta'
             value={name}
@@ -104,7 +104,9 @@ export default function NewSavingAccountModal({
               <SelectItem value='EUR'>EUR - Euro</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={handleSubmit}>Crear cuenta</Button>
+          <Button onClick={handleSubmit} className='w-full'>
+            Crear cuenta
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

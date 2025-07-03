@@ -58,18 +58,10 @@ export default function CategoryModal({
     setLoading(true);
     try {
       if (category) {
-        // Editar
-        await api.put(`/categories/${category.id}`, {
-          name,
-          type,
-        });
+        await api.put(`/categories/${category.id}`, { name, type });
         toast.success('Categoría actualizada correctamente');
       } else {
-        // Crear
-        await api.post('/categories', {
-          name,
-          type,
-        });
+        await api.post('/categories', { name, type });
         toast.success('Categoría creada correctamente');
       }
       onCreated();
@@ -114,12 +106,13 @@ export default function CategoryModal({
               <SelectItem value='both'>Ambos</SelectItem>
             </SelectContent>
           </Select>
-          <p className='text-sm text-gray-500'>
+
+          <p className='text-sm text-muted-foreground'>
             ⚠️ Nota: No puedes cambiar el tipo de la categoría si tiene
             transacciones asociadas.
           </p>
 
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button onClick={handleSubmit} disabled={loading} className='w-full'>
             {loading
               ? category
                 ? 'Actualizando...'

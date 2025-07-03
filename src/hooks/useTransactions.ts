@@ -10,6 +10,7 @@ interface UseTransactionsOptions {
   endDate?: string;
   categoryId?: number;
   type?: "income" | "expense";
+  source?: "all" | "credit_card" | "account"; // ✅ nuevo
 }
 
 export const useTransactions = (options?: UseTransactionsOptions, page = 1) => {
@@ -20,7 +21,15 @@ export const useTransactions = (options?: UseTransactionsOptions, page = 1) => {
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { ...options, page };
+      // Prepara los parámetros de forma limpia
+      const params: Record<string, any> = { page };
+
+      if (options?.startDate) params.startDate = options.startDate;
+      if (options?.endDate) params.endDate = options.endDate;
+      if (options?.categoryId) params.categoryId = options.categoryId;
+      if (options?.type) params.type = options.type;
+      if (options?.source && options.source !== "all") params.source = options.source; 
+
       const { data } = await api.get("/transactions/with-category", { params });
       setTransactions(data.items);
       setTotalPages(data.totalPages);
@@ -29,7 +38,14 @@ export const useTransactions = (options?: UseTransactionsOptions, page = 1) => {
     } finally {
       setLoading(false);
     }
-  }, [options?.startDate, options?.endDate, options?.categoryId, options?.type, page]);
+  }, [
+    options?.startDate,
+    options?.endDate,
+    options?.categoryId,
+    options?.type,
+    options?.source,
+    page,
+  ]);
 
   useEffect(() => {
     fetchTransactions();

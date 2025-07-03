@@ -8,7 +8,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Sidebar />
       <div className='flex flex-col flex-1'>
         <Header />
-        <main className='flex-1 p-4 bg-gray-50'>
+        <main className='flex-1 p-4 bg-background'>
           {children}
           <Toaster position='top-center' />
         </main>
