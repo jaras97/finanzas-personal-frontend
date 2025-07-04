@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { TransactionType, TransactionWithCategoryRead } from '@/types';
+import axios from 'axios';
 
 type Category = {
   id: number;
@@ -107,10 +108,12 @@ export default function EditTransactionModal({
       toast.success('Transacción actualizada');
       onOpenChange(false);
       onUpdated();
-    } catch (error: any) {
-      toast.error(
-        error?.response?.data?.detail || 'Error al actualizar transacción',
-      );
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(
+          error?.response?.data?.detail || 'Error al actualizar transacción',
+        );
+      }
     }
   };
 

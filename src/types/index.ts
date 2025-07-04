@@ -100,3 +100,12 @@ export interface TransactionWithCategoryRead {
   debt?: Debt | null;
   source_type?: string | null; 
 }
+
+export type ApiError = {
+  response?: {
+    data?: {
+      detail?: string;
+    };
+  };
+  message?: string;
+};

@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import api from '@/lib/api';
+import axios from 'axios';
 
 interface Props {
   open: boolean;
@@ -55,8 +56,10 @@ export default function NewSavingAccountModal({
       setBalance('');
       setType('cash');
       setCurrency('COP');
-    } catch (error: any) {
-      toast.error(error?.response?.data?.detail || 'Error al crear cuenta');
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(error?.response?.data?.detail || 'Error al crear cuenta');
+      }
     }
   };
 

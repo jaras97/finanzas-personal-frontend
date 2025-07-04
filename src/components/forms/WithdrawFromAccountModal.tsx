@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { SavingAccount } from '@/types';
+import axios from 'axios';
 
 interface Props {
   open: boolean;
@@ -42,8 +43,12 @@ export default function WithdrawFromAccountModal({
       onOpenChange(false);
       onCompleted();
       setAmount('');
-    } catch (error: any) {
-      toast.error(error?.response?.data?.detail || 'Error al realizar retiro');
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(
+          error?.response?.data?.detail || 'Error al realizar retiro',
+        );
+      }
     }
   };
 

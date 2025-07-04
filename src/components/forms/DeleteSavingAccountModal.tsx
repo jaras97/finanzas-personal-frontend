@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { SavingAccount } from '@/types';
+import axios from 'axios';
 
 interface Props {
   open: boolean;
@@ -30,25 +31,29 @@ export default function DeleteSavingAccountModal({
       toast.success('Cuenta eliminada correctamente');
       onOpenChange(false);
       onDeleted();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error al eliminar cuenta:', error);
-      if (
-        error?.response?.data?.detail?.includes(
-          'violates foreign key constraint',
-        ) ||
-        error?.response?.data?.detail?.includes(
-          'referenced from table "transaction"',
-        )
-      ) {
-        toast.error(
-          'No puedes eliminar esta cuenta porque tiene transacciones asociadas.',
-        );
-      } else {
-        toast.error(
-          error?.response?.data?.detail || 'Error al eliminar la cuenta.',
-        );
+      if (axios.isAxiosError(error)) {
+        if (axios.isAxiosError(error)) {
+          if (
+            error?.response?.data?.detail?.includes(
+              'violates foreign key constraint',
+            ) ||
+            error?.response?.data?.detail?.includes(
+              'referenced from table "transaction"',
+            )
+          ) {
+            toast.error(
+              'No puedes eliminar esta cuenta porque tiene transacciones asociadas.',
+            );
+          } else {
+            toast.error(
+              error?.response?.data?.detail || 'Error al eliminar la cuenta.',
+            );
+          }
+          onOpenChange(false);
+        }
       }
-      onOpenChange(false);
     }
   };
 

@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { Debt } from '@/types';
+import axios from 'axios';
 
 interface Props {
   open: boolean;
@@ -48,8 +49,10 @@ export default function AddChargeToDebtModal({
       setAmount('');
       setDescription('');
       setDate('');
-    } catch (error: any) {
-      toast.error(error?.response?.data?.detail || 'Error al agregar cargo');
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(error?.response?.data?.detail || 'Error al agregar cargo');
+      }
     }
   };
 

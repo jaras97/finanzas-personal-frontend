@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import api from "@/lib/api";
 import { TransactionWithCategoryRead } from "@/types";
 import { toast } from "sonner";
+import axios from "axios";
 
 interface UseTransactionsOptions {
   startDate?: string;
@@ -12,6 +13,15 @@ interface UseTransactionsOptions {
   type?: "income" | "expense";
   source?: "all" | "credit_card" | "account"; // ✅ nuevo
 }
+
+type TransactionQueryParams = {
+  page: number;
+  startDate?: string;
+  endDate?: string;
+  categoryId?: number;
+  type?: "income" | "expense";
+  source?: string; // o 'source?: "all" | "credit_card" | "saving_account"' si deseas precisión
+};
 
 export const useTransactions = (options?: UseTransactionsOptions, page = 1) => {
   const [transactions, setTransactions] = useState<TransactionWithCategoryRead[]>([]);
@@ -22,7 +32,7 @@ export const useTransactions = (options?: UseTransactionsOptions, page = 1) => {
     setLoading(true);
     try {
       // Prepara los parámetros de forma limpia
-      const params: Record<string, any> = { page };
+      const params: TransactionQueryParams = { page };
 
       if (options?.startDate) params.startDate = options.startDate;
       if (options?.endDate) params.endDate = options.endDate;
@@ -33,8 +43,10 @@ export const useTransactions = (options?: UseTransactionsOptions, page = 1) => {
       const { data } = await api.get("/transactions/with-category", { params });
       setTransactions(data.items);
       setTotalPages(data.totalPages);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.detail || "Error al cargar transacciones");
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(error?.response?.data?.detail || "Error al cargar transacciones");
+      }
     } finally {
       setLoading(false);
     }

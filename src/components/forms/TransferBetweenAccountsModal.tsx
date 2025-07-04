@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import api from '@/lib/api';
 import { SavingAccount } from '@/types';
 import { formatCurrency } from '@/lib/format';
+import axios from 'axios';
 
 interface Props {
   open: boolean;
@@ -86,10 +87,12 @@ export default function TransferBetweenAccountsModal({
       setFee('');
       setDescription('');
       setExchangeRate('');
-    } catch (error: any) {
-      toast.error(
-        error?.response?.data?.detail || 'Error al realizar transferencia',
-      );
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(
+          error?.response?.data?.detail || 'Error al realizar transferencia',
+        );
+      }
     }
   };
 

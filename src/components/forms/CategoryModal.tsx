@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import api from '@/lib/api';
+import axios from 'axios';
 
 type Props = {
   open: boolean;
@@ -66,10 +67,12 @@ export default function CategoryModal({
       }
       onCreated();
       onOpenChange(false);
-    } catch (error: any) {
-      toast.error(
-        error?.response?.data?.detail || 'Error al guardar la categoría',
-      );
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(
+          error?.response?.data?.detail || 'Error al guardar la categoría',
+        );
+      }
     } finally {
       setLoading(false);
     }

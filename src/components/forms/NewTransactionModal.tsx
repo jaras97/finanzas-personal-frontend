@@ -28,6 +28,7 @@ import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 type Category = {
   id: number;
@@ -53,23 +54,36 @@ export default function NewTransactionModal({ onCreated }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
 
+  type SavingAccountApiResponse = {
+    id: number;
+    name: string;
+    // opcionalmente currency, balance, etc., según tu modelo
+  };
+
+  type DebtApiResponse = {
+    id: number;
+    name: string;
+    kind: 'credit_card' | 'loan' | string; // ajusta según tu modelo
+    status: 'active' | 'closed' | string;
+  };
+
   // Cargar cuentas y tarjetas de crédito según el tipo
   useEffect(() => {
     const fetchAccountsAndCards = async () => {
       try {
-        const accountsRes = await api.get('/saving-accounts');
-        let combined: Account[] = accountsRes.data.map((acc: any) => ({
+        const accountsRes = await api.get<SavingAccountApiResponse[]>(
+          '/saving-accounts',
+        );
+        let combined: Account[] = accountsRes.data.map((acc) => ({
           id: acc.id.toString(),
           name: acc.name,
         }));
 
         if (type === 'expense') {
-          const cardsRes = await api.get('/debts');
+          const cardsRes = await api.get<DebtApiResponse[]>('/debts');
           const cards = cardsRes.data
-            .filter(
-              (d: any) => d.kind === 'credit_card' && d.status === 'active',
-            )
-            .map((card: any) => ({
+            .filter((d) => d.kind === 'credit_card' && d.status === 'active')
+            .map((card) => ({
               id: `debt-${card.id}`,
               name: `💳 ${card.name}`,
             }));
@@ -150,10 +164,12 @@ export default function NewTransactionModal({ onCreated }: Props) {
       setAccountId('');
       setDate(new Date());
       onCreated();
-    } catch (error: any) {
-      toast.error(
-        error?.response?.data?.detail || 'Error al crear transacción',
-      );
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(
+          error?.response?.data?.detail || 'Error al crear transacción',
+        );
+      }
     }
   };
 

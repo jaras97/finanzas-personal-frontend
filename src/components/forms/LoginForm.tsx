@@ -8,6 +8,7 @@ import { useAuthStore } from '@/lib/store';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import Cookies from 'js-cookie';
+import axios from 'axios';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -37,8 +38,10 @@ export default function LoginForm() {
       });
       toast.success('Inicio de sesión exitoso.');
       router.push('/dashboard');
-    } catch (error: any) {
-      toast.error(error?.response?.data?.detail || 'Error al iniciar sesión');
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(error?.response?.data?.detail || 'Error al iniciar sesión');
+      }
     } finally {
       setLoading(false);
     }

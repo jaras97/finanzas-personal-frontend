@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import axios from 'axios';
 
 interface Props {
   open: boolean;
@@ -59,8 +60,10 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
       setDueDate('');
       setCurrency('COP');
       setKind('loan');
-    } catch (error: any) {
-      toast.error(error?.response?.data?.detail || 'Error al crear deuda');
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(error?.response?.data?.detail || 'Error al crear deuda');
+      }
     }
   };
 

@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import api from '@/lib/api';
 import { SavingAccount } from '@/types';
 import { formatCurrency } from '@/lib/format';
+import axios from 'axios';
 
 interface Props {
   open: boolean;
@@ -51,10 +52,12 @@ export default function EditSavingAccountModal({
       toast.success('Cuenta actualizada correctamente');
       onOpenChange(false);
       onUpdated();
-    } catch (error: any) {
-      toast.error(
-        error?.response?.data?.detail || 'Error al actualizar cuenta',
-      );
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(
+          error?.response?.data?.detail || 'Error al actualizar cuenta',
+        );
+      }
     }
   };
 

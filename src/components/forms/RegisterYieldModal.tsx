@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { SavingAccount } from '@/types';
+import axios from 'axios';
 
 interface Props {
   open: boolean;
@@ -45,10 +46,12 @@ export default function RegisterYieldModal({
       onCompleted();
       setAmount('');
       setDescription('Rendimiento de inversión');
-    } catch (error: any) {
-      toast.error(
-        error?.response?.data?.detail || 'Error al registrar rendimiento',
-      );
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(
+          error?.response?.data?.detail || 'Error al registrar rendimiento',
+        );
+      }
     }
   };
 

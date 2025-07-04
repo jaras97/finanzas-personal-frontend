@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import { DashboardSummary } from '@/types';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 export default function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -14,10 +15,12 @@ export default function DashboardPage() {
       try {
         const { data } = await api.get('/dashboard/resumen');
         setSummary(data);
-      } catch (error: any) {
-        toast.error(
-          error?.response?.data?.detail || 'Error al cargar el resumen',
-        );
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          toast.error(
+            error?.response?.data?.detail || 'Error al cargar el resumen',
+          );
+        }
       }
     };
     fetchSummary();

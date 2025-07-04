@@ -4,7 +4,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { TransactionWithCategoryRead } from '@/types';
 import { useAccountTransactions } from '@/hooks/useAccountTransactions';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/lib/format';

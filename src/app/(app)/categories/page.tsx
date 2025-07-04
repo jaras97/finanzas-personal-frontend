@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import CategoryModal from '@/components/forms/CategoryModal';
+import axios from 'axios';
 
 type Category = {
   id: number;
@@ -40,10 +41,12 @@ export default function CategoriesPage() {
       await api.delete(`/categories/${category.id}`);
       toast.success('Categoría desactivada correctamente');
       fetchCategories();
-    } catch (error: any) {
-      toast.error(
-        error?.response?.data?.detail || 'Error al desactivar categoría',
-      );
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(
+          error?.response?.data?.detail || 'Error al desactivar categoría',
+        );
+      }
     } finally {
       setProcessingId(null);
     }
@@ -55,10 +58,12 @@ export default function CategoriesPage() {
       await api.put(`/categories/${category.id}/reactivate`);
       toast.success('Categoría reactivada correctamente');
       fetchCategories();
-    } catch (error: any) {
-      toast.error(
-        error?.response?.data?.detail || 'Error al reactivar categoría',
-      );
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(
+          error?.response?.data?.detail || 'Error al reactivar categoría',
+        );
+      }
     } finally {
       setProcessingId(null);
     }

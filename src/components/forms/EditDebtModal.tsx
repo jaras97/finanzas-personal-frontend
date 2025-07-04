@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { Debt, currencyType } from '@/types';
+import axios from 'axios';
 
 interface Props {
   open: boolean;
@@ -70,8 +71,12 @@ export default function EditDebtModal({
       toast.success('Deuda actualizada correctamente');
       onUpdated();
       onOpenChange(false);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.detail || 'Error al actualizar deuda');
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(
+          error?.response?.data?.detail || 'Error al actualizar deuda',
+        );
+      }
     }
   };
 

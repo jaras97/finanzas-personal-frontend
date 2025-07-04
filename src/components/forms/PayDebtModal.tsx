@@ -21,6 +21,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
+import axios from 'axios';
 
 interface Props {
   open: boolean;
@@ -62,8 +63,10 @@ export default function PayDebtModal({
       setSavingAccountId('');
       setDescription('');
       setDate('');
-    } catch (error: any) {
-      toast.error(error?.response?.data?.detail || 'Error al pagar la deuda');
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(error?.response?.data?.detail || 'Error al pagar la deuda');
+      }
     }
   };
 

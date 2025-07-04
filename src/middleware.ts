@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
         console.log('✅ Token válido en raíz, redirigiendo a /dashboard');
         return NextResponse.redirect(new URL('/dashboard', request.url));
       } catch (error) {
-        console.log('❌ Token inválido en raíz, redirigiendo a /auth/login');
+        console.log('❌ Token inválido en raíz, redirigiendo a /auth/login',error);
         return NextResponse.redirect(new URL('/auth/login', request.url));
       }
     } else {

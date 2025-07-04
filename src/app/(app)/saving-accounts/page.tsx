@@ -17,6 +17,7 @@ import AccountTransactionsModal from '@/components/forms/AccountTransactionsModa
 import { formatCurrency } from '@/lib/format';
 import { toast } from 'sonner';
 import api from '@/lib/api';
+import axios from 'axios';
 
 export default function SavingAccountsPage() {
   const { accounts, loading, refresh } = useSavingAccounts();
@@ -39,10 +40,12 @@ export default function SavingAccountsPage() {
       const res = await api.post(`/saving-accounts/${account.id}/close`);
       toast.success(res.data.message || 'Cuenta cerrada correctamente');
       refresh();
-    } catch (error: any) {
-      toast.error(
-        error?.response?.data?.detail || 'No se pudo cerrar la cuenta',
-      );
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(
+          error?.response?.data?.detail || 'No se pudo cerrar la cuenta',
+        );
+      }
     }
   };
 

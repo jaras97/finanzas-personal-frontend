@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { TransactionWithCategoryRead } from "@/types";
 import { toast } from "sonner";
+import axios from "axios";
 
 export function useAccountTransactions(accountId: number) {
   const [transactions, setTransactions] = useState<TransactionWithCategoryRead[]>([]);
@@ -15,8 +16,10 @@ export function useAccountTransactions(accountId: number) {
       try {
         const { data } = await api.get(`/saving-accounts/${accountId}/transactions`);
         setTransactions(data);
-      } catch (error: any) {
-        toast.error(error?.response?.data?.detail || "Error al cargar movimientos de la cuenta");
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          toast.error(error?.response?.data?.detail || "Error al cargar movimientos de la cuenta");
+        }
       } finally {
         setLoading(false);
       }

@@ -2,15 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Home,
-  List,
-  Banknote,
-  CreditCard,
-  Folder,
-  Calendar,
-  X,
-} from 'lucide-react';
+import { Home, List, Banknote, CreditCard, Folder, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebarStore } from '@/lib/store/sidebarStore';
 
