@@ -1,47 +1,56 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Enable React Strict Mode
   reactStrictMode: true,
-  
-  // Ensure all generated URLs are HTTPS
   trailingSlash: true,
   
-  // Security headers to prevent mixed content
   async headers() {
+    // Solo aplicar en producción
+    if (process.env.NODE_ENV === 'production') {
+      return [
+        {
+          source: "/(.*)",
+          headers: [
+            {
+              key: "Content-Security-Policy",
+              value: "upgrade-insecure-requests"
+            },
+            {
+              key: "X-Content-Type-Options",
+              value: "nosniff"
+            },
+            {
+              key: "X-Frame-Options",
+              value: "SAMEORIGIN"
+            },
+            {
+              key: "X-XSS-Protection",
+              value: "1; mode=block"
+            },
+            {
+              key: "Referrer-Policy",
+              value: "strict-origin-when-cross-origin"
+            }
+          ],
+        },
+      ];
+    }
+    // En desarrollo, permitir conexiones HTTP locales
     return [
       {
         source: "/(.*)",
         headers: [
           {
             key: "Content-Security-Policy",
-            value: "upgrade-insecure-requests"
-          },
-          {
-            key: "X-Content-Type-Options",
-            value: "nosniff"
-          },
-          {
-            key: "X-Frame-Options",
-            value: "SAMEORIGIN"
-          },
-          {
-            key: "X-XSS-Protection",
-            value: "1; mode=block"
-          },
-          {
-            key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin"
+            value: `default-src 'self' 'unsafe-inline' http://localhost:*; connect-src 'self' http://localhost:* ws://localhost:*`
           }
-        ],
-      },
+        ]
+      }
     ];
   },
 
-  // Fly.io specific optimizations
   output: process.env.DOCKER_BUILD ? "standalone" : undefined,
   
-  // Enable server actions if using Next.js 15 features
   experimental: {
     serverActions: {},
     optimizePackageImports: []

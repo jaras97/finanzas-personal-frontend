@@ -109,3 +109,11 @@ export type ApiError = {
   };
   message?: string;
 };
+
+export interface SubscriptionStatusRead {
+  id: number;
+  user_id: string; 
+  start_date: string; 
+  end_date: string;   
+  is_active: boolean;
+}
