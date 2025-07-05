@@ -70,13 +70,16 @@ export default function TransactionsPage() {
         <>
           <div className='space-y-2'>
             {transactions.map((tx) => {
+              console.log(`Rendering transaction ${tx.id}`, tx);
               const isCreditCardPurchase =
                 tx.source_type === 'credit_card_purchase';
 
               const isEditable =
                 !tx.is_cancelled &&
                 !tx.reversed_transaction_id &&
-                !isCreditCardPurchase;
+                !isCreditCardPurchase &&
+                !tx.source_type &&
+                tx.type !== 'transfer';
 
               const isReversible =
                 !tx.is_cancelled &&
