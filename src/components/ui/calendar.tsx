@@ -9,10 +9,9 @@ import { cn } from '@/lib/utils';
 
 interface CalendarProps {
   className?: string;
-  selected: DateRange;
+  selected: DateRange | undefined;
   onSelect: (range: DateRange | undefined) => void;
   numberOfMonths?: number;
-  initialFocus?: boolean;
 }
 
 export function Calendar({
@@ -20,7 +19,6 @@ export function Calendar({
   selected,
   onSelect,
   numberOfMonths = 1,
-  initialFocus = false,
 }: CalendarProps) {
   return (
     <DayPicker
@@ -30,10 +28,9 @@ export function Calendar({
       numberOfMonths={numberOfMonths}
       defaultMonth={selected?.from ?? new Date()}
       className={cn('rounded-md border bg-white p-3 shadow-md', className)}
-      initialFocus={initialFocus}
       captionLayout='dropdown'
-      fromYear={new Date().getFullYear() - 5}
-      toYear={new Date().getFullYear() + 5}
+      startMonth={new Date(new Date().getFullYear() - 5, 0)}
+      endMonth={new Date(new Date().getFullYear() + 5, 11)}
     />
   );
 }

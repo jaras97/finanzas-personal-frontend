@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-
 import {
   Popover,
   PopoverContent,
@@ -29,12 +28,16 @@ export function DateRangePicker({
   disabled,
 }: DateRangePickerProps) {
   const [open, setOpen] = React.useState(false);
+  const [tempRange, setTempRange] = React.useState<DateRange | undefined>({
+    from: value.startDate,
+    to: value.endDate,
+  });
 
-  const handleSelect = (range: DateRange | undefined) => {
-    if (range?.from && range?.to) {
+  const handleAccept = () => {
+    if (tempRange?.from && tempRange?.to) {
       onChange({
-        startDate: range.from,
-        endDate: range.to,
+        startDate: tempRange.from,
+        endDate: tempRange.to,
       });
       setOpen(false);
     }
@@ -68,11 +71,19 @@ export function DateRangePicker({
       </PopoverTrigger>
       <PopoverContent className='w-auto p-0' align='start'>
         <Calendar
-          selected={{ from: value.startDate, to: value.endDate }}
-          onSelect={handleSelect}
-          initialFocus
+          selected={tempRange}
+          onSelect={setTempRange}
           numberOfMonths={1}
         />
+        <div className='flex justify-end p-2 border-t bg-gray-50'>
+          <Button
+            size='sm'
+            onClick={handleAccept}
+            disabled={!tempRange?.from || !tempRange?.to}
+          >
+            Aceptar
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   );

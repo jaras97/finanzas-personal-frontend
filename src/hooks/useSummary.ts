@@ -51,10 +51,10 @@ export function useSummary(filters: {
         setLoading(true);
         const params = new URLSearchParams();
         if (filters.dateRange.from) {
-          params.append("startDate", filters.dateRange.from.toISOString());
+          params.append("start_date", filters.dateRange.from.toISOString().split("T")[0]);
         }
         if (filters.dateRange.to) {
-          params.append("endDate", filters.dateRange.to.toISOString());
+          params.append("end_date", filters.dateRange.to.toISOString().split("T")[0]);
         }
         if (filters.type && filters.type !== "all") {
           params.append("type", filters.type);
