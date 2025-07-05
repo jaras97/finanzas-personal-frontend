@@ -2,7 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, List, Banknote, CreditCard, Folder, X } from 'lucide-react';
+import {
+  Home,
+  List,
+  Banknote,
+  CreditCard,
+  Folder,
+  X,
+  Calendar,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebarStore } from '@/lib/store/sidebarStore';
 
@@ -12,7 +20,7 @@ const links = [
   { href: '/saving-accounts', label: 'Cuentas de ahorro', icon: Banknote },
   { href: '/debts', label: 'Deudas', icon: CreditCard },
   { href: '/categories', label: 'Categorías', icon: Folder },
-  // { href: '/monthly-summaries', label: 'Resumen mensual', icon: Calendar },
+  { href: '/summary', label: 'Resumen mensual', icon: Calendar },
 ];
 
 export default function Sidebar() {
