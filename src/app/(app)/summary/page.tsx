@@ -26,9 +26,9 @@ export default function ResumenPage() {
         from: dateRange.startDate,
         to: dateRange.endDate,
       },
-      type: 'all' as 'all',
+      type: 'all' as const,
     }),
-    [dateRange.startDate.getTime(), dateRange.endDate.getTime()],
+    [dateRange.startDate, dateRange.endDate],
   );
 
   const { data: summary, loading, error } = useSummary(filters);
