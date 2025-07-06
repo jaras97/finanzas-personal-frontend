@@ -37,7 +37,7 @@ export default function LoginForm() {
         sameSite: 'Lax',
       });
       toast.success('Inicio de sesión exitoso.');
-      router.push('/dashboard');
+      router.push('/summary');
     } catch (error) {
       if (axios.isAxiosError(error)) {
         toast.error(error?.response?.data?.detail || 'Error al iniciar sesión');

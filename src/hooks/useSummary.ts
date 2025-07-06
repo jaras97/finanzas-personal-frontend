@@ -36,12 +36,14 @@ interface SummaryData {
   top_income_day: DaySummary | null;
 }
 
+type Currency = "COP" | "USD" | "EUR";
+
 export function useSummary(filters: {
   dateRange: DateRange;
   type?: "income" | "expense" | "all";
   categoryId?: number;
 }) {
-  const [data, setData] = useState<SummaryData | null>(null);
+  const [data, setData] = useState<Record<Currency, SummaryData> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,7 +69,7 @@ export function useSummary(filters: {
         setData(res.data);
       } catch (err) {
         if (axios.isAxiosError(err)) {
-            setError(err?.response?.data?.detail || "Error al cargar resumen");
+          setError(err?.response?.data?.detail || "Error al cargar resumen");
         }
       } finally {
         setLoading(false);

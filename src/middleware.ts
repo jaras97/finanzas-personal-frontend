@@ -11,7 +11,7 @@ export async function middleware(request: NextRequest) {
   console.log('🪙 Token presente:', !!token);
 
   const privatePaths = [
-    '/dashboard',
+    '/summary',
     '/transactions',
     '/saving-accounts',
     '/categories',
@@ -28,8 +28,8 @@ export async function middleware(request: NextRequest) {
     if (token) {
       try {
         await jwtVerify(token, new TextEncoder().encode(process.env.JWT_SECRET));
-        console.log('✅ Token válido en raíz, redirigiendo a /dashboard');
-        return NextResponse.redirect(new URL('/dashboard', request.url));
+        console.log('✅ Token válido en raíz, redirigiendo a /summary');
+        return NextResponse.redirect(new URL('/summary', request.url));
       } catch (error) {
         console.log('❌ Token inválido en raíz, redirigiendo a /auth/login',error);
         return NextResponse.redirect(new URL('/auth/login', request.url));
@@ -40,12 +40,12 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 🔄 Si está en login y ya tiene token válido, redirigir a dashboard
+  // 🔄 Si está en login y ya tiene token válido, redirigir a summary
   if (isAuthRoute && token) {
     try {
       await jwtVerify(token, new TextEncoder().encode(process.env.JWT_SECRET));
-      console.log('✅ Token válido en login, redirigiendo a /dashboard');
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      console.log('✅ Token válido en login, redirigiendo a /summary');
+      return NextResponse.redirect(new URL('/summary', request.url));
     } catch (error) {
       console.log('❌ Token inválido en login, permitiendo acceso al login', error);
     }
@@ -73,7 +73,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/',
-    '/dashboard/:path*',
+    '/summary/:path*',
     '/transactions/:path*',
     '/saving-accounts/:path*',
     '/categories/:path*',

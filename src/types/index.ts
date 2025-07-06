@@ -11,16 +11,6 @@ export type LoginRequest = {
   username: string; // Email
   password: string;
 };
-
-export type DashboardSummary = {
-  ingresos_mes: number;
-  egresos_mes: number;
-  ahorro_mes: number;
-  total_ahorros: number;
-  total_deudas: number;
-  recomendacion: string;
-};
-
 // 💰 Category
 export type Category = {
   id: number;
@@ -117,3 +107,7 @@ export interface SubscriptionStatusRead {
   end_date: string;   
   is_active: boolean;
 }
+
+export type TotalesPorMoneda = {
+  [key in "COP" | "USD" | "EUR"]: number;
+};
