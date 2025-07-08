@@ -73,12 +73,12 @@ export default function TransactionsPage() {
               const isCreditCardPurchase =
                 tx.source_type === 'credit_card_purchase';
 
-              const isEditable =
-                !tx.is_cancelled &&
-                !tx.reversed_transaction_id &&
-                !isCreditCardPurchase &&
-                !tx.source_type &&
-                tx.type !== 'transfer';
+              // const isEditable =
+              //   !tx.is_cancelled &&
+              //   !tx.reversed_transaction_id &&
+              //   !isCreditCardPurchase &&
+              //   !tx.source_type &&
+              //   tx.type !== 'transfer';
 
               const isReversible =
                 !tx.is_cancelled &&
@@ -172,7 +172,7 @@ export default function TransactionsPage() {
                     </p>
 
                     <div className='flex gap-2 justify-end flex-wrap'>
-                      <Button
+                      {/* <Button
                         size='sm'
                         variant='outline'
                         onClick={() => setEditTx(tx)}
@@ -184,7 +184,7 @@ export default function TransactionsPage() {
                         }
                       >
                         Editar
-                      </Button>
+                      </Button> */}
                       <Button
                         size='sm'
                         variant='destructive'

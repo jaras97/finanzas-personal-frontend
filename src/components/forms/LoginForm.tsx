@@ -40,7 +40,18 @@ export default function LoginForm() {
       router.push('/summary');
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        toast.error(error?.response?.data?.detail || 'Error al iniciar sesión');
+        const status = error.response?.status;
+        const detail = error.response?.data?.detail;
+
+        if (status === 401) {
+          toast.error(detail || 'Correo o contraseña incorrectos.');
+        } else if (status === 422) {
+          toast.error('Datos inválidos. Verifica tu correo y contraseña.');
+        } else {
+          toast.error(detail || 'Error al iniciar sesión. Intenta de nuevo.');
+        }
+      } else {
+        toast.error('Error inesperado al iniciar sesión.');
       }
     } finally {
       setLoading(false);

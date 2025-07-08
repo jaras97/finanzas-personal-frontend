@@ -57,6 +57,8 @@ export default function EditSavingAccountModal({
         toast.error(
           error?.response?.data?.detail || 'Error al actualizar cuenta',
         );
+      } else {
+        toast.error('Error inesperado al actualizar cuenta');
       }
     }
   };

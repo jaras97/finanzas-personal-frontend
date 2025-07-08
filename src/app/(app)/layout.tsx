@@ -2,7 +2,7 @@
 
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
-import { Toaster, toast } from 'sonner';
+import { toast } from 'sonner';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -51,10 +51,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Sidebar />
       <div className='flex flex-col flex-1'>
         <Header />
-        <main className='flex-1 p-4 bg-background'>
-          {children}
-          <Toaster position='top-center' />
-        </main>
+        <main className='flex-1 p-4 bg-background'>{children}</main>
       </div>
     </div>
   );

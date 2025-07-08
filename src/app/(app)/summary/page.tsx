@@ -5,6 +5,7 @@ import { useSummary } from '@/hooks/useSummary';
 import { useAssetsSummary } from '@/hooks/useAssetsSummary';
 import { useLiabilitiesSummary } from '@/hooks/useLiabilitiesSummary';
 import { useNetWorthSummary } from '@/hooks/useNetWorthSummary';
+import { useCashFlowSummary } from '@/hooks/useCashFlowSummary';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader, AlertCircle } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
@@ -27,7 +28,7 @@ export default function ResumenPage() {
       dateRange: { from: dateRange.startDate, to: dateRange.endDate },
       type: 'all' as const,
     }),
-    [dateRange.startDate, dateRange.endDate.getTime()],
+    [dateRange.startDate, dateRange.endDate],
   );
 
   const { data: summary, loading, error } = useSummary(filters);
@@ -35,6 +36,10 @@ export default function ResumenPage() {
   const { data: liabilities, loading: loadingLiabilities } =
     useLiabilitiesSummary();
   const { data: netWorth, loading: loadingNetWorth } = useNetWorthSummary();
+  const { data: cashFlow, loading: loadingCashFlow } = useCashFlowSummary(
+    filters.dateRange.from,
+    filters.dateRange.to,
+  );
 
   return (
     <div className='p-4 max-w-5xl mx-auto space-y-6'>
@@ -51,7 +56,6 @@ export default function ResumenPage() {
           <Loader className='animate-spin w-8 h-8 text-primary' />
         </div>
       )}
-
       {error && (
         <div className='flex items-center text-red-600 gap-2'>
           <AlertCircle className='w-5 h-5' />
@@ -59,7 +63,7 @@ export default function ResumenPage() {
         </div>
       )}
 
-      {/* ✅ Cards unificadas con ingresos, gastos y ahorro */}
+      {/* ✅ Sección principal de tarjetas */}
       {!loading &&
         !loadingAssets &&
         !loadingLiabilities &&
@@ -68,88 +72,163 @@ export default function ResumenPage() {
         assets &&
         liabilities &&
         netWorth && (
+          <div className='space-y-4'>
+            <h2 className='text-lg font-semibold mt-4'>
+              Resumen General del Período
+            </h2>
+            <p className='text-sm text-muted-foreground'>
+              Esta sección muestra{' '}
+              <strong>ingresos, gastos, ahorro (balance) y patrimonio</strong>{' '}
+              en el período seleccionado. Los{' '}
+              <strong>
+                gastos incluyen compras con tarjeta y gastos generales
+              </strong>{' '}
+              (no pagos de deuda ni transferencias). El ahorro aquí refleja la
+              diferencia entre ingresos y gastos. Para ver el ahorro real
+              considerando movimientos de caja, consulta la sección de{' '}
+              <strong>Flujo de Caja</strong>.
+            </p>
+
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+              {[
+                {
+                  label: 'Ingresos en el período',
+                  color: 'text-green-600',
+                  getValue: (currency: Currency) =>
+                    formatCurrency(
+                      summary[currency]?.total_income || 0,
+                      currency,
+                    ),
+                },
+                {
+                  label: 'Gastos en el período',
+                  color: 'text-red-600',
+                  getValue: (currency: Currency) =>
+                    formatCurrency(
+                      summary[currency]?.total_expense || 0,
+                      currency,
+                    ),
+                },
+                {
+                  label: 'Ahorro (Balance) en el período',
+                  color: 'text-green-600',
+                  getValue: (currency: Currency) => {
+                    const s = summary[currency];
+                    return formatCurrency(s?.balance || 0, currency);
+                  },
+                },
+                {
+                  label: '% de Ahorro',
+                  color: 'text-yellow-600',
+                  getValue: (currency: Currency) => {
+                    const s = summary[currency];
+                    if (s && s.total_income > 0) {
+                      const percentage = (s.balance / s.total_income) * 100;
+                      return `${percentage.toFixed(2)}%`;
+                    }
+                    return '0%';
+                  },
+                },
+                {
+                  label: 'Total en Cuentas',
+                  color: 'text-blue-600',
+                  getValue: (currency: Currency) =>
+                    formatCurrency(
+                      assets.total_assets[currency] || 0,
+                      currency,
+                    ),
+                },
+                {
+                  label: 'Deudas Activas',
+                  color: 'text-red-600',
+                  getValue: (currency: Currency) =>
+                    formatCurrency(
+                      liabilities.total_liabilities[currency] || 0,
+                      currency,
+                    ),
+                },
+                {
+                  label: 'Patrimonio Neto',
+                  color: 'text-green-600',
+                  getValue: (currency: Currency) =>
+                    formatCurrency(netWorth[currency].net_worth || 0, currency),
+                },
+                {
+                  label: 'Ratio Deuda/Activo',
+                  color: 'text-yellow-600',
+                  getValue: (currency: Currency) =>
+                    `${netWorth[currency].debt_ratio?.toFixed(2) || '0'}%`,
+                },
+              ].map(({ label, color, getValue }) => (
+                <Card key={label}>
+                  <CardContent className='p-4 space-y-1'>
+                    <p className='text-sm text-muted-foreground'>{label}</p>
+                    <div className='space-y-0.5'>
+                      {currencies.map((currency) => (
+                        <p
+                          key={currency}
+                          className={cn('text-base font-semibold', color)}
+                        >
+                          {currency}: {getValue(currency)}
+                        </p>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+      {/* ✅ Nueva sección de Flujo de Caja */}
+      {!loadingCashFlow && cashFlow && (
+        <div className='space-y-4'>
+          <h2 className='text-lg font-semibold mt-8'>
+            Flujo de Caja del Período
+          </h2>
+          <p className='text-sm text-muted-foreground'>
+            El flujo de caja muestra el movimiento real de dinero en tus cuentas
+            durante este período. No incluye compras con tarjeta hasta que las
+            pagues, ayudándote a conocer tu liquidez real.
+          </p>
+
           <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
             {[
               {
-                label: 'Ingresos en el período',
+                label: 'Ingresos de Caja',
                 color: 'text-green-600',
                 getValue: (currency: Currency) =>
                   formatCurrency(
-                    summary[currency]?.total_income || 0,
+                    cashFlow[currency]?.total_income || 0,
                     currency,
                   ),
               },
               {
-                label: 'Gastos en el período',
+                label: 'Egresos de Caja',
                 color: 'text-red-600',
                 getValue: (currency: Currency) =>
                   formatCurrency(
-                    summary[currency]?.total_expense || 0,
+                    cashFlow[currency]?.total_expense || 0,
                     currency,
                   ),
               },
               {
-                label: 'Ahorro en el período',
-                color: 'text-green-600',
-                getValue: (currency: Currency) => {
-                  const s = summary[currency];
-                  const balance = s ? s.balance : 0;
-                  return formatCurrency(balance, currency);
-                },
-              },
-              {
-                label: '% de Ahorro',
-                color: 'text-green-600',
-                getValue: (currency: Currency) => {
-                  const s = summary[currency];
-                  if (s && s.total_income > 0) {
-                    const percentage = (s.balance / s.total_income) * 100;
-                    return `${percentage.toFixed(2)}%`;
-                  }
-                  return '0%';
-                },
-              },
-              {
-                label: 'Cuentas de Ahorro',
-                color: 'text-blue-600',
-                getValue: (currency: Currency) =>
-                  formatCurrency(assets.total_savings[currency] || 0, currency),
-              },
-              {
-                label: 'Inversiones',
-                color: 'text-blue-600',
-                getValue: (currency: Currency) =>
-                  formatCurrency(
-                    assets.total_investments[currency] || 0,
-                    currency,
-                  ),
-              },
-              {
-                label: 'Total Activos',
-                color: 'text-blue-600',
-                getValue: (currency: Currency) =>
-                  formatCurrency(assets.total_assets[currency] || 0, currency),
-              },
-              {
-                label: 'Deudas Activas',
-                color: 'text-red-600',
-                getValue: (currency: Currency) =>
-                  formatCurrency(
-                    liabilities.total_liabilities[currency] || 0,
-                    currency,
-                  ),
-              },
-              {
-                label: 'Patrimonio Neto',
-                color: 'text-green-600',
-                getValue: (currency: Currency) =>
-                  formatCurrency(netWorth[currency].net_worth || 0, currency),
-              },
-              {
-                label: 'Ratio Deuda/Activo',
+                label: 'Pagos de Deudas',
                 color: 'text-yellow-600',
                 getValue: (currency: Currency) =>
-                  `${netWorth[currency].debt_ratio?.toFixed(2) || '0'}%`,
+                  formatCurrency(
+                    cashFlow[currency]?.total_debt_payments || 0,
+                    currency,
+                  ),
+              },
+              {
+                label: 'Flujo Neto de Caja',
+                color: 'text-green-600',
+                getValue: (currency: Currency) =>
+                  formatCurrency(
+                    cashFlow[currency]?.net_cash_flow || 0,
+                    currency,
+                  ),
               },
             ].map(({ label, color, getValue }) => (
               <Card key={label}>
@@ -169,7 +248,8 @@ export default function ResumenPage() {
               </Card>
             ))}
           </div>
-        )}
+        </div>
+      )}
 
       {/* ✅ Gráficas separadas por moneda */}
       {summary &&
