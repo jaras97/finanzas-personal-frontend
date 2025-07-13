@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import api from '@/lib/api';
-import { SavingAccount } from '@/types';
+import { Account, SavingAccount } from '@/types';
 import { formatCurrency } from '@/lib/format';
 import axios from 'axios';
 
@@ -29,14 +29,30 @@ export default function EditSavingAccountModal({
   onUpdated,
 }: Props) {
   const [name, setName] = useState(account.name);
-  const [type, setType] = useState(account.type || '');
+  const [type, setType] = useState<Account>(account.type || '');
+  const [hasTransactions, setHasTransactions] = useState(false);
+  const [loading, setLoading] = useState(false);
 
+  // Cargar estado inicial
   useEffect(() => {
-    if (account) {
+    if (account?.id) {
       setName(account.name);
       setType(account.type || '');
+      checkIfHasTransactions(account.id);
     }
   }, [account]);
+
+  const checkIfHasTransactions = async (accountId: number) => {
+    try {
+      const response = await api.get(
+        `/saving-accounts/${accountId}/has-transactions`,
+      );
+      setHasTransactions(response.data.hasTransactions);
+    } catch (error) {
+      console.error('Error verificando transacciones:', error);
+      toast.error('Error al verificar si la cuenta tiene transacciones.');
+    }
+  };
 
   const handleUpdate = async () => {
     if (!name) {
@@ -44,6 +60,7 @@ export default function EditSavingAccountModal({
       return;
     }
 
+    setLoading(true);
     try {
       await api.put(`/saving-accounts/${account.id}`, {
         name,
@@ -60,8 +77,16 @@ export default function EditSavingAccountModal({
       } else {
         toast.error('Error inesperado al actualizar cuenta');
       }
+    } finally {
+      setLoading(false);
     }
   };
+
+  const accountTypeOptions: { value: Account; label: string }[] = [
+    { value: 'cash', label: 'Efectivo' },
+    { value: 'bank', label: 'Bancaria' },
+    { value: 'investment', label: 'Inversión' },
+  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -85,9 +110,28 @@ export default function EditSavingAccountModal({
             depósitos o retiros desde la cuenta.
           </p>
 
-          {/* 🚩 Si deseas habilitar edición de tipo, agrega un Select aquí */}
-          <Button onClick={handleUpdate} className='w-full'>
-            Actualizar cuenta
+          {!hasTransactions ? (
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value as Account)}
+              className='w-full border rounded-md px-3 py-2 text-sm'
+            >
+              <option value=''>Selecciona un tipo</option>
+              {accountTypeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <p className='text-sm text-muted-foreground'>
+              El tipo de cuenta no puede modificarse porque tiene transacciones
+              asociadas.
+            </p>
+          )}
+
+          <Button onClick={handleUpdate} className='w-full' disabled={loading}>
+            {loading ? 'Actualizando...' : 'Actualizar cuenta'}
           </Button>
         </div>
       </DialogContent>

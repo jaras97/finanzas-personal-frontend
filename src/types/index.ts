@@ -37,13 +37,15 @@ export type Transaction = {
 };
 
 export type currencyType = "COP" | "USD" | "EUR";
+
+export type Account ="cash" | "bank" | "investment"
 // 🏦 Saving Account
 export type SavingAccount = {
   id: number;
   name: string;
   balance: number;
   currency: currencyType;
-  type: "cash" | "bank" | "investment";
+  type: Account;
   status: "active" | "closed";
   closed_at: string | null; // ISO
 };

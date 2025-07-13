@@ -42,7 +42,7 @@ export default function ResumenPage() {
   );
 
   return (
-    <div className='p-4 max-w-5xl mx-auto space-y-6'>
+    <div className='space-y-4'>
       <h1 className='text-2xl font-semibold'>Resumen Financiero</h1>
 
       <DateRangePicker
