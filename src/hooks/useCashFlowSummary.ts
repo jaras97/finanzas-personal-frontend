@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import axios from "axios";
+import { toLocalDateString } from "@/lib/date";
 
 interface CashFlowSummary {
   total_income: number;
@@ -22,10 +23,10 @@ export function useCashFlowSummary(startDate?: Date, endDate?: Date) {
 
         const params = new URLSearchParams();
         if (startDate) {
-          params.append("start_date", startDate.toISOString().split("T")[0]);
+          params.append("start_date", toLocalDateString(startDate));
         }
         if (endDate) {
-          params.append("end_date", endDate.toISOString().split("T")[0]);
+          params.append("end_date", toLocalDateString(endDate));
         }
 
         const response = await api.get(`/cash-flow?${params.toString()}`);

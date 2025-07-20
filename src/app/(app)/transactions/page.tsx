@@ -8,12 +8,12 @@ import TransactionFilters, {
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { format } from 'date-fns';
 import NewTransactionModal from '@/components/forms/NewTransactionModal';
 import EditTransactionModal from '@/components/forms/EditTransactionModal';
 import { TransactionWithCategoryRead } from '@/types';
 import { reverseTransaction } from '@/utils/reverseTransaction';
 import { Pagination } from '@/components/ui/pagination';
+import DateTimeDisplay from '@/components/ui/DateTimeDisplay';
 
 export default function TransactionsPage() {
   const [filters, setFilters] = useState<Filters>({});
@@ -103,7 +103,7 @@ export default function TransactionsPage() {
                       {tx.description}
                     </p>
                     <p className='text-sm text-muted-foreground'>
-                      {format(new Date(tx.date), 'dd MMM yyyy')}
+                      <DateTimeDisplay isoDate={tx.date} />
                     </p>
 
                     <div className='flex flex-wrap gap-1'>

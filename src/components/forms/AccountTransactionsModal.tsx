@@ -5,8 +5,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useAccountTransactions } from '@/hooks/useAccountTransactions';
-import { format } from 'date-fns';
 import { formatCurrency } from '@/lib/format';
+import DateTimeDisplay from '../ui/DateTimeDisplay';
 
 interface Props {
   accountId: number;
@@ -45,7 +45,7 @@ export default function AccountTransactionsModal({
               >
                 <p className='font-medium'>{tx.description}</p>
                 <p className='text-sm text-muted-foreground'>
-                  {format(new Date(tx.date), 'dd MMM yyyy')} :{' '}
+                  <DateTimeDisplay isoDate={tx.date} />
                   {tx.type === 'income' ? '+' : '-'} {formatCurrency(tx.amount)}{' '}
                   {tx.saving_account?.currency}
                 </p>

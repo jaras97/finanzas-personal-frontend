@@ -8,8 +8,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Debt, DebtTransaction } from '@/types';
-import { format } from 'date-fns';
 import api from '@/lib/api';
+import DateTimeDisplay from '../ui/DateTimeDisplay';
 
 interface Props {
   open: boolean;
@@ -66,7 +66,7 @@ export default function DebtTransactionsModal({
                 </p>
                 <p className='text-sm text-muted-foreground'>
                   {tx.type === 'payment' ? 'Pago' : 'Cargo'} |{' '}
-                  {format(new Date(tx.date), 'dd MMM yyyy')} |{' '}
+                  <DateTimeDisplay isoDate={tx.date} /> |{'   '}
                   {tx.amount.toLocaleString()} {debt.currency}
                 </p>
               </div>

@@ -5,13 +5,14 @@ import api from "@/lib/api";
 import { TransactionWithCategoryRead } from "@/types";
 import { toast } from "sonner";
 import axios from "axios";
+import { DateTime } from "luxon";
 
 interface UseTransactionsOptions {
   startDate?: string;
   endDate?: string;
   categoryId?: number;
   type?: "income" | "expense";
-  source?: "all" | "credit_card" | "account"; // ✅ nuevo
+  source?: "all" | "credit_card" | "account";
 }
 
 type TransactionQueryParams = {
@@ -20,7 +21,7 @@ type TransactionQueryParams = {
   endDate?: string;
   categoryId?: number;
   type?: "income" | "expense";
-  source?: string; // o 'source?: "all" | "credit_card" | "saving_account"' si deseas precisión
+  source?: string;
 };
 
 export const useTransactions = (options?: UseTransactionsOptions, page = 1) => {
@@ -31,14 +32,29 @@ export const useTransactions = (options?: UseTransactionsOptions, page = 1) => {
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
-      // Prepara los parámetros de forma limpia
       const params: TransactionQueryParams = { page };
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-      if (options?.startDate) params.startDate = options.startDate;
-      if (options?.endDate) params.endDate = options.endDate;
+
+      if (options?.startDate) {
+        const start = DateTime.fromISO(options.startDate, { zone: timeZone })
+          .startOf("day")
+          .toUTC()
+          .toISO();
+        params.startDate = start ?? undefined;
+      }
+
+      if (options?.endDate) {
+        const end = DateTime.fromISO(options.endDate, { zone: timeZone })
+          .endOf("day")
+          .toUTC()
+          .toISO();
+        params.endDate = end ?? undefined;
+      }
+
       if (options?.categoryId) params.categoryId = options.categoryId;
       if (options?.type) params.type = options.type;
-      if (options?.source && options.source !== "all") params.source = options.source; 
+      if (options?.source && options.source !== "all") params.source = options.source;
 
       const { data } = await api.get("/transactions/with-category", { params });
       setTransactions(data.items);

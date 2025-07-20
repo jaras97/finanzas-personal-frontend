@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { SummaryPieChart } from '@/components/chart/SummaryPieChart';
 import { SummaryLineChart } from '@/components/chart/SummaryLineChart';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { formatDateInUserTimeZone } from '@/lib/formatDate';
 
 const currencies = ['COP', 'USD'] as const;
 type Currency = (typeof currencies)[number];
@@ -261,7 +262,7 @@ export default function ResumenPage() {
 
             <SummaryLineChart
               data={(summary[currency]?.daily_evolution || []).map((item) => ({
-                date: item.date,
+                date: formatDateInUserTimeZone(item.date, 'dd/MM'),
                 income: item.total_income,
                 expense: item.total_expense,
               }))}

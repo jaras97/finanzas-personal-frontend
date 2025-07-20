@@ -1,4 +1,5 @@
 import api from "@/lib/api";
+import { toLocalDateString } from "@/lib/date";
 import axios from "axios";
 import { useState, useEffect } from "react";
 import { DateRange } from "react-day-picker";
@@ -53,10 +54,10 @@ export function useSummary(filters: {
         setLoading(true);
         const params = new URLSearchParams();
         if (filters.dateRange.from) {
-          params.append("start_date", filters.dateRange.from.toISOString().split("T")[0]);
+          params.append("start_date", toLocalDateString(filters.dateRange.from));
         }
         if (filters.dateRange.to) {
-          params.append("end_date", filters.dateRange.to.toISOString().split("T")[0]);
+          params.append("end_date", toLocalDateString(filters.dateRange.to));
         }
         if (filters.type && filters.type !== "all") {
           params.append("type", filters.type);
