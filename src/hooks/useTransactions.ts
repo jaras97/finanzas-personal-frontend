@@ -5,7 +5,7 @@ import api from "@/lib/api";
 import { TransactionWithCategoryRead } from "@/types";
 import { toast } from "sonner";
 import axios from "axios";
-import { DateTime } from "luxon";
+import { toUtcDayBoundsFromISOStrings } from "@/lib/dateParams";
 
 interface UseTransactionsOptions {
   startDate?: string;
@@ -33,24 +33,13 @@ export const useTransactions = (options?: UseTransactionsOptions, page = 1) => {
     setLoading(true);
     try {
       const params: TransactionQueryParams = { page };
-      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-
-      if (options?.startDate) {
-        const start = DateTime.fromISO(options.startDate, { zone: timeZone })
-          .startOf("day")
-          .toUTC()
-          .toISO();
-        params.startDate = start ?? undefined;
-      }
-
-      if (options?.endDate) {
-        const end = DateTime.fromISO(options.endDate, { zone: timeZone })
-          .endOf("day")
-          .toUTC()
-          .toISO();
-        params.endDate = end ?? undefined;
-      }
+      const { start, end } = toUtcDayBoundsFromISOStrings(
+        options?.startDate,
+        options?.endDate
+      );
+      if (start) params.startDate = start;
+      if (end) params.endDate = end;
+      
 
       if (options?.categoryId) params.categoryId = options.categoryId;
       if (options?.type) params.type = options.type;

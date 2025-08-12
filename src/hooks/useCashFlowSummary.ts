@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import axios from "axios";
-import { toLocalDateString } from "@/lib/date";
+import { buildDateParams } from "@/lib/dateParams";
+import { extractErrorMessage } from "@/lib/extractErrorMessage";
 
 interface CashFlowSummary {
   total_income: number;
@@ -21,22 +21,12 @@ export function useCashFlowSummary(startDate?: Date, endDate?: Date) {
         setLoading(true);
         setError(null);
 
-        const params = new URLSearchParams();
-        if (startDate) {
-          params.append("start_date", toLocalDateString(startDate));
-        }
-        if (endDate) {
-          params.append("end_date", toLocalDateString(endDate));
-        }
+        const params = buildDateParams(startDate, endDate);
 
         const response = await api.get(`/cash-flow?${params.toString()}`);
         setData(response.data);
       } catch (err) {
-        if (axios.isAxiosError(err)) {
-          setError(err?.response?.data?.detail || "Error al cargar flujo de caja");
-        } else {
-          setError("Error inesperado al cargar flujo de caja");
-        }
+        setError(extractErrorMessage(err));
       } finally {
         setLoading(false);
       }
