@@ -8,13 +8,7 @@ import { toast } from 'sonner';
 import api from '@/lib/api';
 import CategoryModal from '@/components/forms/CategoryModal';
 import axios from 'axios';
-
-type Category = {
-  id: number;
-  name: string;
-  type: 'income' | 'expense' | 'both';
-  is_active: boolean;
-};
+import { Category } from '@/types';
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -111,6 +105,11 @@ export default function CategoriesPage() {
                   >
                     {cat.is_active ? 'Activa' : 'Inactiva'}
                   </Badge>
+                  {cat.is_system && (
+                    <Badge variant='secondary' className='w-fit'>
+                      Sistema
+                    </Badge>
+                  )}
                 </div>
               </div>
 
@@ -120,14 +119,22 @@ export default function CategoriesPage() {
                     <Button
                       size='sm'
                       variant='outline'
-                      onClick={() => setEditCategory(cat)}
+                      disabled={processingId === cat.id || cat.is_system}
+                      onClick={() => {
+                        if (!cat.is_system) setEditCategory(cat);
+                      }}
+                      title={
+                        cat.is_system
+                          ? 'Categoría del sistema: No puedes editarla'
+                          : 'Editar categoría'
+                      }
                     >
                       Editar
                     </Button>
                     <Button
                       size='sm'
                       variant='destructive'
-                      disabled={processingId === cat.id}
+                      disabled={processingId === cat.id || cat.is_system}
                       onClick={() => handleDeactivate(cat)}
                     >
                       {processingId === cat.id ? 'Procesando...' : 'Desactivar'}
@@ -137,8 +144,13 @@ export default function CategoriesPage() {
                   <Button
                     size='sm'
                     variant='secondary'
-                    disabled={processingId === cat.id}
+                    disabled={processingId === cat.id || cat.is_system}
                     onClick={() => handleReactivate(cat)}
+                    title={
+                      cat.is_system
+                        ? 'No puedes desactivar una categoría del sistema.'
+                        : 'Desactivar categoría'
+                    }
                   >
                     {processingId === cat.id ? 'Procesando...' : 'Reactivar'}
                   </Button>

@@ -15,7 +15,10 @@ export type LoginRequest = {
 export type Category = {
   id: number;
   name: string;
-  type: "income" | "expense" | "both";
+  type: 'income' | 'expense' | 'both';
+  is_active: boolean;
+  is_system: boolean;
+  system_key?: string | null;
 };
 
 // 🧾 Transaction
@@ -91,6 +94,7 @@ export interface TransactionWithCategoryRead {
   debt_name?: string | null;
   debt?: Debt | null;
   source_type?: string | null; 
+  reversal_note?: string | null;
 }
 
 export type ApiError = {

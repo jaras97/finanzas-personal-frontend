@@ -29,14 +29,9 @@ import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { Category } from '@/types';
 
-type Category = {
-  id: number;
-  name: string;
-  type: 'income' | 'expense' | 'both';
-};
-
-type Account = { id: string; name: string }; // id puede ser "debt-3" para tarjetas
+type Account = { id: string; name: string };
 
 interface Props {
   onCreated: () => void;
@@ -112,8 +107,14 @@ export default function NewTransactionModal({ onCreated }: Props) {
         return;
       }
       try {
-        const { data } = await api.get('/categories', { params: { type } });
-        setCategories(data);
+        const { data } = await api.get('/categories', {
+          params: { type, status: 'active' },
+        });
+        const userCategories = data.filter((c: Category) => !c.is_system);
+        setCategories(userCategories);
+        if (userCategories.length === 0) {
+          setCategoryId('');
+        }
       } catch {
         toast.error('Error al cargar categorías');
       }

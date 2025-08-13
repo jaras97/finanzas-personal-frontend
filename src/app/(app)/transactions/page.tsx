@@ -14,6 +14,11 @@ import { TransactionWithCategoryRead } from '@/types';
 import { reverseTransaction } from '@/utils/reverseTransaction';
 import { Pagination } from '@/components/ui/pagination';
 import DateTimeDisplay from '@/components/ui/DateTimeDisplay';
+import ReverseTransactionDialog from '@/components/forms/ReverseTransactionDialog';
+import { toast } from 'sonner';
+import { extractErrorMessage } from '@/lib/extractErrorMessage';
+import ReversalNoteDialog from '@/components/forms/ReversalNoteDialog';
+import { StickyNote } from 'lucide-react';
 
 export default function TransactionsPage() {
   const [filters, setFilters] = useState<Filters>({});
@@ -23,6 +28,15 @@ export default function TransactionsPage() {
     page,
   );
   const [editTx, setEditTx] = useState<TransactionWithCategoryRead | null>(
+    null,
+  );
+
+  const [reverseOpen, setReverseOpen] = useState(false);
+  const [txToReverse, setTxToReverse] =
+    useState<TransactionWithCategoryRead | null>(null);
+
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteTx, setNoteTx] = useState<TransactionWithCategoryRead | null>(
     null,
   );
 
@@ -85,6 +99,10 @@ export default function TransactionsPage() {
                 !tx.reversed_transaction_id &&
                 tx.type !== 'transfer' &&
                 !isCreditCardPurchase;
+
+              const showNoteButton =
+                tx.is_cancelled &&
+                !!(tx.reversal_note && tx.reversal_note.trim());
 
               return (
                 <Card
@@ -185,10 +203,27 @@ export default function TransactionsPage() {
                       >
                         Editar
                       </Button> */}
+                      {showNoteButton && (
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          onClick={() => {
+                            setNoteTx(tx);
+                            setNoteOpen(true);
+                          }}
+                          title='Ver nota de reversa'
+                        >
+                          <StickyNote className='w-4 h-4 mr-1' />
+                          Ver nota
+                        </Button>
+                      )}
                       <Button
                         size='sm'
                         variant='destructive'
-                        onClick={() => reverseTransaction(tx.id, refresh)}
+                        onClick={() => {
+                          setTxToReverse(tx);
+                          setReverseOpen(true);
+                        }}
                         disabled={!isReversible}
                         title={
                           !isReversible
@@ -229,6 +264,35 @@ export default function TransactionsPage() {
           onUpdated={refresh}
         />
       )}
+
+      <ReverseTransactionDialog
+        open={reverseOpen}
+        onOpenChange={(v) => {
+          if (!v) setTxToReverse(null);
+          setReverseOpen(v);
+        }}
+        description={txToReverse?.description}
+        onConfirm={async (note) => {
+          if (!txToReverse) return;
+          try {
+            await reverseTransaction(txToReverse.id, note);
+            toast.success('Transacción reversada');
+            setTxToReverse(null);
+            refresh();
+          } catch (err) {
+            toast.error(extractErrorMessage(err));
+          }
+        }}
+      />
+
+      <ReversalNoteDialog
+        open={noteOpen}
+        onOpenChange={(v) => {
+          if (!v) setNoteTx(null);
+          setNoteOpen(v);
+        }}
+        tx={noteTx}
+      />
     </div>
   );
 }

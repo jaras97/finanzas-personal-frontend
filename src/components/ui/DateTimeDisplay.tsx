@@ -1,4 +1,3 @@
-// components/DateTimeDisplay.tsx
 'use client';
 
 import { DateTime } from 'luxon';

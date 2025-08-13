@@ -13,6 +13,7 @@ interface UseTransactionsOptions {
   categoryId?: number;
   type?: "income" | "expense";
   source?: "all" | "credit_card" | "account";
+  
 }
 
 type TransactionQueryParams = {
@@ -46,6 +47,7 @@ export const useTransactions = (options?: UseTransactionsOptions, page = 1) => {
       if (options?.source && options.source !== "all") params.source = options.source;
 
       const { data } = await api.get("/transactions/with-category", { params });
+      console.log('data', data);
       setTransactions(data.items);
       setTotalPages(data.totalPages);
     } catch (error) {
