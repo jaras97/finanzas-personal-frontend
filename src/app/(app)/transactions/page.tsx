@@ -87,18 +87,16 @@ export default function TransactionsPage() {
               const isCreditCardPurchase =
                 tx.source_type === 'credit_card_purchase';
 
-              // const isEditable =
-              //   !tx.is_cancelled &&
-              //   !tx.reversed_transaction_id &&
-              //   !isCreditCardPurchase &&
-              //   !tx.source_type &&
-              //   tx.type !== 'transfer';
+              const isEditable =
+                !tx.is_cancelled &&
+                !tx.reversed_transaction_id &&
+                !isCreditCardPurchase &&
+                !tx.source_type;
 
               const isReversible =
                 !tx.is_cancelled &&
                 !tx.reversed_transaction_id &&
-                tx.type !== 'transfer' &&
-                !isCreditCardPurchase;
+                tx.type !== 'transfer';
 
               const showNoteButton =
                 tx.is_cancelled &&
@@ -190,19 +188,16 @@ export default function TransactionsPage() {
                     </p>
 
                     <div className='flex gap-2 justify-end flex-wrap'>
-                      {/* <Button
-                        size='sm'
-                        variant='outline'
-                        onClick={() => setEditTx(tx)}
-                        disabled={!isEditable}
-                        title={
-                          !isEditable
-                            ? 'No se puede editar transacciones reversadas, de reversa o compras con tarjeta'
-                            : 'Editar transacción'
-                        }
-                      >
-                        Editar
-                      </Button> */}
+                      {isEditable && (
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          onClick={() => setEditTx(tx)}
+                          title='Editar descripción y categoría'
+                        >
+                          Editar
+                        </Button>
+                      )}
                       {showNoteButton && (
                         <Button
                           size='sm'

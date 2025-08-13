@@ -35,6 +35,9 @@ export function useSummary(filters: {
           categoryId: typeof filters.categoryId === "number" ? filters.categoryId : undefined,
         });
 
+        params.set("tz", Intl.DateTimeFormat().resolvedOptions().timeZone);
+
+       
         const res = await api.get(`/summary?${params.toString()}`);
         setData(res.data);
       } catch (err) {
