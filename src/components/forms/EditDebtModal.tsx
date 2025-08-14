@@ -21,6 +21,8 @@ import api from '@/lib/api';
 import { Debt, currencyType } from '@/types';
 import axios from 'axios';
 import { NumericFormat } from 'react-number-format';
+import InfoHint from '@/components/ui/info-hint';
+import { cn } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -65,13 +67,15 @@ export default function EditDebtModal({
   };
 
   const handleUpdate = async () => {
+    if (saving) return;
+
     const cleanedName = name.trim();
     if (!cleanedName) {
       toast.error('El nombre es obligatorio');
       return;
     }
 
-    // Payload completo (backend espera DebtCreate); si hay movimientos, no cambiamos monto/moneda
+    // Payload (si hay movimientos, bloqueamos monto/moneda)
     const payload = {
       name: cleanedName,
       total_amount: hasTransactions
@@ -111,119 +115,162 @@ export default function EditDebtModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
-      <DialogContent className='max-w-sm bg-card text-foreground'>
-        <DialogHeader>
-          <DialogTitle>Editar Deuda</DialogTitle>
-        </DialogHeader>
+      <DialogContent
+        className={cn('w-[min(100vw-1rem,520px)] p-0 bg-card text-foreground')}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => saving && e.preventDefault()}
+        onEscapeKeyDown={(e) => saving && e.preventDefault()}
+      >
+        <div
+          className={cn(
+            'max-h-[85dvh] sm:max-h-[80vh]',
+            'overflow-y-auto overscroll-contain',
+            'px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
+          )}
+          aria-busy={saving}
+        >
+          <DialogHeader>
+            <DialogTitle>Editar Deuda</DialogTitle>
+          </DialogHeader>
 
-        <div className='space-y-4'>
-          {/* Nombre */}
-          <div className='space-y-1'>
-            <label htmlFor={idName} className='text-sm font-medium'>
-              Nombre
-            </label>
-            <Input
-              id={idName}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+          <div className='space-y-4 mt-2'>
+            {/* Nombre */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idName} className='text-sm font-medium'>
+                  Nombre
+                </label>
+                <InfoHint side='top'>
+                  Ej: “Préstamo carro” o “Visa Banco X”.
+                </InfoHint>
+              </div>
+              <Input
+                id={idName}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={saving}
+              />
+            </div>
+
+            {/* Monto total */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idAmount} className='text-sm font-medium'>
+                  Monto total
+                </label>
+                <InfoHint side='top'>
+                  Saldo actual de la deuda. Si ya existen movimientos, no puede
+                  modificarse.
+                </InfoHint>
+              </div>
+
+              <NumericFormat
+                id={idAmount}
+                value={totalAmount}
+                onValueChange={({ value }) => setTotalAmount(value)}
+                thousandSeparator='.'
+                decimalSeparator=','
+                allowNegative={false}
+                decimalScale={2}
+                inputMode='decimal'
+                customInput={Input}
+                disabled={saving || hasTransactions}
+              />
+              {hasTransactions && (
+                <p className='text-xs text-muted-foreground'>
+                  No puedes editar el monto porque esta deuda tiene movimientos.
+                </p>
+              )}
+            </div>
+
+            {/* Tasa de interés */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idRate} className='text-sm font-medium'>
+                  Tasa de interés (%)
+                </label>
+                <InfoHint side='top'>
+                  Campo <b>opcional</b> e <b>informativo</b>. No calcula
+                  intereses automáticamente.
+                </InfoHint>
+              </div>
+              <NumericFormat
+                id={idRate}
+                value={interestRate}
+                onValueChange={({ value }) => setInterestRate(value)}
+                decimalSeparator=','
+                allowNegative={false}
+                decimalScale={2}
+                inputMode='decimal'
+                customInput={Input}
+                disabled={saving}
+              />
+            </div>
+
+            {/* Fecha de vencimiento */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idDue} className='text-sm font-medium'>
+                  Fecha de vencimiento
+                </label>
+                <InfoHint side='top'>Opcional. Solo referencia.</InfoHint>
+              </div>
+              <Input
+                id={idDue}
+                type='date'
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                disabled={saving}
+              />
+            </div>
+
+            {/* Moneda */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label className='text-sm font-medium' htmlFor={idCurrency}>
+                  Moneda
+                </label>
+                <InfoHint side='top'>
+                  Afecta con qué cuentas puedes pagar esta deuda. Si hay
+                  movimientos, no puede cambiarse.
+                </InfoHint>
+              </div>
+              <Select
+                value={currency}
+                onValueChange={(v) => setCurrency(v as currencyType)}
+                disabled={saving || hasTransactions}
+              >
+                <SelectTrigger id={idCurrency}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='COP'>COP — Peso Colombiano</SelectItem>
+                  <SelectItem value='USD'>USD — Dólar</SelectItem>
+                  <SelectItem value='EUR'>EUR — Euro</SelectItem>
+                </SelectContent>
+              </Select>
+              {hasTransactions ? (
+                <p className='text-xs text-muted-foreground'>
+                  No puedes cambiar la moneda porque esta deuda tiene
+                  movimientos.
+                </p>
+              ) : (
+                <p className='text-xs text-emerald-600'>
+                  Deuda prístina: puedes ajustar <b>moneda</b> y <b>monto</b>{' '}
+                  sin afectar la trazabilidad.
+                </p>
+              )}
+            </div>
+
+            <Button
+              onClick={handleUpdate}
+              className='w-full'
               disabled={saving}
-            />
-          </div>
-
-          {/* Monto total */}
-          <div className='space-y-1'>
-            <label htmlFor={idAmount} className='text-sm font-medium'>
-              Monto total
-            </label>
-
-            <NumericFormat
-              id={idAmount}
-              value={totalAmount}
-              onValueChange={({ value }) => setTotalAmount(value)} // guarda el valor crudo (sin separadores, con punto decimal)
-              thousandSeparator='.'
-              decimalSeparator=','
-              allowNegative={false}
-              decimalScale={2}
-              inputMode='decimal'
-              customInput={Input} // usa tu mismo componente Input para conservar estilos
-              disabled={saving}
-            />
-            {hasTransactions && (
-              <p className='text-xs text-muted-foreground'>
-                No puedes editar el monto porque esta deuda tiene movimientos.
-              </p>
-            )}
-          </div>
-
-          {/* Tasa de interés */}
-          <div className='space-y-1'>
-            <label htmlFor={idRate} className='text-sm font-medium'>
-              Tasa de interés (%){' '}
-              <span className='text-muted-foreground font-normal'>
-                (opcional)
-              </span>
-            </label>
-            <Input
-              id={idRate}
-              type='number'
-              inputMode='decimal'
-              value={interestRate}
-              onChange={(e) => setInterestRate(e.target.value)}
-              disabled={saving}
-            />
-          </div>
-
-          {/* Fecha de vencimiento */}
-          <div className='space-y-1'>
-            <label htmlFor={idDue} className='text-sm font-medium'>
-              Fecha de vencimiento{' '}
-              <span className='text-muted-foreground font-normal'>
-                (opcional)
-              </span>
-            </label>
-            <Input
-              id={idDue}
-              type='date'
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              disabled={saving}
-            />
-          </div>
-
-          {/* Moneda */}
-          <div className='space-y-1'>
-            <label className='text-sm font-medium' htmlFor={idCurrency}>
-              Moneda
-            </label>
-            <Select
-              value={currency}
-              onValueChange={(v) => setCurrency(v as currencyType)}
-              disabled={saving || hasTransactions}
+              aria-disabled={saving}
             >
-              <SelectTrigger id={idCurrency}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='COP'>COP - Peso Colombiano</SelectItem>
-                <SelectItem value='USD'>USD - Dólar</SelectItem>
-                <SelectItem value='EUR'>EUR - Euro</SelectItem>
-              </SelectContent>
-            </Select>
-            {hasTransactions ? (
-              <p className='text-xs text-muted-foreground'>
-                No puedes cambiar la moneda porque esta deuda tiene movimientos.
-              </p>
-            ) : (
-              <p className='text-xs text-emerald-600'>
-                Deuda prístina: puedes ajustar moneda y monto sin afectar la
-                trazabilidad.
-              </p>
-            )}
+              {saving ? 'Guardando…' : 'Actualizar Deuda'}
+            </Button>
           </div>
-
-          <Button onClick={handleUpdate} className='w-full' disabled={saving}>
-            {saving ? 'Guardando…' : 'Actualizar Deuda'}
-          </Button>
         </div>
       </DialogContent>
     </Dialog>

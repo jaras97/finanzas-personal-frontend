@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,11 +9,20 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { Account, SavingAccount } from '@/types';
 import { formatCurrency } from '@/lib/format';
 import axios from 'axios';
+import InfoHint from '@/components/ui/info-hint';
+import { cn } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -81,9 +90,11 @@ export default function EditSavingAccountModal({
     { value: 'EUR', label: 'EUR — Euro' },
   ] as const;
 
+  // alias para consistencia con otros modales
   const saving = useMemo(() => loading, [loading]);
 
   const handleUpdate = async () => {
+    if (saving) return; // evita dobles clics
     const cleaned = name.trim();
     if (!cleaned) {
       toast.error('El nombre es obligatorio');
@@ -114,6 +125,7 @@ export default function EditSavingAccountModal({
   };
 
   const handleDelete = async () => {
+    if (saving) return;
     const confirmed = window.confirm(
       'Esta acción eliminará la cuenta de forma permanente. ¿Deseas continuar?',
     );
@@ -140,129 +152,190 @@ export default function EditSavingAccountModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
-      <DialogContent className='bg-card text-foreground'>
-        <DialogHeader>
-          <DialogTitle>Editar cuenta de ahorro</DialogTitle>
-        </DialogHeader>
+      <DialogContent
+        className={cn(
+          'bg-card text-foreground',
+          'w-[min(100vw-1rem,520px)]',
+          'p-0',
+        )}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => saving && e.preventDefault()}
+        onEscapeKeyDown={(e) => saving && e.preventDefault()}
+      >
+        {/* Contenedor scrollable (mejor para móvil/teclado) */}
+        <div
+          className={cn(
+            'max-h-[85dvh] sm:max-h-[80vh]',
+            'overflow-y-auto overscroll-contain',
+            'px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
+          )}
+          aria-busy={saving}
+        >
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              Editar cuenta de ahorro
+              <InfoHint side='top'>
+                Cambia el <b>nombre</b>. El <b>tipo</b> y la <b>moneda</b> solo
+                pueden ajustarse si la cuenta está <i>prístina</i> (sin
+                movimientos) y la moneda además requiere saldo en <b>0</b>.
+              </InfoHint>
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className='space-y-4'>
-          {/* Nombre */}
-          <div className='space-y-1'>
-            <label htmlFor={idName} className='text-sm font-medium'>
-              Nombre de la cuenta
-            </label>
-            <Input
-              id={idName}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={saving}
-            />
-          </div>
-
-          {/* Saldo actual (solo lectura) */}
-          <div className='space-y-1'>
-            <label htmlFor={idBalance} className='text-sm font-medium'>
-              Saldo actual
-            </label>
-            <Input
-              id={idBalance}
-              value={`${formatCurrency(account.balance)} ${account.currency}`}
-              disabled
-            />
-            <p className='text-xs text-muted-foreground'>
-              El saldo no puede editarse manualmente. Para modificarlo, realiza{' '}
-              <b>depósitos</b> o <b>retiros</b>.
-            </p>
-          </div>
-
-          {/* Tipo de cuenta */}
-          <div className='space-y-1'>
-            <label htmlFor={idType} className='text-sm font-medium'>
-              Tipo de cuenta
-            </label>
-            {hasTransactions === null ? (
-              <p className='text-sm text-muted-foreground'>
-                Verificando movimientos…
-              </p>
-            ) : canChangeType ? (
-              <select
-                id={idType}
-                value={type}
-                onChange={(e) => setType(e.target.value as Account)}
-                className='w-full border rounded-md px-3 py-2 text-sm bg-background'
+          <div className='space-y-4'>
+            {/* Nombre */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idName} className='text-sm font-medium'>
+                  Nombre de la cuenta
+                </label>
+                <InfoHint side='top'>
+                  Cómo verás esta cuenta en listas y transferencias (ej.
+                  “Billetera”, “Ahorros Bancolombia”).
+                </InfoHint>
+              </div>
+              <Input
+                id={idName}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 disabled={saving}
-              >
-                {accountTypeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <p className='text-xs text-muted-foreground'>
-                No puedes cambiar el tipo porque la cuenta tiene movimientos.
-              </p>
-            )}
-          </div>
+              />
+            </div>
 
-          {/* Moneda */}
-          <div className='space-y-1'>
-            <label htmlFor={idCurrency} className='text-sm font-medium'>
-              Moneda
-            </label>
-            {hasTransactions === null ? (
-              <div className='h-6' />
-            ) : canChangeCurrency ? (
-              <select
-                id={idCurrency}
-                value={currency}
-                onChange={(e) =>
-                  setCurrency(e.target.value as SavingAccount['currency'])
-                }
-                className='w-full border rounded-md px-3 py-2 text-sm bg-background'
-                disabled={saving}
-              >
-                {currencyOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <p className='text-xs text-muted-foreground'>
-                La moneda solo puede cambiarse si el saldo es <b>0</b> y la
-                cuenta no tiene movimientos.
-              </p>
-            )}
-          </div>
+            {/* Saldo actual (solo lectura) */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idBalance} className='text-sm font-medium'>
+                  Saldo actual
+                </label>
+                <InfoHint side='top'>
+                  El saldo no se edita aquí. Usa <b>depósitos</b> o{' '}
+                  <b>retiros</b> para modificarlo.
+                </InfoHint>
+              </div>
+              <Input
+                id={idBalance}
+                value={`${formatCurrency(account.balance)} ${account.currency}`}
+                disabled
+              />
+            </div>
 
-          <Button
-            onClick={handleUpdate}
-            className='w-full'
-            disabled={saving || hasTransactions === null}
-          >
-            {saving ? 'Actualizando…' : 'Actualizar cuenta'}
-          </Button>
+            {/* Tipo de cuenta */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idType} className='text-sm font-medium'>
+                  Tipo de cuenta
+                </label>
+                <InfoHint side='top'>
+                  Solo afecta la <b>clasificación visual</b> e iconografía.
+                </InfoHint>
+              </div>
 
-          {/* Eliminar (solo prístina) */}
-          {canDelete && (
+              {hasTransactions === null ? (
+                <p className='text-sm text-muted-foreground'>
+                  Verificando movimientos…
+                </p>
+              ) : canChangeType ? (
+                <Select
+                  value={type}
+                  onValueChange={(v) => setType(v as Account)}
+                  disabled={saving}
+                >
+                  <SelectTrigger id={idType}>
+                    <SelectValue placeholder='Selecciona el tipo' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accountTypeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className='text-xs text-muted-foreground'>
+                  No puedes cambiar el tipo porque la cuenta tiene movimientos.
+                </p>
+              )}
+            </div>
+
+            {/* Moneda */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idCurrency} className='text-sm font-medium'>
+                  Moneda
+                </label>
+                <InfoHint side='top'>
+                  Cambia la moneda solo si la cuenta está prístina y con saldo{' '}
+                  <b>0</b>.
+                </InfoHint>
+              </div>
+
+              {hasTransactions === null ? (
+                <div className='h-6' />
+              ) : canChangeCurrency ? (
+                <Select
+                  value={currency}
+                  onValueChange={(v) =>
+                    setCurrency(v as SavingAccount['currency'])
+                  }
+                  disabled={saving}
+                >
+                  <SelectTrigger id={idCurrency}>
+                    <SelectValue placeholder='Selecciona la moneda' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currencyOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className='text-xs text-muted-foreground'>
+                  La moneda solo puede cambiarse si el saldo es <b>0</b> y la
+                  cuenta no tiene movimientos.
+                </p>
+              )}
+            </div>
+
             <Button
-              variant='destructive'
-              onClick={handleDelete}
+              onClick={handleUpdate}
               className='w-full'
-              disabled={saving}
+              disabled={saving || hasTransactions === null}
+              aria-disabled={saving || hasTransactions === null}
             >
-              Eliminar cuenta
+              {saving ? 'Actualizando…' : 'Actualizar cuenta'}
             </Button>
-          )}
 
-          {/* Hint de estado */}
-          {isPristine && (
-            <p className='text-xs text-emerald-600'>
-              Cuenta prístina: puedes cambiar el <b>tipo</b>, la <b>moneda</b> y
-              también eliminarla (incluso con saldo).
-            </p>
-          )}
+            {/* Eliminar (solo prístina) */}
+            {canDelete && (
+              <Button
+                variant='destructive'
+                onClick={handleDelete}
+                className='w-full'
+                disabled={saving}
+                aria-disabled={saving}
+              >
+                Eliminar cuenta
+              </Button>
+            )}
+
+            {/* Estado prístina */}
+            {isPristine && (
+              <div className='flex items-center gap-2'>
+                <InfoHint side='top'>
+                  Cuenta <b>prístina</b>: puedes cambiar <b>tipo</b>,{' '}
+                  <b>moneda</b> o incluso <b>eliminarla</b> (aunque tenga
+                  saldo).
+                </InfoHint>
+                <span className='text-xs text-emerald-600'>
+                  Cuenta prístina habilitada
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -22,6 +22,8 @@ import axios from 'axios';
 import { SavingAccount } from '@/types';
 import { formatCurrency } from '@/lib/format';
 import { NumericFormat } from 'react-number-format';
+import InfoHint from '@/components/ui/info-hint';
+import { cn } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -39,17 +41,17 @@ export default function TransferBetweenAccountsModal({
   const [fromAccountId, setFromAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState('');
 
-  // estados “formateados” (texto) y numéricos (para cálculos)
-  const [amount, setAmount] = useState(''); // UI
-  const [amountNum, setAmountNum] = useState<number | undefined>(undefined); // número limpio
+  // valores “formateados” (texto) y numéricos (para cálculos/envío)
+  const [amount, setAmount] = useState('');
+  const [amountNum, setAmountNum] = useState<number | undefined>(undefined);
 
   const [fee, setFee] = useState('');
   const [feeNum, setFeeNum] = useState<number | undefined>(undefined);
 
   const [description, setDescription] = useState('');
 
-  const [exchangeRate, setExchangeRate] = useState(''); // UI
-  const [rateNum, setRateNum] = useState<number | undefined>(undefined); // número limpio
+  const [exchangeRate, setExchangeRate] = useState('');
+  const [rateNum, setRateNum] = useState<number | undefined>(undefined);
 
   const [loading, setLoading] = useState(false);
   const [prefilling, setPrefilling] = useState(false);
@@ -59,7 +61,8 @@ export default function TransferBetweenAccountsModal({
     () => accounts.filter((a) => a.status === 'active'),
     [accounts],
   );
-  // Evitar misma cuenta en ambos selects
+
+  // Evitar elegir la misma cuenta en ambos selects
   const fromList = useMemo(
     () => activeAccounts.filter((a) => a.id.toString() !== toAccountId),
     [activeAccounts, toAccountId],
@@ -104,11 +107,11 @@ export default function TransferBetweenAccountsModal({
           params: { from: fromAccount.currency, to: toAccount.currency },
         });
         if (data?.rate) {
-          setExchangeRate(String(data.rate)); // UI
-          setRateNum(Number(data.rate)); // num
+          setExchangeRate(String(data.rate));
+          setRateNum(Number(data.rate));
         }
       } catch {
-        /* silencioso */
+        // silencioso: el usuario puede escribir manualmente
       } finally {
         setPrefilling(false);
       }
@@ -117,10 +120,10 @@ export default function TransferBetweenAccountsModal({
   }, [
     requiresConversion,
     fromAccount?.currency,
-    fromAccount,
-    toAccount,
     toAccount?.currency,
     exchangeRate,
+    fromAccount,
+    toAccount,
   ]);
 
   const handleRefreshRate = async () => {
@@ -145,6 +148,8 @@ export default function TransferBetweenAccountsModal({
   };
 
   const handleTransfer = async () => {
+    if (loading) return; // evita dobles envíos
+
     if (!fromAccountId || !toAccountId) {
       toast.error('Selecciona cuenta origen y destino');
       return;
@@ -227,170 +232,235 @@ export default function TransferBetweenAccountsModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !loading && onOpenChange(o)}>
-      <DialogContent className='bg-card text-foreground'>
-        <DialogHeader>
-          <DialogTitle>Transferir entre cuentas</DialogTitle>
-        </DialogHeader>
-
-        <div className='space-y-4'>
-          {/* Origen */}
-          <div className='space-y-1'>
-            <label htmlFor={idFrom} className='text-sm font-medium'>
-              Cuenta origen
-            </label>
-            <Select
-              value={fromAccountId}
-              onValueChange={setFromAccountId}
-              disabled={loading}
-            >
-              <SelectTrigger id={idFrom}>
-                <SelectValue placeholder='Selecciona la cuenta origen' />
-              </SelectTrigger>
-              <SelectContent>
-                {fromList.map((a) => (
-                  <SelectItem key={a.id} value={a.id.toString()}>
-                    ({formatCurrency(a.balance)} {a.currency}) {a.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Destino */}
-          <div className='space-y-1'>
-            <label htmlFor={idTo} className='text-sm font-medium'>
-              Cuenta destino
-            </label>
-            <Select
-              value={toAccountId}
-              onValueChange={setToAccountId}
-              disabled={loading}
-            >
-              <SelectTrigger id={idTo}>
-                <SelectValue placeholder='Selecciona la cuenta destino' />
-              </SelectTrigger>
-              <SelectContent>
-                {toList.map((a) => (
-                  <SelectItem key={a.id} value={a.id.toString()}>
-                    ({formatCurrency(a.balance)} {a.currency}) {a.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Monto */}
-          <div className='space-y-1'>
-            <label htmlFor={idAmount} className='text-sm font-medium'>
-              Monto a transferir ({fromAccount?.currency ?? 'moneda origen'})
-            </label>
-            <NumericFormat
-              id={idAmount}
-              value={amount}
-              thousandSeparator // usa "," por defecto
-              decimalSeparator='.' // punto como separador decimal (más común al teclear)
-              decimalScale={amountDecimalScale}
-              allowNegative={false}
-              inputMode='decimal'
-              customInput={Input}
-              disabled={loading}
-              onValueChange={(values) => {
-                setAmount(values.value ?? ''); // cadena numérica sin formateo
-                setAmountNum(values.floatValue); // número limpio
-              }}
-            />
-          </div>
-
-          {/* Comisión */}
-          <div className='space-y-1'>
-            <label htmlFor={idFee} className='text-sm font-medium'>
-              Comisión{' '}
-              <span className='font-normal text-muted-foreground'>
-                (opcional)
-              </span>
-            </label>
-            <NumericFormat
-              id={idFee}
-              value={fee}
-              thousandSeparator
-              decimalSeparator='.'
-              decimalScale={feeDecimalScale}
-              allowNegative={false}
-              inputMode='decimal'
-              customInput={Input}
-              disabled={loading}
-              onValueChange={(values) => {
-                setFee(values.value ?? '');
-                setFeeNum(values.floatValue);
-              }}
-            />
-          </div>
-
-          {/* Descripción */}
-          <div className='space-y-1'>
-            <label htmlFor={idDesc} className='text-sm font-medium'>
-              Descripción{' '}
-              <span className='font-normal text-muted-foreground'>
-                (opcional)
-              </span>
-            </label>
-            <Input
-              id={idDesc}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={loading}
-            />
-          </div>
-
-          {/* Tasa (solo si hay conversión) */}
-          {requiresConversion && (
-            <div className='space-y-1'>
-              <label htmlFor={idRate} className='text-sm font-medium'>
-                Tasa de conversión → {toAccount?.currency}
-              </label>
-              <div className='flex gap-2'>
-                <NumericFormat
-                  id={idRate}
-                  value={exchangeRate}
-                  thousandSeparator
-                  decimalSeparator='.'
-                  decimalScale={rateDecimalScale}
-                  allowNegative={false}
-                  inputMode='decimal'
-                  customInput={Input}
-                  disabled={loading}
-                  onValueChange={(values) => {
-                    setExchangeRate(values.value ?? '');
-                    setRateNum(values.floatValue);
-                  }}
-                />
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={handleRefreshRate}
-                  disabled={loading || prefilling || !fromAccount || !toAccount}
-                >
-                  {prefilling ? 'Cargando…' : 'Actualizar tasa'}
-                </Button>
-              </div>
-              {convertedAmount !== null && (
-                <p className='text-xs text-muted-foreground'>
-                  Se depositarán:{' '}
-                  <b>
-                    {formatCurrency(convertedAmount)} {toAccount?.currency}
-                  </b>
-                </p>
-              )}
-            </div>
+      <DialogContent
+        className={cn(
+          'bg-card text-foreground',
+          'w-[min(100vw-1rem,520px)]',
+          'p-0',
+        )}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => loading && e.preventDefault()}
+        onEscapeKeyDown={(e) => loading && e.preventDefault()}
+      >
+        {/* Contenedor scrollable para mobile/teclado */}
+        <div
+          className={cn(
+            'max-h-[85dvh] sm:max-h-[80vh]',
+            'overflow-y-auto overscroll-contain',
+            'px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
           )}
+          aria-busy={loading}
+        >
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              Transferir entre cuentas
+              <InfoHint side='top'>
+                Mueve dinero entre tus cuentas activas. Si las monedas difieren,
+                usa la tasa de conversión (unidades de <b>destino</b> por 1
+                unidad de <b>origen</b>).
+              </InfoHint>
+            </DialogTitle>
+          </DialogHeader>
 
-          <Button
-            onClick={handleTransfer}
-            className='w-full'
-            disabled={loading}
-          >
-            {loading ? 'Transfiriendo…' : 'Transferir'}
-          </Button>
+          <div className='space-y-4'>
+            {/* Origen */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idFrom} className='text-sm font-medium'>
+                  Cuenta origen
+                </label>
+                <InfoHint side='top'>
+                  Solo aparecen <b>cuentas activas</b>. No puedes elegir la
+                  misma cuenta como destino.
+                </InfoHint>
+              </div>
+              <Select
+                value={fromAccountId}
+                onValueChange={setFromAccountId}
+                disabled={loading}
+              >
+                <SelectTrigger id={idFrom}>
+                  <SelectValue placeholder='Selecciona la cuenta origen' />
+                </SelectTrigger>
+                <SelectContent>
+                  {fromList.map((a) => (
+                    <SelectItem key={a.id} value={a.id.toString()}>
+                      ({formatCurrency(a.balance)} {a.currency}) {a.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Destino */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idTo} className='text-sm font-medium'>
+                  Cuenta destino
+                </label>
+                <InfoHint side='top'>
+                  Debe ser diferente a la cuenta origen. Si la moneda es
+                  distinta, te pediremos una tasa.
+                </InfoHint>
+              </div>
+              <Select
+                value={toAccountId}
+                onValueChange={setToAccountId}
+                disabled={loading}
+              >
+                <SelectTrigger id={idTo}>
+                  <SelectValue placeholder='Selecciona la cuenta destino' />
+                </SelectTrigger>
+                <SelectContent>
+                  {toList.map((a) => (
+                    <SelectItem key={a.id} value={a.id.toString()}>
+                      ({formatCurrency(a.balance)} {a.currency}) {a.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Monto */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idAmount} className='text-sm font-medium'>
+                  Monto a transferir ({fromAccount?.currency ?? 'moneda origen'}
+                  )
+                </label>
+                <InfoHint side='top'>
+                  Usa <b>punto</b> como separador decimal. La precisión se
+                  adapta a la moneda (COP sin decimales; USD/EUR con 2).
+                </InfoHint>
+              </div>
+              <NumericFormat
+                id={idAmount}
+                value={amount}
+                thousandSeparator
+                decimalSeparator='.'
+                decimalScale={amountDecimalScale}
+                allowNegative={false}
+                inputMode='decimal'
+                customInput={Input}
+                disabled={loading}
+                onValueChange={(values) => {
+                  setAmount(values.value ?? '');
+                  setAmountNum(values.floatValue);
+                }}
+              />
+            </div>
+
+            {/* Comisión */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idFee} className='text-sm font-medium'>
+                  Comisión{' '}
+                  <span className='font-normal text-muted-foreground'>
+                    (opcional)
+                  </span>
+                </label>
+                <InfoHint side='top'>
+                  Se descuenta de la cuenta origen junto con el monto. No puede
+                  ser negativa.
+                </InfoHint>
+              </div>
+              <NumericFormat
+                id={idFee}
+                value={fee}
+                thousandSeparator
+                decimalSeparator='.'
+                decimalScale={feeDecimalScale}
+                allowNegative={false}
+                inputMode='decimal'
+                customInput={Input}
+                disabled={loading}
+                onValueChange={(values) => {
+                  setFee(values.value ?? '');
+                  setFeeNum(values.floatValue);
+                }}
+              />
+            </div>
+
+            {/* Descripción */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idDesc} className='text-sm font-medium'>
+                  Descripción{' '}
+                  <span className='font-normal text-muted-foreground'>
+                    (opcional)
+                  </span>
+                </label>
+                <InfoHint side='top'>
+                  Añade un detalle como “Traspaso ahorro → gastos”.
+                </InfoHint>
+              </div>
+              <Input
+                id={idDesc}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+
+            {/* Tasa (solo si hay conversión) */}
+            {requiresConversion && (
+              <div className='space-y-1'>
+                <div className='flex items-center gap-2'>
+                  <label htmlFor={idRate} className='text-sm font-medium'>
+                    Tasa de conversión → {toAccount?.currency}
+                  </label>
+                  <InfoHint side='top'>
+                    Define cuántas unidades de <b>{toAccount?.currency}</b> se
+                    obtienen por <b>1</b> de {fromAccount?.currency}.
+                  </InfoHint>
+                </div>
+                <div className='flex gap-2'>
+                  <NumericFormat
+                    id={idRate}
+                    value={exchangeRate}
+                    thousandSeparator
+                    decimalSeparator='.'
+                    decimalScale={rateDecimalScale}
+                    allowNegative={false}
+                    inputMode='decimal'
+                    customInput={Input}
+                    disabled={loading}
+                    onValueChange={(values) => {
+                      setExchangeRate(values.value ?? '');
+                      setRateNum(values.floatValue);
+                    }}
+                  />
+                  <Button
+                    type='button'
+                    variant='outline'
+                    onClick={handleRefreshRate}
+                    disabled={
+                      loading || prefilling || !fromAccount || !toAccount
+                    }
+                  >
+                    {prefilling ? 'Cargando…' : 'Actualizar tasa'}
+                  </Button>
+                </div>
+                {convertedAmount !== null && (
+                  <p className='text-xs text-muted-foreground'>
+                    Se depositarán:{' '}
+                    <b>
+                      {formatCurrency(convertedAmount)} {toAccount?.currency}
+                    </b>
+                  </p>
+                )}
+              </div>
+            )}
+
+            <Button
+              onClick={handleTransfer}
+              className='w-full'
+              disabled={loading}
+              aria-disabled={loading}
+            >
+              {loading ? 'Transfiriendo…' : 'Transferir'}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

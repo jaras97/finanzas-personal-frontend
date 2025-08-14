@@ -32,6 +32,7 @@ import axios from 'axios';
 import { Category } from '@/types';
 import { formatCurrency } from '@/lib/format';
 import { NumericFormat } from 'react-number-format';
+import InfoHint from '@/components/ui/info-hint';
 
 type UiAccount = { id: string; name: string };
 
@@ -168,7 +169,7 @@ export default function NewTransactionModal({ onCreated }: Props) {
     setSubmitting(true);
     try {
       if (accountId.startsWith('debt-')) {
-        const debtId = parseInt(accountId.replace('debt-', ''));
+        const debtId = parseInt(accountId.replace('debt-', ''), 10);
         await api.post(`/debts/${debtId}/purchase`, {
           amount: amountNum,
           description,
@@ -223,15 +224,8 @@ export default function NewTransactionModal({ onCreated }: Props) {
       </DialogTrigger>
 
       <DialogContent
-        className={cn(
-          // ancho
-          'w-[min(100vw-1rem,520px)]',
-          // altura adaptable a móvil/teclado + scroll interno
-          'p-0', // quitamos padding aquí; lo ponemos en el contenedor interno
-        )}
-        // Evita auto-focus (que fuerza scroll raro en mobile al abrir teclado)
+        className={cn('w-[min(100vw-1rem,520px)]', 'p-0')}
         onOpenAutoFocus={(e) => e.preventDefault()}
-        // No permitir cerrar haciendo click fuera mientras enviamos
         onPointerDownOutside={(e) => submitting && e.preventDefault()}
         onEscapeKeyDown={(e) => submitting && e.preventDefault()}
       >
@@ -253,9 +247,14 @@ export default function NewTransactionModal({ onCreated }: Props) {
           <div className='space-y-4 mt-2'>
             {/* Descripción */}
             <div className='space-y-1'>
-              <label htmlFor={idDesc} className='text-sm font-medium'>
-                Descripción
-              </label>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idDesc} className='text-sm font-medium'>
+                  Descripción
+                </label>
+                <InfoHint side='top'>
+                  Un nombre corto y claro para identificar la transacción.
+                </InfoHint>
+              </div>
               <Input
                 id={idDesc}
                 value={description}
@@ -266,9 +265,15 @@ export default function NewTransactionModal({ onCreated }: Props) {
 
             {/* Monto */}
             <div className='space-y-1'>
-              <label htmlFor={idAmt} className='text-sm font-medium'>
-                Monto
-              </label>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idAmt} className='text-sm font-medium'>
+                  Monto
+                </label>
+                <InfoHint side='top'>
+                  Usa punto como separador decimal. En COP normalmente no se
+                  usan decimales.
+                </InfoHint>
+              </div>
               <NumericFormat
                 id={idAmt}
                 value={amount}
@@ -284,17 +289,19 @@ export default function NewTransactionModal({ onCreated }: Props) {
                   setAmountNum(values.floatValue);
                 }}
               />
-              <p className='text-xs text-muted-foreground'>
-                Usa punto como separador decimal. En COP puedes omitir
-                decimales.
-              </p>
             </div>
 
             {/* Tipo */}
             <div className='space-y-1'>
-              <label htmlFor={idType} className='text-sm font-medium'>
-                Tipo de transacción
-              </label>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idType} className='text-sm font-medium'>
+                  Tipo de transacción
+                </label>
+                <InfoHint side='top'>
+                  Elige <b>Ingreso</b> o <b>Egreso</b>. Si seleccionas Egreso,
+                  podrás pagar con una tarjeta de crédito activa.
+                </InfoHint>
+              </div>
               <Select
                 value={type}
                 onValueChange={(v) => setType(v as 'income' | 'expense')}
@@ -308,17 +315,19 @@ export default function NewTransactionModal({ onCreated }: Props) {
                   <SelectItem value='expense'>Egreso</SelectItem>
                 </SelectContent>
               </Select>
-              <p className='text-xs text-muted-foreground'>
-                Si eliges <b>Egreso</b>, también podrás usar una{' '}
-                <b>tarjeta de crédito</b> activa.
-              </p>
             </div>
 
             {/* Categoría */}
             <div className='space-y-1'>
-              <label htmlFor={idCat} className='text-sm font-medium'>
-                Categoría
-              </label>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idCat} className='text-sm font-medium'>
+                  Categoría
+                </label>
+                <InfoHint side='top'>
+                  Solo se muestran categorías activas compatibles con el{' '}
+                  <b>tipo seleccionado</b>.
+                </InfoHint>
+              </div>
               <Select
                 value={categoryId}
                 onValueChange={setCategoryId}
@@ -342,18 +351,23 @@ export default function NewTransactionModal({ onCreated }: Props) {
                 </SelectContent>
               </Select>
               {!type && (
-                <p className='text-xs text-muted-foreground'>
-                  Selecciona primero el <b>tipo</b> para ver las categorías
-                  disponibles.
-                </p>
+                <div className='text-xs text-muted-foreground'>
+                  Selecciona primero el <b>tipo</b>.
+                </div>
               )}
             </div>
 
             {/* Cuenta o tarjeta */}
             <div className='space-y-1'>
-              <label htmlFor={idAcc} className='text-sm font-medium'>
-                Cuenta o tarjeta
-              </label>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idAcc} className='text-sm font-medium'>
+                  Cuenta o tarjeta
+                </label>
+                <InfoHint side='top'>
+                  Solo verás <b>cuentas activas</b>. En egresos, también
+                  aparecerán <b>tarjetas de crédito</b> activas.
+                </InfoHint>
+              </div>
               <Select
                 value={accountId}
                 onValueChange={setAccountId}
@@ -376,17 +390,19 @@ export default function NewTransactionModal({ onCreated }: Props) {
                   ))}
                 </SelectContent>
               </Select>
-              <p className='text-xs text-muted-foreground'>
-                Solo se listan <b>cuentas activas</b>. Para egresos, verás
-                también <b>tarjetas de crédito</b> activas.
-              </p>
             </div>
 
             {/* Fecha */}
             <div className='space-y-1'>
-              <label htmlFor={idDate} className='text-sm font-medium'>
-                Fecha
-              </label>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idDate} className='text-sm font-medium'>
+                  Fecha
+                </label>
+                <InfoHint side='top'>
+                  Guardamos la fecha a <b>mediodía local</b> para evitar saltos
+                  por husos horarios.
+                </InfoHint>
+              </div>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -418,10 +434,6 @@ export default function NewTransactionModal({ onCreated }: Props) {
                   />
                 </PopoverContent>
               </Popover>
-              <p className='text-xs text-muted-foreground'>
-                Guardamos la fecha a <b>mediodía local</b> para evitar cambios
-                por husos horarios.
-              </p>
             </div>
 
             <Button

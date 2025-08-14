@@ -29,6 +29,7 @@ import { DayPicker } from 'react-day-picker';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import InfoHint from '@/components/ui/info-hint';
 
 type Category = {
   id: number;
@@ -102,6 +103,7 @@ export default function EditTransactionModal({
   }, [transaction.id]);
 
   const handleSubmit = async () => {
+    if (saving) return; // guard contra doble click
     if (!description.trim() || !categoryId || !date) {
       toast.error('Completa descripción, categoría y fecha');
       return;
@@ -131,114 +133,144 @@ export default function EditTransactionModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
-      <DialogContent className='bg-card text-foreground max-w-md'>
-        <DialogHeader>
-          <DialogTitle>Editar Transacción</DialogTitle>
-        </DialogHeader>
+      <DialogContent
+        className={cn('w-[min(100vw-1rem,520px)]', 'p-0')}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => saving && e.preventDefault()}
+        onEscapeKeyDown={(e) => saving && e.preventDefault()}
+      >
+        {/* Contenedor scrollable interno para móvil */}
+        <div
+          className={cn(
+            'max-h-[85dvh] sm:max-h-[80vh]',
+            'overflow-y-auto overscroll-contain',
+            'px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
+          )}
+          aria-busy={saving}
+        >
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              Editar Transacción
+              <InfoHint side='top'>
+                Solo puedes editar <b>descripción</b>, <b>categoría</b> y{' '}
+                <b>fecha</b> en ingresos/egresos creados manualmente. Montos y
+                cuentas no cambian por trazabilidad.
+              </InfoHint>
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className='space-y-4'>
-          <p className='text-sm text-muted-foreground'>
-            Puedes modificar la <b>descripción</b>, la <b>categoría</b> y la{' '}
-            <b>fecha</b>. Los montos y cuentas no se editan por trazabilidad.
-          </p>
+          <div className='space-y-4 mt-2'>
+            {/* Descripción */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idDesc} className='text-sm font-medium'>
+                  Descripción
+                </label>
+                <InfoHint side='top'>
+                  Un texto corto y claro que identifique la transacción.
+                </InfoHint>
+              </div>
+              <Input
+                id={idDesc}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={saving}
+              />
+            </div>
 
-          {/* Descripción */}
-          <div className='space-y-1'>
-            <label htmlFor={idDesc} className='text-sm font-medium'>
-              Descripción
-            </label>
-            <Input
-              id={idDesc}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={saving}
-            />
-          </div>
-
-          {/* Categoría */}
-          <div className='space-y-1'>
-            <label htmlFor={idCat} className='text-sm font-medium'>
-              Categoría
-            </label>
-            <Select
-              value={categoryId}
-              onValueChange={setCategoryId}
-              disabled={saving || categories.length === 0}
-            >
-              <SelectTrigger id={idCat}>
-                <SelectValue
-                  placeholder={
-                    categories.length
-                      ? `Seleccionar categoría (${typeLabel})`
-                      : 'No hay categorías disponibles'
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id.toString()}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className='text-xs text-muted-foreground'>
-              Solo se muestran categorías del tipo <b>{typeLabel}</b> o{' '}
-              <b>Ambas</b>, para mantener coherencia con la transacción.
-            </p>
-            {categories.length === 0 && (
-              <p className='text-xs text-amber-600'>
-                No tienes categorías activas de este tipo. Crea una para poder
-                reasignar esta transacción.
-              </p>
-            )}
-          </div>
-
-          {/* Fecha */}
-          <div className='space-y-1'>
-            <label htmlFor={idDate} className='text-sm font-medium'>
-              Fecha
-            </label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  id={idDate}
-                  variant='outline'
-                  className={cn(
-                    'justify-start text-left font-normal w-full',
-                    !date && 'text-muted-foreground',
-                  )}
-                  disabled={saving}
-                >
-                  <CalendarIcon className='mr-2 h-4 w-4' />
-                  {date ? (
-                    format(date, 'dd MMM yyyy')
-                  ) : (
-                    <span>Seleccionar fecha</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                align='start'
-                className='p-0 bg-popover text-popover-foreground border border-border rounded-md'
+            {/* Categoría */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idCat} className='text-sm font-medium'>
+                  Categoría
+                </label>
+                <InfoHint side='top'>
+                  Solo aparecen categorías activas compatibles con{' '}
+                  <b>{typeLabel}</b> (o <b>Ambas</b>).
+                </InfoHint>
+              </div>
+              <Select
+                value={categoryId}
+                onValueChange={setCategoryId}
+                disabled={saving || categories.length === 0}
               >
-                <DayPicker
-                  mode='single'
-                  selected={date}
-                  onSelect={setDate}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            <p className='text-xs text-muted-foreground'>
-              Guardamos la fecha a <b>mediodía local</b> para evitar saltos por
-              husos horarios.
-            </p>
-          </div>
+                <SelectTrigger id={idCat}>
+                  <SelectValue
+                    placeholder={
+                      categories.length
+                        ? `Seleccionar categoría (${typeLabel})`
+                        : 'No hay categorías disponibles'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={c.id.toString()}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {categories.length === 0 && (
+                <div className='text-xs text-amber-600'>
+                  No tienes categorías activas de este tipo.
+                </div>
+              )}
+            </div>
 
-          <Button onClick={handleSubmit} className='w-full' disabled={saving}>
-            {saving ? 'Guardando…' : 'Guardar cambios'}
-          </Button>
+            {/* Fecha */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idDate} className='text-sm font-medium'>
+                  Fecha
+                </label>
+                <InfoHint side='top'>
+                  Se guarda como <b>mediodía local</b> para evitar saltos por
+                  husos horarios.
+                </InfoHint>
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id={idDate}
+                    variant='outline'
+                    className={cn(
+                      'justify-start text-left font-normal w-full',
+                      !date && 'text-muted-foreground',
+                    )}
+                    disabled={saving}
+                  >
+                    <CalendarIcon className='mr-2 h-4 w-4' />
+                    {date ? (
+                      format(date, 'dd MMM yyyy')
+                    ) : (
+                      <span>Seleccionar fecha</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align='start'
+                  className='p-0 bg-popover text-popover-foreground border border-border rounded-md'
+                >
+                  <DayPicker
+                    mode='single'
+                    selected={date}
+                    onSelect={setDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <Button
+              onClick={handleSubmit}
+              className='w-full'
+              disabled={saving}
+              aria-disabled={saving}
+            >
+              {saving ? 'Guardando…' : 'Guardar cambios'}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

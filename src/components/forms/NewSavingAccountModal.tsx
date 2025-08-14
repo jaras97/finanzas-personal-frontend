@@ -20,6 +20,8 @@ import { toast } from 'sonner';
 import api from '@/lib/api';
 import axios from 'axios';
 import { NumericFormat } from 'react-number-format';
+import InfoHint from '@/components/ui/info-hint';
+import { cn } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -51,6 +53,7 @@ export default function NewSavingAccountModal({
   };
 
   const handleSubmit = async () => {
+    if (saving) return; // evita dobles clics
     const cleanedName = name.trim();
     if (!cleanedName) {
       toast.error('El nombre es obligatorio');
@@ -99,99 +102,145 @@ export default function NewSavingAccountModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
-      <DialogContent className='bg-card text-foreground'>
-        <DialogHeader>
-          <DialogTitle>Nueva cuenta</DialogTitle>
-        </DialogHeader>
+      <DialogContent
+        className={cn(
+          'bg-card text-foreground',
+          'w-[min(100vw-1rem,520px)]',
+          'p-0',
+        )}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => saving && e.preventDefault()}
+        onEscapeKeyDown={(e) => saving && e.preventDefault()}
+      >
+        {/* Contenedor scrollable para móvil/teclado */}
+        <div
+          className={cn(
+            'max-h-[85dvh] sm:max-h-[80vh]',
+            'overflow-y-auto overscroll-contain',
+            'px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
+          )}
+          aria-busy={saving}
+        >
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              Nueva cuenta
+              <InfoHint side='top'>
+                Crea una cuenta para registrar <b>depósitos</b>, <b>retiros</b>{' '}
+                y movimientos. Podrás editarla luego.
+              </InfoHint>
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className='space-y-4'>
-          {/* Nombre */}
-          <div className='space-y-1'>
-            <label htmlFor={idName} className='text-sm font-medium'>
-              Nombre de la cuenta
-            </label>
-            <Input
-              id={idName}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+          <div className='space-y-4'>
+            {/* Nombre */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idName} className='text-sm font-medium'>
+                  Nombre de la cuenta
+                </label>
+                <InfoHint side='top'>
+                  Cómo verás esta cuenta en listas y transferencias (ej.
+                  “Billetera”, “Ahorros Bancolombia”).
+                </InfoHint>
+              </div>
+              <Input
+                id={idName}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={saving}
+              />
+            </div>
+
+            {/* Saldo inicial */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idBalance} className='text-sm font-medium'>
+                  Saldo inicial
+                </label>
+                <InfoHint side='top'>
+                  Puedes empezar en <b>0</b>. Más adelante el saldo se ajusta
+                  con <b>depósitos</b> o <b>retiros</b>.
+                </InfoHint>
+              </div>
+              <NumericFormat
+                id={idBalance}
+                value={balance}
+                onValueChange={({ value }) => setBalance(value)} // valor crudo (con . decimal)
+                thousandSeparator='.'
+                decimalSeparator=','
+                allowNegative={false}
+                decimalScale={2}
+                inputMode='decimal'
+                customInput={Input}
+                disabled={saving}
+              />
+            </div>
+
+            {/* Tipo de cuenta */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idType} className='text-sm font-medium'>
+                  Tipo de cuenta
+                </label>
+                <InfoHint side='top'>
+                  Solo afecta la <b>clasificación visual</b> e iconografía
+                  (efectivo, banco o inversión).
+                </InfoHint>
+              </div>
+              <Select
+                value={type}
+                onValueChange={(v) =>
+                  setType(v as 'cash' | 'bank' | 'investment')
+                }
+                disabled={saving}
+              >
+                <SelectTrigger id={idType}>
+                  <SelectValue placeholder='Selecciona el tipo' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='cash'>Efectivo</SelectItem>
+                  <SelectItem value='bank'>Banco</SelectItem>
+                  <SelectItem value='investment'>Inversión</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Moneda */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <label htmlFor={idCurrency} className='text-sm font-medium'>
+                  Moneda
+                </label>
+                <InfoHint side='top'>
+                  Define la <b>moneda nativa</b> en la que verás el saldo y
+                  registrarás movimientos.
+                </InfoHint>
+              </div>
+              <Select
+                value={currency}
+                onValueChange={(v) => setCurrency(v as 'COP' | 'USD' | 'EUR')}
+                disabled={saving}
+              >
+                <SelectTrigger id={idCurrency}>
+                  <SelectValue placeholder='Selecciona la moneda' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='COP'>COP — Peso colombiano</SelectItem>
+                  <SelectItem value='USD'>USD — Dólar</SelectItem>
+                  <SelectItem value='EUR'>EUR — Euro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              onClick={handleSubmit}
+              className='w-full'
               disabled={saving}
-            />
-          </div>
-
-          <div className='space-y-1'>
-            <label htmlFor={idBalance} className='text-sm font-medium'>
-              Saldo inicial
-            </label>
-
-            <NumericFormat
-              id={idBalance}
-              value={balance}
-              onValueChange={({ value }) => setBalance(value)} // guarda el valor crudo (sin separadores, con punto decimal)
-              thousandSeparator='.'
-              decimalSeparator=','
-              allowNegative={false}
-              decimalScale={2}
-              inputMode='decimal'
-              customInput={Input} // usa tu mismo componente Input para conservar estilos
-              disabled={saving}
-            />
-
-            <p className='text-xs text-muted-foreground'>
-              Puedes comenzar en <b>0</b>. Más adelante el saldo se ajusta con{' '}
-              <b>depósitos</b> y <b>retiros</b>.
-            </p>
-          </div>
-
-          {/* Tipo de cuenta */}
-          <div className='space-y-1'>
-            <label htmlFor={idType} className='text-sm font-medium'>
-              Tipo de cuenta
-            </label>
-            <Select
-              value={type}
-              onValueChange={(v) =>
-                setType(v as 'cash' | 'bank' | 'investment')
-              }
-              disabled={saving}
+              aria-disabled={saving}
             >
-              <SelectTrigger id={idType}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='cash'>Efectivo</SelectItem>
-                <SelectItem value='bank'>Banco</SelectItem>
-                <SelectItem value='investment'>Inversión</SelectItem>
-              </SelectContent>
-            </Select>
+              {saving ? 'Creando…' : 'Crear cuenta'}
+            </Button>
           </div>
-
-          {/* Moneda */}
-          <div className='space-y-1'>
-            <label htmlFor={idCurrency} className='text-sm font-medium'>
-              Moneda
-            </label>
-            <Select
-              value={currency}
-              onValueChange={(v) => setCurrency(v as 'COP' | 'USD' | 'EUR')}
-              disabled={saving}
-            >
-              <SelectTrigger id={idCurrency}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='COP'>COP — Peso colombiano</SelectItem>
-                <SelectItem value='USD'>USD — Dólar</SelectItem>
-                <SelectItem value='EUR'>EUR — Euro</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className='text-xs text-muted-foreground'>
-              La moneda define cómo se mostrará el saldo de esta cuenta.
-            </p>
-          </div>
-
-          <Button onClick={handleSubmit} className='w-full' disabled={saving}>
-            {saving ? 'Creando…' : 'Crear cuenta'}
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
