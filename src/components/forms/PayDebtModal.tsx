@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import api from '@/lib/api';
-import { Debt } from '@/types';
+import { Debt, SavingAccount as SavingAccountType } from '@/types';
 import { useSavingAccounts } from '@/hooks/useSavingAccounts';
 import { formatCurrency } from '@/lib/format';
 import {
@@ -22,6 +22,8 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 import axios from 'axios';
+import { toIsoAtLocalNoon } from '@/utils/dates';
+import { NumericFormat } from 'react-number-format';
 
 interface Props {
   open: boolean;
@@ -42,23 +44,83 @@ export default function PayDebtModal({
   const [savingAccountId, setSavingAccountId] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const parseNumber = (v: string) => {
+    const n = parseFloat((v || '').replace(',', '.'));
+    return isNaN(n) ? NaN : n;
+  };
+
+  // ✅ Solo cuentas ACTIVAS y en la MISMA MONEDA que la deuda
+  const eligibleAccounts = useMemo(
+    () =>
+      (accounts as SavingAccountType[])
+        .filter(
+          (acc) => acc.status === 'active' && acc.currency === debt.currency,
+        )
+        .sort((a, b) => b.balance - a.balance),
+    [accounts, debt.currency],
+  );
+
+  const selectedAccount = useMemo(
+    () =>
+      eligibleAccounts.find((a) => a.id.toString() === savingAccountId) ||
+      undefined,
+    [eligibleAccounts, savingAccountId],
+  );
+
+  const idDate = 'pay-debt-date';
+  const idAmount = 'pay-debt-amount';
+  const idAccount = 'pay-debt-account';
+  const idDesc = 'pay-debt-desc';
+
+  const handleFillMax = () => {
+    if (!selectedAccount) return;
+    const maxPay = Math.min(debt.total_amount, selectedAccount.balance);
+    setAmount(String(maxPay));
+  };
 
   const handlePay = async () => {
-    if (!amount || !savingAccountId) {
-      toast.error('Completa todos los campos obligatorios');
+    const amt = parseNumber(amount);
+
+    if (amt > debt.total_amount) {
+      toast.error(
+        `El monto excede el saldo pendiente (${debt.currency} ${debt.total_amount}).`,
+      );
       return;
     }
 
+    if (!savingAccountId) {
+      toast.error('Selecciona la cuenta de pago');
+      return;
+    }
+    if (isNaN(amt) || amt <= 0) {
+      toast.error('Ingresa un monto válido (> 0)');
+      return;
+    }
+    if (!selectedAccount) {
+      toast.error('La cuenta seleccionada no es válida');
+      return;
+    }
+    if (amt > selectedAccount.balance) {
+      toast.error('Saldo insuficiente en la cuenta seleccionada');
+      return;
+    }
+
+    setSaving(true);
     try {
       await api.post(`/debts/${debt.id}/pay`, {
-        amount: parseFloat(amount),
+        amount: amt,
         saving_account_id: parseInt(savingAccountId),
         description: description || `Pago de deuda: ${debt.name}`,
-        date: date ? new Date(date).toISOString() : undefined,
+        date: date ? toIsoAtLocalNoon(date) : undefined,
       });
+
       toast.success('Deuda pagada correctamente');
       onPaid();
       onOpenChange(false);
+
+      // Reset
       setAmount('');
       setSavingAccountId('');
       setDescription('');
@@ -66,57 +128,147 @@ export default function PayDebtModal({
     } catch (error) {
       if (axios.isAxiosError(error)) {
         toast.error(error?.response?.data?.detail || 'Error al pagar la deuda');
+      } else {
+        toast.error('Error inesperado al pagar la deuda');
       }
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='max-w-sm'>
+    <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
+      <DialogContent className='max-w-sm bg-card text-foreground'>
         <DialogHeader>
           <DialogTitle>
             Pagar deuda: {debt.name} ({debt.currency})
           </DialogTitle>
         </DialogHeader>
 
-        <div className='space-y-3'>
-          <Input
-            type='date'
-            placeholder='Fecha de pago (opcional)'
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
+        <div className='space-y-4'>
+          {/* Fecha */}
+          <div className='space-y-1'>
+            <label htmlFor={idDate} className='text-sm font-medium'>
+              Fecha de pago{' '}
+              <span className='font-normal text-muted-foreground'>
+                (opcional)
+              </span>
+            </label>
+            <Input
+              id={idDate}
+              type='date'
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              disabled={saving}
+            />
+          </div>
 
-          <Input
-            placeholder={`Monto a pagar (${debt.currency})`}
-            type='number'
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
+          {/* Monto */}
+          <div className='space-y-1'>
+            <label htmlFor={idAmount} className='text-sm font-medium'>
+              Monto a pagar ({debt.currency})
+            </label>
+            <div className='flex gap-2'>
+              <NumericFormat
+                id={idAmount}
+                value={amount}
+                onValueChange={({ value }) => setAmount(value)} // guarda el valor crudo (sin separadores, con punto decimal)
+                thousandSeparator='.'
+                decimalSeparator=','
+                allowNegative={false}
+                decimalScale={2}
+                inputMode='decimal'
+                customInput={Input} // usa tu mismo componente Input para conservar estilos
+                disabled={saving}
+              />
+              <Button
+                type='button'
+                variant='outline'
+                onClick={handleFillMax}
+                disabled={saving || !selectedAccount}
+              >
+                Pagar total
+              </Button>
+            </div>
+            <p className='text-xs text-muted-foreground'>
+              Saldo pendiente:{' '}
+              <b>
+                {formatCurrency(debt.total_amount)} {debt.currency}
+              </b>
+            </p>
+          </div>
 
-          <Select value={savingAccountId} onValueChange={setSavingAccountId}>
-            <SelectTrigger>
-              <SelectValue placeholder='Selecciona la cuenta de pago' />
-            </SelectTrigger>
-            <SelectContent>
-              {accounts
-                .filter((acc) => acc.currency === debt.currency)
-                .map((acc) => (
+          {/* Cuenta de pago */}
+          <div className='space-y-1'>
+            <label htmlFor={idAccount} className='text-sm font-medium'>
+              Cuenta de pago
+            </label>
+            <Select
+              value={savingAccountId}
+              onValueChange={setSavingAccountId}
+              disabled={saving || eligibleAccounts.length === 0}
+            >
+              <SelectTrigger id={idAccount}>
+                <SelectValue
+                  placeholder={
+                    eligibleAccounts.length
+                      ? 'Selecciona la cuenta'
+                      : 'No hay cuentas disponibles'
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {eligibleAccounts.map((acc) => (
                   <SelectItem key={acc.id} value={acc.id.toString()}>
-                    {acc.name} - Saldo: {formatCurrency(acc.balance)}{' '}
-                    {acc.currency}
+                    ({formatCurrency(acc.balance)} {acc.currency}) {acc.name}
                   </SelectItem>
                 ))}
-            </SelectContent>
-          </Select>
+              </SelectContent>
+            </Select>
+            <p className='text-xs text-muted-foreground'>
+              Solo se listan cuentas <b>activas</b> y en <b>{debt.currency}</b>.
+              Las cuentas cerradas no aparecen.
+            </p>
+            {eligibleAccounts.length === 0 && (
+              <p className='text-xs text-amber-600'>
+                No tienes cuentas activas en {debt.currency}. Crea una para
+                poder pagar esta deuda.
+              </p>
+            )}
+            {selectedAccount && (
+              <p className='text-xs'>
+                Disponible:{' '}
+                <b>
+                  {formatCurrency(selectedAccount.balance)}{' '}
+                  {selectedAccount.currency}
+                </b>
+              </p>
+            )}
+          </div>
 
-          <Input
-            placeholder='Descripción (opcional)'
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
+          {/* Descripción */}
+          <div className='space-y-1'>
+            <label htmlFor={idDesc} className='text-sm font-medium'>
+              Descripción{' '}
+              <span className='font-normal text-muted-foreground'>
+                (opcional)
+              </span>
+            </label>
+            <Input
+              id={idDesc}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              disabled={saving}
+            />
+          </div>
 
-          <Button onClick={handlePay}>Pagar deuda</Button>
+          <Button
+            onClick={handlePay}
+            className='w-full'
+            disabled={saving || eligibleAccounts.length === 0}
+          >
+            {saving ? 'Pagando…' : 'Pagar deuda'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

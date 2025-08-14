@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import api from '@/lib/api';
 import { SavingAccount } from '@/types';
 import axios from 'axios';
+import { formatCurrency } from '@/lib/format';
+import { NumericFormat } from 'react-number-format';
 
 interface Props {
   open: boolean;
@@ -29,17 +31,25 @@ export default function DepositToAccountModal({
 }: Props) {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const parseNumber = (v: string) => {
+    const n = parseFloat((v || '').replace(',', '.'));
+    return isNaN(n) ? NaN : n;
+  };
 
   const handleDeposit = async () => {
-    if (!amount) {
-      toast.error('Ingresa un monto');
+    const amt = parseNumber(amount);
+    if (isNaN(amt) || amt <= 0) {
+      toast.error('Ingresa un monto válido (> 0)');
       return;
     }
 
+    setSaving(true);
     try {
       await api.post(`/saving-accounts/${account.id}/deposit`, {
-        amount: parseFloat(amount),
-        description,
+        amount: amt,
+        description: description?.trim() || undefined,
       });
       toast.success('Depósito realizado correctamente');
       onOpenChange(false);
@@ -51,30 +61,77 @@ export default function DepositToAccountModal({
         toast.error(
           error?.response?.data?.detail || 'Error al realizar depósito',
         );
+      } else {
+        toast.error('Error inesperado al realizar depósito');
       }
+    } finally {
+      setSaving(false);
     }
   };
 
+  // IDs accesibles
+  const idAmount = 'deposit-amount';
+  const idDesc = 'deposit-desc';
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
       <DialogContent className='bg-card text-foreground'>
         <DialogHeader>
-          <DialogTitle>Depositar en {account.name}</DialogTitle>
+          <DialogTitle>
+            Depositar en {account.name} ({account.currency})
+          </DialogTitle>
         </DialogHeader>
-        <div className='space-y-3'>
-          <Input
-            placeholder='Monto'
-            type='number'
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-          <Input
-            placeholder='Descripción (opcional)'
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-          <Button onClick={handleDeposit} className='w-full'>
-            Depositar
+
+        <div className='space-y-4'>
+          <p className='text-xs text-muted-foreground'>
+            Saldo actual:{' '}
+            <b>
+              {formatCurrency(account.balance)} {account.currency}
+            </b>
+          </p>
+
+          {/* Monto */}
+          <div className='space-y-1'>
+            <label htmlFor={idAmount} className='text-sm font-medium'>
+              Monto ({account.currency})
+            </label>
+
+            <NumericFormat
+              id={idAmount}
+              value={amount}
+              onValueChange={({ value }) => setAmount(value)} // guarda el valor crudo (sin separadores, con punto decimal)
+              thousandSeparator='.'
+              decimalSeparator=','
+              allowNegative={false}
+              decimalScale={2}
+              inputMode='decimal'
+              customInput={Input} // usa tu mismo componente Input para conservar estilos
+              disabled={saving}
+            />
+            <p className='text-xs text-muted-foreground'>
+              Este depósito se reflejará como un <b>ingreso</b> en los
+              movimientos de la cuenta.
+            </p>
+          </div>
+
+          {/* Descripción */}
+          <div className='space-y-1'>
+            <label htmlFor={idDesc} className='text-sm font-medium'>
+              Descripción{' '}
+              <span className='font-normal text-muted-foreground'>
+                (opcional)
+              </span>
+            </label>
+            <Input
+              id={idDesc}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              disabled={saving}
+            />
+          </div>
+
+          <Button onClick={handleDeposit} className='w-full' disabled={saving}>
+            {saving ? 'Depositando…' : 'Depositar'}
           </Button>
         </div>
       </DialogContent>
