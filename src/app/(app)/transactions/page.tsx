@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTransactions } from '@/hooks/useTransactions';
 import TransactionFilters, {
   Filters,
 } from '@/components/forms/TransactionFilters';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import NewTransactionModal from '@/components/forms/NewTransactionModal';
@@ -18,34 +18,84 @@ import ReverseTransactionDialog from '@/components/forms/ReverseTransactionDialo
 import { toast } from 'sonner';
 import { extractErrorMessage } from '@/lib/extractErrorMessage';
 import ReversalNoteDialog from '@/components/forms/ReversalNoteDialog';
-import { StickyNote } from 'lucide-react';
+import { StickyNote, Filter, RotateCw, Search } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+
+/* Tabla reusable (headless) */
+import { DataTable } from '@/components/ui/data-table';
+import { buildTransactionColumns } from './columns';
+
+/* === NEW: helpers de estilo para categorías === */
+const SYSTEM_CATEGORY_STYLES: Record<string, string> = {
+  Transferencia: 'bg-sky-50 text-sky-700 border-sky-200',
+  'Pago de deuda': 'bg-amber-50 text-amber-700 border-amber-200',
+  Comisión: 'bg-rose-50 text-rose-700 border-rose-200',
+  Interés: 'bg-violet-50 text-violet-700 border-violet-200',
+  Ajuste: 'bg-slate-50 text-slate-700 border-slate-200',
+};
+
+function categoryBadgeClasses(tx: TransactionWithCategoryRead) {
+  const cat = tx.category;
+  if (!cat) return '';
+  const isSystem =
+    (cat as any).is_system === true || (cat as any).origin === 'system';
+  if (isSystem) {
+    const key = cat.name || '';
+    return (
+      SYSTEM_CATEGORY_STYLES[key] ??
+      'bg-slate-50 text-slate-700 border-slate-200'
+    );
+  }
+  if (tx.type === 'income')
+    return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  if (tx.type === 'expense') return 'bg-rose-50 text-rose-700 border-rose-200';
+  return 'bg-slate-50 text-slate-700 border-slate-200';
+}
+
+/* === NEW: helper de currency para KPIs === */
+function getTxCurrency(tx: TransactionWithCategoryRead) {
+  return (
+    tx.saving_account?.currency ||
+    tx.debt?.currency ||
+    tx.from_account?.currency ||
+    tx.to_account?.currency ||
+    ''
+  );
+}
 
 export default function TransactionsPage() {
   const [filters, setFilters] = useState<Filters>({});
   const [page, setPage] = useState(1);
+
   const { transactions, loading, refresh, totalPages } = useTransactions(
     filters,
     page,
   );
+
   const [editTx, setEditTx] = useState<TransactionWithCategoryRead | null>(
     null,
   );
-
   const [reverseOpen, setReverseOpen] = useState(false);
   const [txToReverse, setTxToReverse] =
     useState<TransactionWithCategoryRead | null>(null);
-
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteTx, setNoteTx] = useState<TransactionWithCategoryRead | null>(
     null,
   );
 
+  /* ===== helpers visuales ===== */
   const typeColor = (type: string) => {
     switch (type) {
       case 'income':
-        return 'text-green-600';
+        return 'text-emerald-600';
       case 'expense':
-        return 'text-destructive';
+        return 'text-rose-600';
       case 'transfer':
         return 'text-primary';
       default:
@@ -62,77 +112,351 @@ export default function TransactionsPage() {
     return 'Transferencia';
   };
 
+  /* Columnas (sin selector de visibilidad) */
+  const allColumns = useMemo(
+    () =>
+      buildTransactionColumns({
+        onEdit: (tx) => setEditTx(tx),
+        onReverse: (tx) => {
+          setTxToReverse(tx);
+          setReverseOpen(true);
+        },
+        onShowNote: (tx) => {
+          setNoteTx(tx);
+          setNoteOpen(true);
+        },
+        // usePastelButtons: true,
+        // categoryClassName: categoryBadgeClasses,
+      }).map((c, i) => ({
+        ...c,
+        id: (c as any).id ?? (c as any).accessorKey ?? `col_${i}`,
+      })),
+    [],
+  );
+
+  /* ===== toolbar: búsqueda ===== */
+  const [search, setSearch] = useState('');
+
+  /* Filtro simple por búsqueda (sobre el dataset actual de página) */
+  const filteredData = useMemo(() => {
+    if (!search.trim()) return transactions;
+    const q = search.toLowerCase();
+    return transactions.filter((tx) => {
+      const haystack = [
+        tx.description,
+        tx.category?.name,
+        tx.from_account?.name,
+        tx.to_account?.name,
+        tx.debt?.name,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [transactions, search]);
+
+  /* KPIs por moneda (COP / USD) */
+  const kpisByCurrency = useMemo(() => {
+    const acc: Record<
+      string,
+      { income: number; expense: number; count: number }
+    > = {};
+    for (const tx of filteredData) {
+      if (tx.is_cancelled) continue;
+      const cur = getTxCurrency(tx) || 'COP';
+      if (!acc[cur]) acc[cur] = { income: 0, expense: 0, count: 0 };
+      acc[cur].count++;
+      if (tx.type === 'income') acc[cur].income += tx.amount;
+      else if (tx.type === 'expense') acc[cur].expense += tx.amount;
+    }
+    return acc;
+  }, [filteredData]);
+
+  const currenciesInView = useMemo(
+    () => Object.keys(kpisByCurrency).filter((c) => c === 'COP' || c === 'USD'),
+    [kpisByCurrency],
+  );
+
+  const nf = useMemo(() => new Intl.NumberFormat('es-CO'), []);
+
   return (
-    <div className='space-y-4'>
-      <div className='flex justify-between items-center'>
-        <h1 className='text-xl font-semibold'>Transacciones</h1>
-        <NewTransactionModal onCreated={refresh} />
+    <div className='space-y-6'>
+      {/* Header */}
+      <div className='flex items-center justify-between gap-3'>
+        <div>
+          <h1 className='text-2xl font-semibold'>Transacciones</h1>
+          <p className='text-sm text-muted-foreground'>
+            Historial y gestión de tus movimientos.
+          </p>
+        </div>
+        {/* Sin botón aquí (solo en toolbar) */}
       </div>
 
-      <TransactionFilters
-        onFilterChange={(f) => {
-          setPage(1);
-          setFilters(f);
-        }}
-      />
+      {/* KPIs (pastel) con líneas por moneda */}
+      {!loading && (
+        <section className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
+          <Card variant='kpi-income' interactive>
+            <CardContent className='py-5 px-6'>
+              <p className='text-sm text-slate-700'>Ingresos (vista)</p>
+              <div className='mt-1 space-y-1.5'>
+                {currenciesInView.map((cur) => (
+                  <div
+                    key={`inc-${cur}`}
+                    className='flex items-center justify-between'
+                  >
+                    <span className='text-xs text-slate-600'>{cur}</span>
+                    <span className='text-xl font-semibold tracking-tight'>
+                      {nf.format(kpisByCurrency[cur]?.income ?? 0)} {cur}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <Card variant='kpi-expense' interactive>
+            <CardContent className='py-5 px-6'>
+              <p className='text-sm text-slate-700'>Gastos (vista)</p>
+              <div className='mt-1 space-y-1.5'>
+                {currenciesInView.map((cur) => (
+                  <div
+                    key={`exp-${cur}`}
+                    className='flex items-center justify-between'
+                  >
+                    <span className='text-xs text-slate-600'>{cur}</span>
+                    <span className='text-xl font-semibold tracking-tight'>
+                      {nf.format(kpisByCurrency[cur]?.expense ?? 0)} {cur}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <Card variant='kpi-balance' interactive>
+            <CardContent className='py-5 px-6'>
+              <p className='text-sm text-slate-700'>Neto (vista)</p>
+              <div className='mt-1 space-y-1.5'>
+                {currenciesInView.map((cur) => {
+                  const inc = kpisByCurrency[cur]?.income ?? 0;
+                  const exp = kpisByCurrency[cur]?.expense ?? 0;
+                  const net = inc - exp;
+                  return (
+                    <div
+                      key={`net-${cur}`}
+                      className='flex items-center justify-between'
+                    >
+                      <span className='text-xs text-slate-600'>{cur}</span>
+                      <span className='text-xl font-semibold tracking-tight'>
+                        {nf.format(net)} {cur}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
-      {loading ? (
-        <p className='text-center p-4 text-muted-foreground'>
-          Cargando transacciones...
-        </p>
-      ) : (
-        <>
-          <div className='space-y-2'>
-            {transactions.map((tx) => {
+      {/* Tabla (desktop) con toolbar y paginación dentro del Card */}
+      <Card variant='white' className='hidden md:block'>
+        {/* Toolbar DESKTOP */}
+        <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-4 py-3'>
+          <div className='flex items-center gap-2'>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant='outline' className='gap-2'>
+                  <Filter className='h-4 w-4' />
+                  Filtros
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                align='start'
+                sideOffset={8}
+                className='p-3 w-[min(92vw,720px)]'
+              >
+                <TransactionFilters
+                  onFilterChange={(f) => {
+                    setPage(1);
+                    setFilters(f);
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
+
+            <Button variant='outline' className='gap-2' onClick={refresh}>
+              <RotateCw className='h-4 w-4' />
+              Actualizar
+            </Button>
+
+            {/* Búsqueda */}
+            <div className='relative'>
+              <Input
+                className='w-[240px] pl-9'
+                placeholder='Buscar…'
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <Search className='pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60' />
+            </div>
+          </div>
+
+          {/* ÚNICO botón de nueva transacción */}
+          <NewTransactionModal onCreated={refresh} />
+        </div>
+
+        {/* Tabla */}
+        <CardContent className='p-0'>
+          <div className='px-4'>
+            <DataTable
+              columns={allColumns as any}
+              data={filteredData}
+              loading={loading}
+              density='normal'
+              rowSeparator='inset'
+              tableClassName='min-w-[960px] xl:min-w-0'
+            />
+          </div>
+        </CardContent>
+
+        {/* Paginación DESKTOP dentro del card */}
+        {!loading && totalPages > 1 && (
+          <div className='border-t px-4 py-3'>
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
+      </Card>
+
+      {/* Toolbar MOBILE (md:hidden) */}
+      <div className='md:hidden px-2 pt-1'>
+        <div className='flex flex-wrap items-center gap-2'>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant='outline' size='sm' className='gap-2'>
+                <Filter className='h-4 w-4' />
+                Filtros
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align='start'
+              sideOffset={8}
+              className='p-3 w-[min(92vw,720px)]'
+            >
+              <TransactionFilters
+                onFilterChange={(f) => {
+                  setPage(1);
+                  setFilters(f);
+                }}
+              />
+            </PopoverContent>
+          </Popover>
+
+          <Button
+            variant='outline'
+            size='sm'
+            className='shrink-0'
+            onClick={refresh}
+          >
+            <RotateCw className='h-4 w-4' />
+            <span className='sr-only'>Actualizar</span>
+          </Button>
+
+          <div className='relative flex-1 basis-full'>
+            <Input
+              className='w-full pl-9 h-9'
+              placeholder='Buscar…'
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <Search className='pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60' />
+          </div>
+
+          <div className='ml-auto'>
+            <NewTransactionModal onCreated={refresh} />
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile: lista en cards */}
+      {!loading && (
+        <div className='md:hidden space-y-2'>
+          {filteredData.length === 0 ? (
+            <Card variant='white'>
+              <CardContent className='p-6 text-center text-muted-foreground'>
+                No hay transacciones con estos filtros.
+              </CardContent>
+            </Card>
+          ) : (
+            filteredData.map((tx) => {
               const isCreditCardPurchase =
                 tx.source_type === 'credit_card_purchase';
-
               const isEditable =
                 !tx.is_cancelled &&
                 !tx.reversed_transaction_id &&
                 !isCreditCardPurchase &&
                 !tx.source_type;
-
               const isReversible =
                 !tx.is_cancelled &&
                 !tx.reversed_transaction_id &&
                 tx.type !== 'transfer';
-
               const showNoteButton =
                 tx.is_cancelled &&
                 !!(tx.reversal_note && tx.reversal_note.trim());
 
               return (
-                <Card
-                  key={tx.id}
-                  className='p-4 flex flex-col md:flex-row md:justify-between md:items-center border border-border bg-card'
-                >
-                  <div className='space-y-1'>
-                    <p
-                      className={`font-medium flex items-center gap-1 ${
-                        isCreditCardPurchase
-                          ? 'text-purple-600'
-                          : typeColor(tx.type)
-                      }`}
-                    >
-                      {isCreditCardPurchase && '💳'}
-                      {tx.description}
-                    </p>
-                    <p className='text-sm text-muted-foreground'>
-                      <DateTimeDisplay isoDate={tx.date} />
-                    </p>
+                <Card key={tx.id} variant='white'>
+                  <CardContent className='p-4'>
+                    <div className='flex items-start justify-between gap-3'>
+                      <div>
+                        <p
+                          className={cn(
+                            'font-medium',
+                            isCreditCardPurchase
+                              ? 'text-fuchsia-600'
+                              : typeColor(tx.type),
+                          )}
+                        >
+                          {isCreditCardPurchase ? '💳 ' : ''}
+                          {tx.description}
+                        </p>
+                        <p className='text-xs text-muted-foreground'>
+                          <DateTimeDisplay isoDate={tx.date} />
+                        </p>
+                      </div>
+                      <p
+                        className={cn(
+                          'text-right font-semibold',
+                          isCreditCardPurchase
+                            ? 'text-fuchsia-600'
+                            : typeColor(tx.type),
+                        )}
+                      >
+                        {tx.type === 'income' ? '+' : '-'}{' '}
+                        {tx.amount.toLocaleString()}{' '}
+                        {tx.saving_account?.currency ?? tx.debt?.currency ?? ''}
+                      </p>
+                    </div>
 
-                    <div className='flex flex-wrap gap-1'>
+                    <div className='mt-2 flex flex-wrap gap-1'>
                       {tx.category && (
-                        <Badge variant='outline'>{tx.category.name}</Badge>
+                        <Badge
+                          className={cn('border', categoryBadgeClasses(tx))}
+                        >
+                          {tx.category.name}
+                        </Badge>
                       )}
                       {tx.debt?.name && (
                         <Badge
-                          variant={
+                          className={cn(
+                            'border',
                             tx.debt.kind === 'credit_card'
-                              ? 'secondary'
-                              : 'outline'
-                          }
+                              ? 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200'
+                              : 'bg-amber-50 text-amber-800 border-amber-200',
+                          )}
                         >
                           {tx.debt.kind === 'credit_card'
                             ? `💳 Tarjeta: ${tx.debt.name}`
@@ -141,7 +465,7 @@ export default function TransactionsPage() {
                       )}
                     </div>
 
-                    <div className='text-sm text-muted-foreground space-y-0.5'>
+                    <div className='mt-2 text-xs text-muted-foreground space-y-0.5'>
                       {tx.from_account && (
                         <p>
                           De: {tx.from_account.name} ({tx.from_account.currency}
@@ -162,38 +486,14 @@ export default function TransactionsPage() {
                             {tx.saving_account.currency})
                           </p>
                         )}
-                      {(tx.transaction_fee ?? 0) > 0 && (
-                        <p>
-                          Comisión: {tx.transaction_fee?.toLocaleString()}{' '}
-                          {tx.saving_account?.currency ?? ''}
-                        </p>
-                      )}
                     </div>
-                  </div>
 
-                  <div className='text-right mt-2 md:mt-0 space-y-1'>
-                    <p
-                      className={`text-lg font-bold ${
-                        isCreditCardPurchase
-                          ? 'text-purple-600'
-                          : typeColor(tx.type)
-                      }`}
-                    >
-                      {tx.type === 'income' ? '+' : '-'}{' '}
-                      {tx.amount.toLocaleString()}{' '}
-                      {tx.saving_account?.currency ?? tx.debt?.currency ?? ''}
-                    </p>
-                    <p className='text-sm text-muted-foreground'>
-                      {getStatusLabel(tx)}
-                    </p>
-
-                    <div className='flex gap-2 justify-end flex-wrap'>
+                    <div className='mt-3 flex gap-2 justify-end'>
                       {isEditable && (
                         <Button
                           size='sm'
-                          variant='outline'
+                          variant='soft-sky'
                           onClick={() => setEditTx(tx)}
-                          title='Editar descripción y categoría'
                         >
                           Editar
                         </Button>
@@ -201,60 +501,52 @@ export default function TransactionsPage() {
                       {showNoteButton && (
                         <Button
                           size='sm'
-                          variant='outline'
+                          variant='soft-amber'
                           onClick={() => {
                             setNoteTx(tx);
                             setNoteOpen(true);
                           }}
-                          title='Ver nota de reversa'
                         >
                           <StickyNote className='w-4 h-4 mr-1' />
-                          Ver nota
+                          Nota
                         </Button>
                       )}
                       <Button
                         size='sm'
-                        variant='destructive'
+                        variant='soft-rose'
                         onClick={() => {
                           setTxToReverse(tx);
                           setReverseOpen(true);
                         }}
                         disabled={!isReversible}
-                        title={
-                          !isReversible
-                            ? 'No se puede reversar transacciones reversadas, de reversa, transferencias o compras con tarjeta'
-                            : 'Reversar transacción'
-                        }
                       >
                         Reversar
                       </Button>
                     </div>
-                  </div>
+                  </CardContent>
                 </Card>
               );
-            })}
+            })
+          )}
+        </div>
+      )}
 
-            {transactions.length === 0 && (
-              <p className='text-center p-4 text-muted-foreground'>
-                No hay transacciones con estos filtros.
-              </p>
-            )}
-          </div>
-
+      {/* Paginación MOBILE */}
+      {!loading && totalPages > 1 && (
+        <div className='md:hidden border-t mt-3 pt-3 px-2'>
           <Pagination
             page={page}
             totalPages={totalPages}
             onPageChange={setPage}
           />
-        </>
+        </div>
       )}
 
+      {/* Modales / Diálogos */}
       {editTx && (
         <EditTransactionModal
           open={!!editTx}
-          onOpenChange={(open) => {
-            if (!open) setEditTx(null);
-          }}
+          onOpenChange={(open) => !open && setEditTx(null)}
           transaction={editTx}
           onUpdated={refresh}
         />

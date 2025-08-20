@@ -1,15 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Debt, DebtTransaction } from '@/types';
 import api from '@/lib/api';
 import DateTimeDisplay from '../ui/DateTimeDisplay';
+import { formatCurrency } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -26,53 +23,79 @@ export default function DebtTransactionsModal({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchTransactions = async () => {
-      if (!debt || !open) return;
+    if (!debt?.id || !open) return;
+    let cancelled = false;
+
+    (async () => {
       setLoading(true);
       try {
         const res = await api.get(`/debts/${debt.id}/transactions`);
-        setTransactions(res.data);
+        if (!cancelled) setTransactions(res.data);
       } catch (error) {
-        console.error(error);
+        if (!cancelled) console.error(error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    };
+    })();
 
-    fetchTransactions();
-  }, [debt, open]);
+    return () => {
+      cancelled = true;
+    };
+  }, [debt?.id, open]);
+
+  const headerTint = 'bg-[hsl(var(--muted))]';
+  const panelTint = 'bg-[hsl(var(--accent))]';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='max-w-md'>
-        <DialogHeader>
-          <DialogTitle>Movimientos de {debt.name}</DialogTitle>
-        </DialogHeader>
-        <div className='space-y-2 max-h-[60vh] overflow-y-auto'>
+      <DialogContent
+        size='lg'
+        className={cn(
+          'grid grid-rows-[auto_minmax(0,1fr)] max-h-[92dvh] min-h-0',
+          'w-[min(100vw-1rem,560px)] overflow-hidden',
+          panelTint,
+        )}
+      >
+        {/* HEADER */}
+        <header className={cn('border-b px-4 py-3', headerTint)}>
+          <DialogTitle className='text-base sm:text-lg font-semibold'>
+            Movimientos de {debt.name}
+          </DialogTitle>
+        </header>
+
+        {/* BODY (scroll) */}
+        <section
+          className='min-h-0 overflow-y-auto overscroll-contain px-4 py-4'
+          aria-busy={loading}
+        >
           {loading ? (
-            <p className='text-center'>Cargando movimientos...</p>
+            <p className='text-center text-sm text-muted-foreground'>
+              Cargando movimientos...
+            </p>
           ) : transactions.length === 0 ? (
-            <p className='text-center text-muted-foreground'>
+            <p className='text-center text-sm text-muted-foreground'>
               No hay movimientos registrados.
             </p>
           ) : (
-            transactions.map((tx) => (
-              <div
-                key={tx.id}
-                className='rounded border p-3 bg-card text-card-foreground shadow-sm'
-              >
-                <p className='font-medium'>
-                  {tx.description || 'Sin descripción'}
-                </p>
-                <p className='text-sm text-muted-foreground'>
-                  {tx.type === 'payment' ? 'Pago' : 'Cargo'} |{' '}
-                  <DateTimeDisplay isoDate={tx.date} /> |{'   '}
-                  {tx.amount.toLocaleString()} {debt.currency}
-                </p>
-              </div>
-            ))
+            <div className='space-y-2 pr-1'>
+              {transactions.map((tx) => (
+                <div
+                  key={tx.id}
+                  className='border border-border rounded-md p-3 bg-white'
+                >
+                  <p className='font-medium'>
+                    {tx.description || 'Sin descripción'}
+                  </p>
+                  <p className='text-sm text-muted-foreground'>
+                    {tx.type === 'payment' ? 'Pago' : 'Cargo'} |{' '}
+                    <DateTimeDisplay isoDate={tx.date} /> |{' '}
+                    {formatCurrency(tx.amount)} {debt.currency}
+                  </p>
+                </div>
+              ))}
+            </div>
           )}
-        </div>
+        </section>
       </DialogContent>
     </Dialog>
   );

@@ -1,102 +1,248 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
-/* Permitir variante dark */
+/* Dark variant */
 @custom-variant dark (&:is(.dark *));
 
-/* Mapeo de variables para Tailwind v4 Engine */
+/* =========================================
+   THEME (Tailwind v4 Engine)
+   ========================================= */
 @theme inline {
-  /* Tipografías */
-  --font-sans: 'Inter', sans-serif;
-  --font-mono: 'Menlo', monospace;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI,
+    Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji',
+    'Segoe UI Emoji';
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
 
   /* Radii */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
 
-  /* Colores generales */
+  /* Base tokens (derivan de :root/.dark) */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  /* Card */
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
 
-  /* Popover */
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
 
-  /* Paleta primaria */
-  --color-primary: #2563eb; /* Azul principal */
-  --color-primary-foreground: #ffffff;
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
 
-  /* Paleta secundaria */
-  --color-secondary: #10b981; /* Verde secundario */
-  --color-secondary-foreground: #ffffff;
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground, 215 16% 47%);
 
-  /* Acento */
-  --color-accent: #e0f2fe; /* Azul claro */
-  --color-accent-foreground: #0c4a6e;
+  --color-accent: var(--accent); /* superficies suaves azuladas */
+  --color-accent-foreground: var(--accent-foreground);
 
-  /* Muted */
-  --color-muted: #f3f4f6;
-  --color-muted-foreground: #6b7280;
-
-  /* Destructive */
-  --color-destructive: #ef4444; /* Rojo de error/destructive */
-
-  /* Otros */
-  --color-border: #e5e7eb;
-  --color-input: #f9fafb;
-  --color-ring: #2563eb;
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 
   /* Sidebar */
-  --color-sidebar: #ffffff;
-  --color-sidebar-foreground: #111827;
-  --color-sidebar-primary: #2563eb;
-  --color-sidebar-primary-foreground: #ffffff;
-  --color-sidebar-accent: #10b981;
-  --color-sidebar-accent-foreground: #ffffff;
-  --color-sidebar-border: #e5e7eb;
-  --color-sidebar-ring: #2563eb;
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Charts */
-  --color-chart-1: #60a5fa; /* azul claro */
-  --color-chart-2: #34d399; /* verde */
-  --color-chart-3: #fbbf24; /* amarillo */
-  --color-chart-4: #f87171; /* rojo */
-  --color-chart-5: #a78bfa; /* morado */
+  /* Charts (usadas en Recharts/vis) */
+  --color-chart-1: 213 94% 68%; /* sky-400 */
+  --color-chart-2: 160 84% 39%; /* emerald-500 */
+  --color-chart-3: 43 96% 56%; /* amber-400 */
+  --color-chart-4: 0 84% 60%; /* red-500 */
+  --color-chart-5: 258 90% 66%; /* violet-500 */
 }
 
-/* Light mode por defecto */
+/* =========================================
+   LIGHT
+   ========================================= */
 :root {
-  --background: #f9fafb;
-  --foreground: #111827;
-  --card: #ffffff;
-  --card-foreground: #111827;
-  --popover: #ffffff;
-  --popover-foreground: #111827;
+  /* Fondo general (azul tenue) */
+  --background: 216 100% 98%; /* #F3F8FF aprox */
+  --foreground: 222 47% 11%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+
+  --primary: 220 83% 56%; /* #2563EB (blue-600) */
+  --primary-foreground: 0 0% 100%;
+
+  --muted: 214 32% 95%; /* superficie suave */
+  --muted-foreground: 215 16% 47%;
+
+  --accent: 210 100% 97%; /* azul muy claro para secciones */
+  --accent-foreground: 217 33% 17%;
+
+  --border: 214 32% 91%;
+  --input: 0 0% 100%;
+  --ring: 220 83% 56%;
+
+  /* Sidebar: azul petróleo con alto contraste */
+  --sidebar: 218 39% 14%; /* slate-900-ish */
+  --sidebar-foreground: 210 40% 98%; /* casi blanco */
+  --sidebar-primary: 220 83% 56%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-border: 217 33% 17%;
+  --sidebar-ring: 220 83% 56%;
 }
 
-/* Dark mode */
+/* Capa fija de fondo (evita “saltos” en mobile al scrollear) */
+.app-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+
+  background: radial-gradient(
+      1200px 600px at 20% -10%,
+      hsl(210 100% 97%),
+      transparent 60%
+    ),
+    radial-gradient(1200px 700px at 80% 0%, hsl(214 95% 93%), transparent 55%),
+    hsl(var(--background));
+  background-repeat: no-repeat;
+  background-size: 180% 180%, 180% 180%, cover; /* muy grande => no se “acaba” */
+}
+
+/* =========================================
+   DARK
+   ========================================= */
 .dark {
-  --background: #111827;
-  --foreground: #f9fafb;
-  --card: #1f2937;
-  --card-foreground: #f9fafb;
-  --popover: #1f2937;
-  --popover-foreground: #f9fafb;
+  --background: 222 47% 7%;
+  --foreground: 210 40% 98%;
+
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+
+  --popover: 222 47% 11%;
+  --popover-foreground: 210 40% 98%;
+
+  --primary: 220 83% 56%;
+  --primary-foreground: 0 0% 100%;
+
+  --muted: 222 20% 16%;
+  --muted-foreground: 215 20% 80%;
+
+  --accent: 222 20% 12%;
+  --accent-foreground: 210 40% 96%;
+
+  --border: 222 20% 18%;
+  --input: 222 47% 11%;
+  --ring: 220 83% 56%;
+
+  --sidebar: 222 47% 7%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-primary: 220 83% 56%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-border: 222 20% 18%;
+  --sidebar-ring: 220 83% 56%;
 }
 
-/* Reset y estilos base */
+/* =========================================
+   BASE
+   ========================================= */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html,
   body {
-    @apply bg-background text-foreground;
-    font-family: var(--font-sans);
+    height: 100%;
   }
+  body {
+    @apply text-foreground;
+    font-family: var(--font-sans);
+    /* Fondo sólido; los gradientes viven en .app-bg fija */
+    background: hsl(var(--background));
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* =========================================
+   UTILIDADES
+   ========================================= */
+@layer utilities {
+  /* Superficie blanca con sombra sutil */
+  .card-surface {
+    @apply bg-card rounded-2xl;
+    border: 1px solid hsl(var(--border) / 0.45);
+    box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.02),
+      0 10px 30px -12px rgba(2, 6, 23, 0.12);
+  }
+
+  /* Panel suave y consistente para “todas las demás” cards */
+  .panel-muted {
+    background: hsl(var(--accent));
+    border: 1px solid hsl(var(--border) / 0.45);
+    border-radius: 1rem; /* rounded-2xl */
+    box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.02),
+      0 10px 30px -12px rgba(2, 6, 23, 0.1);
+  }
+
+  /* Panel para gráficas (blanco, más contraste) */
+  .chart-surface {
+    @apply bg-white rounded-2xl;
+    border: 1px solid hsl(var(--border) / 0.5);
+    box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.02),
+      0 14px 40px -14px rgba(2, 6, 23, 0.16);
+  }
+
+  /* KPI con gradiente fuerte (las 3 top cards) */
+  .kpi-gradient-strong {
+    background: linear-gradient(
+      140deg,
+      hsl(220 83% 56%) 0%,
+      hsl(201 94% 52%) 100%
+    );
+    @apply text-white rounded-2xl;
+    box-shadow: 0 14px 40px -12px rgba(37, 99, 235, 0.55);
+  }
+}
+
+@layer components {
+  /* Fuerza fondo sólido en todo el popover del Select cuando uses className="select-solid" */
+  .select-solid[data-slot='select-content'],
+  .select-solid [data-slot='select-content'] {
+    background-color: hsl(var(--card)) !important;
+    color: hsl(var(--card-foreground)) !important;
+    border-color: hsl(var(--border)) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .select-solid [data-slot='select-viewport'],
+  .select-solid [data-slot='select-scroll-up-button'],
+  .select-solid [data-slot='select-scroll-down-button'] {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  .modal-surface {
+    background-color: hsl(var(--card)) !important;
+    color: hsl(var(--card-foreground)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    box-shadow: 0 24px 60px -20px rgba(2, 6, 23, 0.45),
+      0 1px 0 0 rgba(0, 0, 0, 0.04) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .modal-surface-tinted {
+    background-color: transparent !important; /* 👈 no forzamos blanco */
+    color: hsl(var(--card-foreground)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    box-shadow: 0 24px 60px -20px rgba(2, 6, 23, 0.45),
+      0 1px 0 0 rgba(0, 0, 0, 0.04) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Root del calendario */
 }

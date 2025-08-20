@@ -6,23 +6,25 @@ import { useAssetsSummary } from '@/hooks/useAssetsSummary';
 import { useLiabilitiesSummary } from '@/hooks/useLiabilitiesSummary';
 import { useNetWorthSummary } from '@/hooks/useNetWorthSummary';
 import { useCashFlowSummary } from '@/hooks/useCashFlowSummary';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader, AlertCircle } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
-import { cn } from '@/lib/utils';
-import { SummaryPieChart } from '@/components/chart/SummaryPieChart';
-import { SummaryLineChart } from '@/components/chart/SummaryLineChart';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { formatDayLabel } from '@/lib/formatDayLabel';
+import { CurrencyToggle } from '@/components/ui/CurrencyToggle';
+import { AreaIncomeExpense } from '@/components/chart/AreaIncomeExpense';
+import { DonutByCategory } from '@/components/chart/DonutByCategory';
 
-const currencies = ['COP', 'USD'] as const;
-type Currency = (typeof currencies)[number];
+type Currency = 'COP' | 'USD' | 'EUR';
 
-export default function ResumenPage() {
+export default function SummaryPage() {
+  const today = new Date();
   const [dateRange, setDateRange] = useState({
-    startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    endDate: new Date(),
+    startDate: new Date(today.getFullYear(), today.getMonth(), 1),
+    endDate: today,
   });
+  const [currency, setCurrency] = useState<Currency>('COP');
 
   const filters = useMemo(
     () => ({
@@ -33,27 +35,53 @@ export default function ResumenPage() {
   );
 
   const { data: summary, loading, error } = useSummary(filters);
-  const { data: assets, loading: loadingAssets } = useAssetsSummary();
-  const { data: liabilities, loading: loadingLiabilities } =
-    useLiabilitiesSummary();
-  const { data: netWorth, loading: loadingNetWorth } = useNetWorthSummary();
-  const { data: cashFlow, loading: loadingCashFlow } = useCashFlowSummary(
+  const { data: assets, loading: lA } = useAssetsSummary();
+  const { data: liabilities, loading: lL } = useLiabilitiesSummary();
+  const { data: netWorth, loading: lN } = useNetWorthSummary();
+  const { data: cashFlow, loading: lC } = useCashFlowSummary(
     filters.dateRange.from,
     filters.dateRange.to,
   );
 
+  const hour = today.getHours();
+  const greeting =
+    hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
+
+  const isBusy = loading || lA || lL || lN || lC;
+  const s = summary?.[currency];
+
   return (
-    <div className='space-y-4'>
-      <h1 className='text-2xl font-semibold'>Resumen Financiero</h1>
+    <div className='space-y-6'>
+      {/* Saludo + filtros */}
+      <div className='flex flex-col gap-3 sm:gap-4 md:flex-row md:items-end md:justify-between'>
+        <div className='min-w-0'>
+          <h1 className='text-2xl font-semibold'>{greeting} 👋</h1>
+          <p className='text-sm text-muted-foreground'>
+            Aquí tienes tu resumen financiero.
+          </p>
+        </div>
 
-      <DateRangePicker
-        value={dateRange}
-        onChange={setDateRange}
-        disabled={loading}
-      />
+        <div className='flex flex-col sm:flex-row gap-3 sm:items-center w-full md:w-auto'>
+          <div className='w-full sm:w-[min(420px,100%)]'>
+            <DateRangePicker
+              value={dateRange}
+              onChange={setDateRange}
+              disabled={isBusy}
+            />
+          </div>
+          <div className='w-full sm:w-40'>
+            <CurrencyToggle
+              value={currency}
+              onChange={(c) => setCurrency(c as Currency)}
+              disabled={isBusy}
+            />
+          </div>
+        </div>
+      </div>
 
-      {loading && (
-        <div className='flex justify-center items-center h-40'>
+      {/* Estado */}
+      {isBusy && (
+        <div className='grid place-items-center h-40'>
           <Loader className='animate-spin w-8 h-8 text-primary' />
         </div>
       )}
@@ -64,239 +92,163 @@ export default function ResumenPage() {
         </div>
       )}
 
-      {/* ✅ Sección principal de tarjetas */}
-      {!loading &&
-        !loadingAssets &&
-        !loadingLiabilities &&
-        !loadingNetWorth &&
-        summary &&
-        assets &&
-        liabilities &&
-        netWorth && (
-          <div className='space-y-4'>
-            <h2 className='text-lg font-semibold mt-4'>
-              Resumen General del Período
-            </h2>
-            <p className='text-sm text-muted-foreground'>
-              Esta sección muestra{' '}
-              <strong>ingresos, gastos, ahorro (balance) y patrimonio</strong>{' '}
-              en el período seleccionado. Los{' '}
-              <strong>
-                gastos incluyen compras con tarjeta y gastos generales
-              </strong>{' '}
-              (no pagos de deuda ni transferencias). El ahorro aquí refleja la
-              diferencia entre ingresos y gastos. Para ver el ahorro real
-              considerando movimientos de caja, consulta la sección de{' '}
-              <strong>Flujo de Caja</strong>.
-            </p>
-
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-              {[
-                {
-                  label: 'Ingresos en el período',
-                  color: 'text-green-600',
-                  getValue: (currency: Currency) =>
-                    formatCurrency(
-                      summary[currency]?.total_income || 0,
-                      currency,
-                    ),
-                },
-                {
-                  label: 'Gastos en el período',
-                  color: 'text-red-600',
-                  getValue: (currency: Currency) =>
-                    formatCurrency(
-                      summary[currency]?.total_expense || 0,
-                      currency,
-                    ),
-                },
-                {
-                  label: 'Ahorro (Balance) en el período',
-                  color: 'text-green-600',
-                  getValue: (currency: Currency) => {
-                    const s = summary[currency];
-                    return formatCurrency(s?.balance || 0, currency);
-                  },
-                },
-                {
-                  label: '% de Ahorro',
-                  color: 'text-yellow-600',
-                  getValue: (currency: Currency) => {
-                    const s = summary[currency];
-                    if (s && s.total_income > 0) {
-                      const percentage = (s.balance / s.total_income) * 100;
-                      return `${percentage.toFixed(2)}%`;
-                    }
-                    return '0%';
-                  },
-                },
-                {
-                  label: 'Total en Cuentas',
-                  color: 'text-blue-600',
-                  getValue: (currency: Currency) =>
-                    formatCurrency(
-                      assets.total_assets[currency] || 0,
-                      currency,
-                    ),
-                },
-                {
-                  label: 'Deudas Activas',
-                  color: 'text-red-600',
-                  getValue: (currency: Currency) =>
-                    formatCurrency(
-                      liabilities.total_liabilities[currency] || 0,
-                      currency,
-                    ),
-                },
-                {
-                  label: 'Patrimonio Neto',
-                  color: 'text-green-600',
-                  getValue: (currency: Currency) =>
-                    formatCurrency(netWorth[currency].net_worth || 0, currency),
-                },
-                {
-                  label: 'Ratio Deuda/Activo',
-                  color: 'text-yellow-600',
-                  getValue: (currency: Currency) =>
-                    `${netWorth[currency].debt_ratio?.toFixed(2) || '0'}%`,
-                },
-              ].map(({ label, color, getValue }) => (
-                <Card key={label}>
-                  <CardContent className='p-4 space-y-1'>
-                    <p className='text-sm text-muted-foreground'>{label}</p>
-                    <div className='space-y-0.5'>
-                      {currencies.map((currency) => (
-                        <p
-                          key={currency}
-                          className={cn('text-base font-semibold', color)}
-                        >
-                          {currency}: {getValue(currency)}
-                        </p>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
-
-      {/* ✅ Nueva sección de Flujo de Caja */}
-      {!loadingCashFlow && cashFlow && (
-        <div className='space-y-4'>
-          <h2 className='text-lg font-semibold mt-8'>
-            Flujo de Caja del Período
-          </h2>
-          <p className='text-sm text-muted-foreground'>
-            El flujo de caja muestra el movimiento real de dinero en tus cuentas
-            durante este período. No incluye compras con tarjeta hasta que las
-            pagues, ayudándote a conocer tu liquidez real.
-          </p>
-
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-            {[
-              {
-                label: 'Ingresos de Caja',
-                color: 'text-green-600',
-                getValue: (currency: Currency) =>
-                  formatCurrency(
-                    cashFlow[currency]?.total_income || 0,
-                    currency,
-                  ),
-              },
-              {
-                label: 'Egresos de Caja',
-                color: 'text-red-600',
-                getValue: (currency: Currency) =>
-                  formatCurrency(
-                    cashFlow[currency]?.total_expense || 0,
-                    currency,
-                  ),
-              },
-              {
-                label: 'Pagos de Deudas',
-                color: 'text-yellow-600',
-                getValue: (currency: Currency) =>
-                  formatCurrency(
-                    cashFlow[currency]?.total_debt_payments || 0,
-                    currency,
-                  ),
-              },
-              {
-                label: 'Flujo Neto de Caja',
-                color: 'text-green-600',
-                getValue: (currency: Currency) =>
-                  formatCurrency(
-                    cashFlow[currency]?.net_cash_flow || 0,
-                    currency,
-                  ),
-              },
-            ].map(({ label, color, getValue }) => (
-              <Card key={label}>
-                <CardContent className='p-4 space-y-1'>
-                  <p className='text-sm text-muted-foreground'>{label}</p>
-                  <div className='space-y-0.5'>
-                    {currencies.map((currency) => (
-                      <p
-                        key={currency}
-                        className={cn('text-base font-semibold', color)}
-                      >
-                        {currency}: {getValue(currency)}
-                      </p>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+      {/* 1) KPIs */}
+      {!isBusy && s && (
+        <section className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
+          {[
+            {
+              label: 'Balance del período',
+              value: formatCurrency(s.balance, currency),
+              variant: 'kpi-balance' as const,
+            },
+            {
+              label: 'Ingresos',
+              value: formatCurrency(s.total_income, currency),
+              variant: 'kpi-income' as const,
+            },
+            {
+              label: 'Gastos',
+              value: formatCurrency(s.total_expense, currency),
+              variant: 'kpi-expense' as const,
+            },
+          ].map(({ label, value, variant }) => (
+            <Card key={label} variant={variant} interactive>
+              <CardContent className='py-5 px-6'>
+                <p className='text-sm text-slate-700'>{label}</p>
+                <p className='mt-1 text-xl font-semibold tracking-tight'>
+                  {value}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </section>
       )}
 
-      {/* ✅ Gráficas separadas por moneda */}
-      {summary &&
-        currencies.map((currency) => (
-          <div key={currency} className='space-y-4'>
-            <h2 className='text-lg font-semibold mt-6'>
-              Gráficas en {currency}
-            </h2>
+      {/* 2) Totales (superficie blanca) */}
+      {!isBusy && assets && liabilities && netWorth && (
+        <section className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
+          {[
+            {
+              label: 'Total en cuentas',
+              value: formatCurrency(
+                assets.total_assets[currency] || 0,
+                currency,
+              ),
+            },
+            {
+              label: 'Total deudas',
+              value: formatCurrency(
+                liabilities.total_liabilities[currency] || 0,
+                currency,
+              ),
+            },
+            {
+              label: 'Patrimonio neto',
+              value: formatCurrency(
+                netWorth[currency]?.net_worth || 0,
+                currency,
+              ),
+            },
+          ].map(({ label, value }) => (
+            <Card key={label} variant='surface'>
+              <CardContent className='p-5'>
+                <p className='text-sm text-muted-foreground'>{label}</p>
+                <p className='text-xl font-semibold'>{value}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </section>
+      )}
 
-            <SummaryLineChart
-              data={(summary[currency]?.daily_evolution || []).map((item) => ({
-                date: formatDayLabel(item.date, 'dd/MM'),
-                income: item.total_income,
-                expense: item.total_expense,
-              }))}
-            />
+      {/* 3) Flujo de caja (paneles semánticos suaves) */}
+      {!isBusy && cashFlow && (
+        <section className='grid grid-cols-1 sm:grid-cols-4 gap-4'>
+          {[
+            {
+              l: 'Ingresos de caja',
+              v: cashFlow[currency]?.total_income || 0,
+              variant: 'panel-positive' as const,
+            },
+            {
+              l: 'Egresos de caja',
+              v: cashFlow[currency]?.total_expense || 0,
+              variant: 'panel-negative' as const,
+            },
+            {
+              l: 'Pagos de deudas',
+              v: cashFlow[currency]?.total_debt_payments || 0,
+              variant: 'panel-warning' as const,
+            },
+            {
+              l: 'Flujo neto',
+              v: cashFlow[currency]?.net_cash_flow || 0,
+              // verde si >= 0, rojo si < 0
+              variant:
+                (cashFlow[currency]?.net_cash_flow || 0) >= 0
+                  ? ('panel-positive' as const)
+                  : ('panel-negative' as const),
+            },
+          ].map(({ l, v, variant }) => (
+            <Card key={l} variant={variant}>
+              <CardContent className='p-5'>
+                <p className='text-sm text-slate-700'>{l}</p>
+                <p className='text-xl font-semibold'>
+                  {formatCurrency(v, currency)}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </section>
+      )}
 
-            <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
-              <SummaryPieChart
-                data={(summary[currency]?.expense_by_category || []).map(
-                  (item) => ({
-                    name: item.category_name,
-                    value: item.total,
-                  }),
-                )}
-                title={`Gastos por Categoría (${currency})`}
+      {/* 4) Gráficas */}
+      {!isBusy && s && (
+        <section className='space-y-4'>
+          <Card variant='surface'>
+            <CardContent className='p-4'>
+              <AreaIncomeExpense
+                data={(s.daily_evolution || []).map((d) => ({
+                  date: formatDayLabel(d.date, 'dd/MM'),
+                  income: d.total_income,
+                  expense: d.total_expense,
+                }))}
               />
-              <SummaryPieChart
-                data={(summary[currency]?.income_by_category || []).map(
-                  (item) => ({
-                    name: item.category_name,
-                    value: item.total,
-                  }),
-                )}
-                title={`Ingresos por Categoría (${currency})`}
-              />
-            </div>
+            </CardContent>
+          </Card>
 
-            {summary[currency]?.overspending_alert && (
-              <div className='p-4 rounded-md bg-red-100 text-red-800 text-center font-medium'>
-                Alerta: Tus gastos superan tus ingresos en este período en{' '}
-                {currency}.
-              </div>
-            )}
+          <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+            <Card variant='surface'>
+              <CardContent className='p-4'>
+                <DonutByCategory
+                  title={`Gastos por categoría (${currency})`}
+                  data={(s.expense_by_category || []).map((i) => ({
+                    name: i.category_name,
+                    value: i.total,
+                  }))}
+                />
+              </CardContent>
+            </Card>
+
+            <Card variant='surface'>
+              <CardContent className='p-4'>
+                <DonutByCategory
+                  title={`Ingresos por categoría (${currency})`}
+                  data={(s.income_by_category || []).map((i) => ({
+                    name: i.category_name,
+                    value: i.total,
+                  }))}
+                />
+              </CardContent>
+            </Card>
           </div>
-        ))}
+
+          {s.overspending_alert && (
+            <div className='p-4 rounded-xl bg-rose-50 text-rose-700 text-center font-medium'>
+              Tus gastos superan tus ingresos en este período ({currency}).
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

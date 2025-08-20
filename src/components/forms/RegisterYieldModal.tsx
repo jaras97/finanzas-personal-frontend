@@ -5,8 +5,8 @@ import { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,7 +43,7 @@ export default function RegisterYieldModal({
   );
 
   const handleRegisterYield = async () => {
-    if (saving) return; // guard
+    if (saving) return;
     const amt = amountNum ?? NaN;
 
     if (isNaN(amt) || amt <= 0) {
@@ -85,35 +85,39 @@ export default function RegisterYieldModal({
   const idAmount = 'yield-amount';
   const idDesc = 'yield-desc';
 
+  // 🎨 Tinte “positivo” (ingreso)
+  const panelTint = 'bg-emerald-50';
+  const headerFooterTint = 'bg-emerald-100';
+  const ctaClass =
+    'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-300';
+
   return (
     <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
       <DialogContent
+        size='md'
         className={cn(
-          'w-[min(100vw-1rem,520px)]',
-          'p-0',
-          'bg-card text-foreground',
+          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
+          'w-[min(100vw-1rem,520px)] rounded-2xl overflow-hidden',
+          panelTint,
         )}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onPointerDownOutside={(e) => saving && e.preventDefault()}
-        onEscapeKeyDown={(e) => saving && e.preventDefault()}
       >
-        {/* Contenedor interno scrollable para mobile/teclado */}
-        <div
-          className={cn(
-            'max-h-[85dvh] sm:max-h-[80vh]',
-            'overflow-y-auto overscroll-contain',
-            'px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
-          )}
+        {/* HEADER */}
+        <header className={cn('border-b px-4 py-3', headerFooterTint)}>
+          <DialogTitle className='flex items-center gap-2 text-base sm:text-lg font-semibold'>
+            Registrar rendimiento en{' '}
+            <span className='font-semibold'>{account.name}</span>
+            <InfoHint side='top'>
+              Se registra como <b>ingreso</b> y aumenta el saldo de la cuenta.
+            </InfoHint>
+          </DialogTitle>
+        </header>
+
+        {/* BODY (scroll) */}
+        <section
+          className='overflow-y-auto overscroll-contain px-4 py-4'
           aria-busy={saving}
         >
-          <DialogHeader>
-            <DialogTitle>
-              Registrar rendimiento en{' '}
-              <span className='font-semibold'>{account.name}</span>
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className='space-y-4 mt-2'>
+          <div className='space-y-4 mt-1'>
             {/* Monto */}
             <div className='space-y-1'>
               <div className='flex items-center gap-2'>
@@ -121,8 +125,9 @@ export default function RegisterYieldModal({
                   Monto del rendimiento ({account.currency})
                 </label>
                 <InfoHint side='top'>
-                  Se registrará como <b>ingreso</b> y aumentará el saldo de la
-                  cuenta.
+                  Usa{' '}
+                  <b>{account.currency === 'COP' ? 'enteros' : 'decimales'}</b>{' '}
+                  según la moneda.
                 </InfoHint>
               </div>
               <NumericFormat
@@ -139,6 +144,7 @@ export default function RegisterYieldModal({
                   setAmount(values.value ?? '');
                   setAmountNum(values.floatValue);
                 }}
+                className='bg-white'
               />
             </div>
 
@@ -149,8 +155,7 @@ export default function RegisterYieldModal({
                   Descripción
                 </label>
                 <InfoHint side='top'>
-                  Opcional. Si lo dejas vacío usaremos{' '}
-                  <b>“Rendimiento de inversión”</b>.
+                  Si lo dejas vacío usaremos <b>“Rendimiento de inversión”</b>.
                 </InfoHint>
               </div>
               <Input
@@ -158,19 +163,33 @@ export default function RegisterYieldModal({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={saving}
+                className='bg-white'
               />
             </div>
+          </div>
+        </section>
 
+        {/* FOOTER */}
+        <footer className={cn('border-t', headerFooterTint)}>
+          <div className='px-4 py-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
+            <DialogClose asChild>
+              <Button
+                className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
+                disabled={saving}
+              >
+                Cancelar
+              </Button>
+            </DialogClose>
             <Button
               onClick={handleRegisterYield}
-              className='w-full'
               disabled={saving}
               aria-disabled={saving}
+              className={cn('sm:min-w-[200px]', ctaClass)}
             >
               {saving ? 'Registrando…' : 'Registrar rendimiento'}
             </Button>
           </div>
-        </div>
+        </footer>
       </DialogContent>
     </Dialog>
   );

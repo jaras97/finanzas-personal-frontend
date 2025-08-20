@@ -1,36 +1,29 @@
 // components/ui/calendar.tsx
-
 'use client';
 
 import * as React from 'react';
-import { DayPicker, DateRange } from 'react-day-picker';
-import 'react-day-picker/dist/style.css';
+import { DayPicker } from 'react-day-picker';
+import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import 'react-day-picker/dist/style.css';
 
-interface CalendarProps {
+// Hacemos el wrapper genérico: acepta todas las props de DayPicker.
+// Así sirve para `mode="single"` (Date) y `mode="range"` (DateRange).
+export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
   className?: string;
-  selected: DateRange | undefined;
-  onSelect: (range: DateRange | undefined) => void;
-  numberOfMonths?: number;
-}
+};
 
-export function Calendar({
-  className,
-  selected,
-  onSelect,
-  numberOfMonths = 1,
-}: CalendarProps) {
+export function Calendar({ className, ...props }: CalendarProps) {
   return (
     <DayPicker
-      mode='range'
-      selected={selected}
-      onSelect={onSelect}
-      numberOfMonths={numberOfMonths}
-      defaultMonth={selected?.from ?? new Date()}
-      className={cn('rounded-md border bg-white p-3 shadow-md', className)}
+      locale={es}
+      showOutsideDays
+      fixedWeeks
       captionLayout='dropdown'
       startMonth={new Date(new Date().getFullYear() - 5, 0)}
       endMonth={new Date(new Date().getFullYear() + 5, 11)}
+      className={cn('rdp-theme', className)}
+      {...props}
     />
   );
 }

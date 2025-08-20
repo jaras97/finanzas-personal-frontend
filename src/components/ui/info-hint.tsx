@@ -17,7 +17,7 @@ import {
 
 type Props = {
   className?: string;
-  children: React.ReactNode; // texto de ayuda
+  children?: React.ReactNode; // texto de ayuda
   side?: 'top' | 'bottom' | 'left' | 'right';
   align?: 'start' | 'center' | 'end';
   size?: 'sm' | 'md';
@@ -25,7 +25,7 @@ type Props = {
 
 export default function InfoHint({
   className,
-  children,
+  children = 'Más información',
   side = 'top',
   align = 'start',
   size = 'sm',
@@ -59,7 +59,10 @@ export default function InfoHint({
         <PopoverContent
           side={side}
           align={align}
-          className='max-w-[260px] text-xs leading-relaxed'
+          className={cn(
+            'max-w-[260px] text-xs leading-relaxed z-[130] shadow-2xl',
+            'bg-[hsl(var(--card))] text-[hsl(var(--card-foreground))] border border-[hsl(var(--border))]',
+          )}
         >
           {children}
         </PopoverContent>
@@ -74,7 +77,7 @@ export default function InfoHint({
         <TooltipContent
           side={side}
           align={align}
-          className='max-w-[320px] text-xs leading-relaxed'
+          className='max-w-[320px] text-xs leading-relaxed z-[130]'
         >
           {children}
         </TooltipContent>

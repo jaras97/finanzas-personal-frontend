@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,7 +41,6 @@ export default function TransferBetweenAccountsModal({
   const [fromAccountId, setFromAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState('');
 
-  // valores “formateados” (texto) y numéricos (para cálculos/envío)
   const [amount, setAmount] = useState('');
   const [amountNum, setAmountNum] = useState<number | undefined>(undefined);
 
@@ -84,7 +83,7 @@ export default function TransferBetweenAccountsModal({
   const requiresConversion =
     !!fromAccount && !!toAccount && fromAccount.currency !== toAccount.currency;
 
-  // Escalas decimales (COP usualmente 0; USD/EUR 2; tasa con más precisión)
+  // Escalas decimales (COP: 0; USD/EUR: 2; tasa: más precisión)
   const amountDecimalScale = fromAccount?.currency === 'COP' ? 0 : 2;
   const feeDecimalScale = amountDecimalScale;
   const rateDecimalScale = 6;
@@ -111,7 +110,7 @@ export default function TransferBetweenAccountsModal({
           setRateNum(Number(data.rate));
         }
       } catch {
-        // silencioso: el usuario puede escribir manualmente
+        // silencioso
       } finally {
         setPrefilling(false);
       }
@@ -148,7 +147,7 @@ export default function TransferBetweenAccountsModal({
   };
 
   const handleTransfer = async () => {
-    if (loading) return; // evita dobles envíos
+    if (loading) return;
 
     if (!fromAccountId || !toAccountId) {
       toast.error('Selecciona cuenta origen y destino');
@@ -223,6 +222,12 @@ export default function TransferBetweenAccountsModal({
     }
   };
 
+  // 🎨 Tintes y CTA
+  const panelTint = 'bg-[hsl(var(--accent))]';
+  const headerFooterTint = 'bg-[hsl(var(--muted))]';
+  const ctaClass =
+    'bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-[hsl(var(--ring))]';
+
   const idFrom = 'transfer-from';
   const idTo = 'transfer-to';
   const idAmount = 'transfer-amount';
@@ -234,34 +239,28 @@ export default function TransferBetweenAccountsModal({
     <Dialog open={open} onOpenChange={(o) => !loading && onOpenChange(o)}>
       <DialogContent
         className={cn(
-          'bg-card text-foreground',
-          'w-[min(100vw-1rem,520px)]',
-          'p-0',
+          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
+          'w-[min(100vw-1rem,560px)] rounded-2xl overflow-hidden',
+          panelTint,
         )}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onPointerDownOutside={(e) => loading && e.preventDefault()}
-        onEscapeKeyDown={(e) => loading && e.preventDefault()}
+        size='lg'
       >
-        {/* Contenedor scrollable para mobile/teclado */}
-        <div
-          className={cn(
-            'max-h-[85dvh] sm:max-h-[80vh]',
-            'overflow-y-auto overscroll-contain',
-            'px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
-          )}
+        {/* HEADER */}
+        <header className={cn('border-b px-4 py-3', headerFooterTint)}>
+          <DialogTitle className='flex items-center gap-2 text-base sm:text-lg font-semibold'>
+            Transferir entre cuentas
+            <InfoHint side='top'>
+              Si las monedas difieren, usa la tasa (unidades de <b>destino</b>{' '}
+              por 1 de <b>origen</b>).
+            </InfoHint>
+          </DialogTitle>
+        </header>
+
+        {/* BODY */}
+        <section
+          className='overflow-y-auto overscroll-contain px-4 py-4'
           aria-busy={loading}
         >
-          <DialogHeader>
-            <DialogTitle className='flex items-center gap-2'>
-              Transferir entre cuentas
-              <InfoHint side='top'>
-                Mueve dinero entre tus cuentas activas. Si las monedas difieren,
-                usa la tasa de conversión (unidades de <b>destino</b> por 1
-                unidad de <b>origen</b>).
-              </InfoHint>
-            </DialogTitle>
-          </DialogHeader>
-
           <div className='space-y-4'>
             {/* Origen */}
             <div className='space-y-1'>
@@ -271,7 +270,7 @@ export default function TransferBetweenAccountsModal({
                 </label>
                 <InfoHint side='top'>
                   Solo aparecen <b>cuentas activas</b>. No puedes elegir la
-                  misma cuenta como destino.
+                  misma como destino.
                 </InfoHint>
               </div>
               <Select
@@ -279,10 +278,10 @@ export default function TransferBetweenAccountsModal({
                 onValueChange={setFromAccountId}
                 disabled={loading}
               >
-                <SelectTrigger id={idFrom}>
+                <SelectTrigger id={idFrom} className='bg-white'>
                   <SelectValue placeholder='Selecciona la cuenta origen' />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className='select-solid z-[140]'>
                   {fromList.map((a) => (
                     <SelectItem key={a.id} value={a.id.toString()}>
                       ({formatCurrency(a.balance)} {a.currency}) {a.name}
@@ -308,10 +307,10 @@ export default function TransferBetweenAccountsModal({
                 onValueChange={setToAccountId}
                 disabled={loading}
               >
-                <SelectTrigger id={idTo}>
+                <SelectTrigger id={idTo} className='bg-white'>
                   <SelectValue placeholder='Selecciona la cuenta destino' />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className='select-solid z-[140]'>
                   {toList.map((a) => (
                     <SelectItem key={a.id} value={a.id.toString()}>
                       ({formatCurrency(a.balance)} {a.currency}) {a.name}
@@ -329,8 +328,8 @@ export default function TransferBetweenAccountsModal({
                   )
                 </label>
                 <InfoHint side='top'>
-                  Usa <b>punto</b> como separador decimal. La precisión se
-                  adapta a la moneda (COP sin decimales; USD/EUR con 2).
+                  Usa <b>punto</b> para decimales. (COP sin decimales; USD/EUR
+                  con 2).
                 </InfoHint>
               </div>
               <NumericFormat
@@ -347,6 +346,7 @@ export default function TransferBetweenAccountsModal({
                   setAmount(values.value ?? '');
                   setAmountNum(values.floatValue);
                 }}
+                className='bg-white'
               />
             </div>
 
@@ -378,6 +378,7 @@ export default function TransferBetweenAccountsModal({
                   setFee(values.value ?? '');
                   setFeeNum(values.floatValue);
                 }}
+                className='bg-white'
               />
             </div>
 
@@ -399,6 +400,7 @@ export default function TransferBetweenAccountsModal({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={loading}
+                className='bg-white'
               />
             </div>
 
@@ -410,8 +412,8 @@ export default function TransferBetweenAccountsModal({
                     Tasa de conversión → {toAccount?.currency}
                   </label>
                   <InfoHint side='top'>
-                    Define cuántas unidades de <b>{toAccount?.currency}</b> se
-                    obtienen por <b>1</b> de {fromAccount?.currency}.
+                    ¿Cuántas unidades de <b>{toAccount?.currency}</b> por{' '}
+                    <b>1</b> de {fromAccount?.currency}?
                   </InfoHint>
                 </div>
                 <div className='flex gap-2'>
@@ -429,6 +431,7 @@ export default function TransferBetweenAccountsModal({
                       setExchangeRate(values.value ?? '');
                       setRateNum(values.floatValue);
                     }}
+                    className='bg-white'
                   />
                   <Button
                     type='button'
@@ -451,17 +454,30 @@ export default function TransferBetweenAccountsModal({
                 )}
               </div>
             )}
+          </div>
+        </section>
 
+        {/* FOOTER */}
+        <footer className={cn('border-t', headerFooterTint)}>
+          <div className='px-4 py-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
+            <DialogClose asChild>
+              <Button
+                className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
+                disabled={loading}
+              >
+                Cancelar
+              </Button>
+            </DialogClose>
             <Button
               onClick={handleTransfer}
-              className='w-full'
               disabled={loading}
               aria-disabled={loading}
+              className={cn('sm:min-w-[160px]', ctaClass)}
             >
               {loading ? 'Transfiriendo…' : 'Transferir'}
             </Button>
           </div>
-        </div>
+        </footer>
       </DialogContent>
     </Dialog>
   );

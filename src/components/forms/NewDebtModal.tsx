@@ -4,8 +4,8 @@ import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import api from '@/lib/api';
 import axios from 'axios';
 import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
+import { DatePicker } from '@/components/ui/date-picker';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -33,7 +34,7 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
   const [name, setName] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
   const [interestRate, setInterestRate] = useState(''); // opcional
-  const [dueDate, setDueDate] = useState('');
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined); // ← ahora Date
   const [currency, setCurrency] = useState<'COP' | 'USD' | 'EUR'>('COP');
   const [kind, setKind] = useState<'loan' | 'credit_card'>('loan');
   const [saving, setSaving] = useState(false);
@@ -43,14 +44,42 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
     return isNaN(n) ? NaN : n;
   };
 
+  // Date → "YYYY-MM-DD" (local) para compatibilidad backend
+  const toLocalYMD = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
   const resetForm = () => {
     setName('');
     setTotalAmount('');
     setInterestRate('');
-    setDueDate('');
+    setDueDate(undefined);
     setCurrency('COP');
     setKind('loan');
   };
+
+  // Evita pasar objetos al toast cuando el backend responde 422
+  function extractApiError(err: unknown): string {
+    if (axios.isAxiosError(err)) {
+      const data: any = err.response?.data;
+      const detail =
+        data?.detail ?? data?.message ?? data?.error ?? data?.errors;
+      if (typeof detail === 'string') return detail;
+      if (Array.isArray(detail)) {
+        const msgs = detail.map((e: any) => e?.msg).filter(Boolean);
+        if (msgs.length) return msgs.join(' • ');
+      }
+      try {
+        return JSON.stringify(detail ?? data ?? err);
+      } catch {
+        return (err as any)?.message || 'Error inesperado';
+      }
+    }
+    return 'Error inesperado';
+  }
 
   const handleSubmit = async () => {
     if (saving) return;
@@ -76,8 +105,8 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
     const payload = {
       name: cleanedName,
       total_amount: amount,
-      interest_rate: rate, // opcional / informativa
-      due_date: dueDate || null,
+      interest_rate: rate, // informativo
+      due_date: dueDate ? toLocalYMD(dueDate) : null, // ← string o null
       currency,
       kind,
     };
@@ -90,11 +119,7 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
       onOpenChange(false);
       resetForm();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        toast.error(error?.response?.data?.detail || 'Error al crear deuda');
-      } else {
-        toast.error('Error inesperado al crear deuda');
-      }
+      toast.error(extractApiError(error));
     } finally {
       setSaving(false);
     }
@@ -104,32 +129,39 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
   const idName = 'new-debt-name';
   const idAmount = 'new-debt-amount';
   const idRate = 'new-debt-rate';
-  const idDue = 'new-debt-due';
   const idCurr = 'new-debt-currency';
   const idKind = 'new-debt-kind';
+
+  // 🎨 Tintes del panel
+  const panelTint = 'bg-[hsl(var(--accent))]';
+  const headerFooterTint = 'bg-[hsl(var(--muted))]';
+  const ctaClass = 'bg-primary text-primary-foreground hover:bg-primary/90';
 
   return (
     <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
       <DialogContent
-        className={cn('w-[min(100vw-1rem,520px)] p-0 bg-card text-foreground')}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onPointerDownOutside={(e) => saving && e.preventDefault()}
-        onEscapeKeyDown={(e) => saving && e.preventDefault()}
+        size='xl'
+        className={cn(
+          // layout: header | body scroll | footer
+          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
+          // tamaño / borde / evitar solapamientos
+          'w-[min(100vw-1rem,560px)] rounded-2xl overflow-hidden',
+          panelTint,
+        )}
       >
-        {/* Contenedor interno scrollable para mobile/teclado */}
-        <div
-          className={cn(
-            'max-h-[85dvh] sm:max-h-[80vh]',
-            'overflow-y-auto overscroll-contain',
-            'px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
-          )}
+        {/* HEADER */}
+        <header className={cn('border-b px-4 py-3', headerFooterTint)}>
+          <DialogTitle className='text-base sm:text-lg font-semibold'>
+            Nueva Deuda
+          </DialogTitle>
+        </header>
+
+        {/* BODY (solo aquí hay scroll) */}
+        <section
+          className='overflow-y-auto overscroll-contain px-4 py-4'
           aria-busy={saving}
         >
-          <DialogHeader>
-            <DialogTitle>Nueva Deuda</DialogTitle>
-          </DialogHeader>
-
-          <div className='space-y-4 mt-2'>
+          <div className='space-y-4'>
             {/* Nombre */}
             <div className='space-y-1'>
               <div className='flex items-center gap-2'>
@@ -145,6 +177,7 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={saving}
+                className='bg-white'
               />
             </div>
 
@@ -169,6 +202,7 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
                 inputMode='decimal'
                 customInput={Input}
                 disabled={saving}
+                className='bg-white'
               />
             </div>
 
@@ -179,8 +213,8 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
                   Tasa de interés (%)
                 </label>
                 <InfoHint side='top'>
-                  Campo <b>opcional</b> y <b>informativo</b>. No calcula
-                  intereses automáticos. Para intereses/cargos usa{' '}
+                  Campo <b>opcional</b> e <b>informativo</b>. No calcula
+                  intereses automáticos. Para cargos/recargos usa{' '}
                   <b>Agregar Cargo</b>.
                 </InfoHint>
               </div>
@@ -188,32 +222,35 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
                 id={idRate}
                 value={interestRate}
                 onValueChange={({ value }) => setInterestRate(value)}
-                // porcentaje: sin miles, 2 decimales
                 decimalSeparator=','
                 allowNegative={false}
                 decimalScale={2}
                 inputMode='decimal'
                 customInput={Input}
                 disabled={saving}
+                className='bg-white'
               />
             </div>
 
-            {/* Fecha de vencimiento */}
+            {/* Fecha de vencimiento (con DatePicker) */}
             <div className='space-y-1'>
-              <div className='flex items-center gap-2'>
-                <label htmlFor={idDue} className='text-sm font-medium'>
-                  Fecha de vencimiento
-                </label>
-                <InfoHint side='top'>
-                  Opcional. Úsala como referencia/recordatorio.
-                </InfoHint>
+              <div className='flex items-center justify-between gap-2'>
+                <div className='flex items-center gap-2'>
+                  <span className='text-sm font-medium'>
+                    Fecha de vencimiento
+                  </span>
+                  <InfoHint side='top'>
+                    Opcional. Úsala como referencia/recordatorio.
+                  </InfoHint>
+                </div>
+                {/* Limpiar/Hoy ya vienen en el Popover del DatePicker */}
               </div>
-              <Input
-                id={idDue}
-                type='date'
+              <DatePicker
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+                onChange={setDueDate}
                 disabled={saving}
+                className='z-[140]'
+                buttonClassName='bg-white h-9'
               />
             </div>
 
@@ -232,10 +269,10 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
                 onValueChange={(v) => setCurrency(v as 'COP' | 'USD' | 'EUR')}
                 disabled={saving}
               >
-                <SelectTrigger id={idCurr}>
-                  <SelectValue />
+                <SelectTrigger id={idCurr} className='bg-white'>
+                  <SelectValue placeholder='Selecciona la moneda' />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className='select-solid z-[140]'>
                   <SelectItem value='COP'>COP — Peso Colombiano</SelectItem>
                   <SelectItem value='USD'>USD — Dólar</SelectItem>
                   <SelectItem value='EUR'>EUR — Euro</SelectItem>
@@ -259,10 +296,10 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
                 onValueChange={(v) => setKind(v as 'loan' | 'credit_card')}
                 disabled={saving}
               >
-                <SelectTrigger id={idKind}>
-                  <SelectValue />
+                <SelectTrigger id={idKind} className='bg-white'>
+                  <SelectValue placeholder='Selecciona el tipo' />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className='select-solid z-[140]'>
                   <SelectItem value='loan'>Préstamo</SelectItem>
                   <SelectItem value='credit_card'>
                     Tarjeta de Crédito
@@ -270,17 +307,30 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+        </section>
 
+        {/* FOOTER */}
+        <footer className={cn('border-t px-4 py-3', headerFooterTint)}>
+          <div className='flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
+            <DialogClose asChild>
+              <Button
+                className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
+                disabled={saving}
+              >
+                Cancelar
+              </Button>
+            </DialogClose>
             <Button
               onClick={handleSubmit}
-              className='w-full'
               disabled={saving}
               aria-disabled={saving}
+              className={cn('sm:min-w-[160px]', ctaClass)}
             >
               {saving ? 'Creando…' : 'Crear Deuda'}
             </Button>
           </div>
-        </div>
+        </footer>
       </DialogContent>
     </Dialog>
   );

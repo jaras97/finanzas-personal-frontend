@@ -9,29 +9,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { format } from 'date-fns';
-import { DateRange, DayPicker } from 'react-day-picker';
-import 'react-day-picker/dist/style.css';
 import api from '@/lib/api';
 import { toast } from 'sonner';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 
 interface Props {
   onFilterChange: (filters: Filters) => void;
 }
 
 export interface Filters {
-  startDate?: string; // ISO string
-  endDate?: string; // ISO string
+  startDate?: string; // ISO
+  endDate?: string; // ISO
   type?: 'income' | 'expense';
   categoryId?: number;
-  source?: 'all' | 'credit_card' | 'account'; // ✅ nuevo
+  source?: 'all' | 'credit_card' | 'account';
 }
 
 type Category = {
@@ -40,9 +32,13 @@ type Category = {
 };
 
 export default function TransactionFilters({ onFilterChange }: Props) {
-  const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(
-    undefined,
-  );
+  // Rango por defecto: mes actual → hoy
+  const [range, setRange] = useState<{ startDate: Date; endDate: Date }>(() => {
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth(), 1);
+    return { startDate: start, endDate: today };
+  });
+
   const [type, setType] = useState<string>('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryId, setCategoryId] = useState<string>('');
@@ -64,18 +60,18 @@ export default function TransactionFilters({ onFilterChange }: Props) {
 
   const applyFilters = () => {
     const filters: Filters = {};
-    if (selectedRange?.from)
-      filters.startDate = selectedRange.from.toISOString();
-    if (selectedRange?.to) filters.endDate = selectedRange.to.toISOString();
+    if (range?.startDate) filters.startDate = range.startDate.toISOString();
+    if (range?.endDate) filters.endDate = range.endDate.toISOString();
     if (type) filters.type = type as 'income' | 'expense';
-    if (categoryId) filters.categoryId = parseInt(categoryId);
-    if (source && source !== 'all') filters.source = source; // ✅ agregado
-
+    if (categoryId) filters.categoryId = parseInt(categoryId, 10);
+    if (source && source !== 'all') filters.source = source;
     onFilterChange(filters);
   };
 
   const clearFilters = () => {
-    setSelectedRange(undefined);
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth(), 1);
+    setRange({ startDate: start, endDate: today });
     setType('');
     setCategoryId('');
     setSource('all');
@@ -84,98 +80,82 @@ export default function TransactionFilters({ onFilterChange }: Props) {
 
   return (
     <div className='space-y-4'>
-      <div className='grid grid-cols-1 md:grid-cols-4 gap-3'>
-        {/* Date Range Picker */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant='outline'
-              className={cn(
-                'justify-start text-left font-normal w-full',
-                !selectedRange && 'text-muted-foreground',
-              )}
-            >
-              <CalendarIcon className='mr-2 h-4 w-4' />
-              {selectedRange?.from ? (
-                selectedRange.to ? (
-                  <>
-                    {format(selectedRange.from, 'dd MMM yyyy')} -{' '}
-                    {format(selectedRange.to, 'dd MMM yyyy')}
-                  </>
-                ) : (
-                  format(selectedRange.from, 'dd MMM yyyy')
-                )
-              ) : (
-                <span>Seleccionar rango de fechas</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            align='start'
-            className='p-2 bg-card text-card-foreground rounded-md shadow-md'
-          >
-            <DayPicker
-              mode='range'
-              selected={selectedRange}
-              onSelect={setSelectedRange}
-              numberOfMonths={1}
+      {/* Panel con leve realce */}
+      <div className={cn('rounded-xl border p-3', 'bg-[hsl(var(--accent))]')}>
+        <div className='grid grid-cols-1 md:grid-cols-12 gap-3 items-start'>
+          {/* Rango de fechas */}
+          <div className='min-w-0 md:col-span-5'>
+            <DateRangePicker
+              value={{ startDate: range.startDate, endDate: range.endDate }}
+              onChange={(r) => setRange(r)}
             />
-          </PopoverContent>
-        </Popover>
+          </div>
 
-        {/* Tipo */}
-        <Select onValueChange={setType} value={type}>
-          <SelectTrigger className='w-full'>
-            <SelectValue placeholder='Filtrar por tipo' />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='income'>Ingreso</SelectItem>
-            <SelectItem value='expense'>Egreso</SelectItem>
-          </SelectContent>
-        </Select>
+          {/* Tipo */}
+          <div className='min-w-0 md:col-span-2'>
+            <Select onValueChange={setType} value={type}>
+              <SelectTrigger className='w-full truncate'>
+                <SelectValue placeholder='Filtrar por tipo' />
+              </SelectTrigger>
+              <SelectContent className='z-[60]'>
+                <SelectItem value='income'>Ingreso</SelectItem>
+                <SelectItem value='expense'>Egreso</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Categoría */}
-        <Select onValueChange={setCategoryId} value={categoryId}>
-          <SelectTrigger className='w-full'>
-            <SelectValue placeholder='Filtrar por categoría' />
-          </SelectTrigger>
-          <SelectContent>
-            {categories.map((c) => (
-              <SelectItem key={c.id} value={c.id.toString()}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          {/* Categoría */}
+          <div className='min-w-0 md:col-span-3'>
+            <Select onValueChange={setCategoryId} value={categoryId}>
+              <SelectTrigger className='w-full truncate'>
+                <SelectValue placeholder='Filtrar por categoría' />
+              </SelectTrigger>
+              <SelectContent className='z-[60] max-h-[50vh]'>
+                {categories.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Origen */}
-        <Select
-          onValueChange={(v) =>
-            setSource(v as 'all' | 'credit_card' | 'account')
-          }
-          value={source}
-        >
-          <SelectTrigger className='w-full'>
-            <SelectValue placeholder='Filtrar por origen' />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='all'>Todos</SelectItem>
-            <SelectItem value='account'>Cuentas</SelectItem>
-            <SelectItem value='credit_card'>Tarjetas de crédito</SelectItem>
-          </SelectContent>
-        </Select>
+          {/* Origen */}
+          <div className='min-w-0 md:col-span-2'>
+            <Select
+              onValueChange={(v) =>
+                setSource(v as 'all' | 'credit_card' | 'account')
+              }
+              value={source}
+            >
+              <SelectTrigger className='w-full truncate'>
+                <SelectValue placeholder='Filtrar por origen' />
+              </SelectTrigger>
+              <SelectContent className='z-[60]'>
+                <SelectItem value='all'>Todos</SelectItem>
+                <SelectItem value='account'>Cuentas</SelectItem>
+                <SelectItem value='credit_card'>Tarjetas de crédito</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
-      <div className='flex flex-wrap gap-2'>
-        <Button onClick={applyFilters} className='font-semibold'>
-          Aplicar filtros
-        </Button>
+      {/* Acciones */}
+      <div className='flex flex-wrap gap-2 justify-end'>
         <Button
-          variant='secondary'
+          variant='outline'
           onClick={clearFilters}
           className='font-semibold'
         >
           Limpiar
+        </Button>
+        <Button
+          variant='soft-sky'
+          onClick={applyFilters}
+          className='font-semibold'
+        >
+          Aplicar filtros
         </Button>
       </div>
     </div>

@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,16 +20,9 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { TransactionWithCategoryRead } from '@/types';
 import axios from 'axios';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { DayPicker } from 'react-day-picker';
-import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import InfoHint from '@/components/ui/info-hint';
+import { DatePicker } from '@/components/ui/date-picker';
 
 type Category = {
   id: number;
@@ -63,9 +56,7 @@ export default function EditTransactionModal({
 
   const idDesc = 'edit-tx-desc';
   const idCat = 'edit-tx-cat';
-  const idDate = 'edit-tx-date';
 
-  // Helper: ISO a mediodía local
   const dateToIsoAtLocalNoon = (d: Date) =>
     new Date(
       d.getFullYear(),
@@ -78,7 +69,21 @@ export default function EditTransactionModal({
 
   const typeLabel = transaction.type === 'income' ? 'Ingreso' : 'Egreso';
 
-  // Cargar categorías (solo del tipo de la transacción actual y activas)
+  // Tinte según tipo (usa tailwind + tus tokens)
+  const tone: 'emerald' | 'rose' =
+    transaction.type === 'income' ? 'emerald' : 'rose';
+
+  const panelTint = tone === 'emerald' ? 'bg-emerald-50' : 'bg-rose-50';
+
+  const headerFooterTint =
+    tone === 'emerald' ? 'bg-emerald-100' : 'bg-rose-100';
+
+  const ctaClass =
+    tone === 'emerald'
+      ? 'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-300'
+      : 'bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-300';
+
+  // Cargar categorías activas del tipo
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -100,10 +105,15 @@ export default function EditTransactionModal({
       transaction.category ? transaction.category.id.toString() : '',
     );
     setDate(transaction.date ? new Date(transaction.date) : new Date());
-  }, [transaction.id]);
+  }, [
+    transaction.id,
+    transaction.description,
+    transaction.category,
+    transaction.date,
+  ]);
 
   const handleSubmit = async () => {
-    if (saving) return; // guard contra doble click
+    if (saving) return;
     if (!description.trim() || !categoryId || !date) {
       toast.error('Completa descripción, categoría y fecha');
       return;
@@ -113,19 +123,17 @@ export default function EditTransactionModal({
       await api.patch(`/transactions/${transaction.id}`, {
         description: description.trim(),
         category_id: parseInt(categoryId, 10),
-        date: dateToIsoAtLocalNoon(date), // ⬅️ enviamos mediodía local
+        date: dateToIsoAtLocalNoon(date),
       });
       toast.success('Transacción actualizada');
       onOpenChange(false);
       onUpdated();
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        toast.error(
-          error?.response?.data?.detail || 'Error al actualizar transacción',
-        );
-      } else {
-        toast.error('Error al actualizar transacción');
-      }
+      toast.error(
+        axios.isAxiosError(error)
+          ? error?.response?.data?.detail || 'Error al actualizar transacción'
+          : 'Error al actualizar transacción',
+      );
     } finally {
       setSaving(false);
     }
@@ -134,47 +142,45 @@ export default function EditTransactionModal({
   return (
     <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
       <DialogContent
-        className={cn('w-[min(100vw-1rem,520px)]', 'p-0')}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onPointerDownOutside={(e) => saving && e.preventDefault()}
-        onEscapeKeyDown={(e) => saving && e.preventDefault()}
+        // Headless UI panel: nada de props de Radix aquí
+        className={cn(
+          'w-[min(100vw-1rem,560px)]',
+          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
+          'rounded-2xl overflow-hidden', // evita solapamientos de borde
+          panelTint,
+        )}
       >
-        {/* Contenedor scrollable interno para móvil */}
-        <div
-          className={cn(
-            'max-h-[85dvh] sm:max-h-[80vh]',
-            'overflow-y-auto overscroll-contain',
-            'px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
-          )}
+        {/* HEADER */}
+        <header className={cn('border-b px-4 py-3', headerFooterTint)}>
+          <DialogTitle className='flex items-center gap-2 text-base sm:text-lg font-semibold'>
+            Editar Transacción
+            <InfoHint side='top'>
+              Solo puedes editar <b>descripción</b>, <b>categoría</b> y{' '}
+              <b>fecha</b>. Montos y cuentas no cambian por trazabilidad.
+            </InfoHint>
+          </DialogTitle>
+        </header>
+
+        {/* BODY (solo aquí hay scroll) */}
+        <section
+          className='overflow-y-auto overscroll-contain px-4 py-4'
           aria-busy={saving}
         >
-          <DialogHeader>
-            <DialogTitle className='flex items-center gap-2'>
-              Editar Transacción
-              <InfoHint side='top'>
-                Solo puedes editar <b>descripción</b>, <b>categoría</b> y{' '}
-                <b>fecha</b> en ingresos/egresos creados manualmente. Montos y
-                cuentas no cambian por trazabilidad.
-              </InfoHint>
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className='space-y-4 mt-2'>
+          <div className='space-y-4'>
             {/* Descripción */}
             <div className='space-y-1'>
               <div className='flex items-center gap-2'>
                 <label htmlFor={idDesc} className='text-sm font-medium'>
                   Descripción
                 </label>
-                <InfoHint side='top'>
-                  Un texto corto y claro que identifique la transacción.
-                </InfoHint>
+                <InfoHint side='top'>Un texto corto y claro.</InfoHint>
               </div>
               <Input
                 id={idDesc}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={saving}
+                className='bg-white'
               />
             </div>
 
@@ -185,8 +191,8 @@ export default function EditTransactionModal({
                   Categoría
                 </label>
                 <InfoHint side='top'>
-                  Solo aparecen categorías activas compatibles con{' '}
-                  <b>{typeLabel}</b> (o <b>Ambas</b>).
+                  Solo categorías activas para <b>{typeLabel}</b> (o{' '}
+                  <b>Ambas</b>).
                 </InfoHint>
               </div>
               <Select
@@ -194,7 +200,7 @@ export default function EditTransactionModal({
                 onValueChange={setCategoryId}
                 disabled={saving || categories.length === 0}
               >
-                <SelectTrigger id={idCat}>
+                <SelectTrigger id={idCat} className='bg-white'>
                   <SelectValue
                     placeholder={
                       categories.length
@@ -203,7 +209,8 @@ export default function EditTransactionModal({
                     }
                   />
                 </SelectTrigger>
-                <SelectContent>
+                {/* z alto para ir sobre el modal (Dialog panel ~ z-[110]) */}
+                <SelectContent className='select-solid z-[140]'>
                   {categories.map((c) => (
                     <SelectItem key={c.id} value={c.id.toString()}>
                       {c.name}
@@ -220,58 +227,59 @@ export default function EditTransactionModal({
 
             {/* Fecha */}
             <div className='space-y-1'>
-              <div className='flex items-center gap-2'>
-                <label htmlFor={idDate} className='text-sm font-medium'>
-                  Fecha
-                </label>
-                <InfoHint side='top'>
-                  Se guarda como <b>mediodía local</b> para evitar saltos por
-                  husos horarios.
-                </InfoHint>
-              </div>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id={idDate}
-                    variant='outline'
-                    className={cn(
-                      'justify-start text-left font-normal w-full',
-                      !date && 'text-muted-foreground',
-                    )}
-                    disabled={saving}
-                  >
-                    <CalendarIcon className='mr-2 h-4 w-4' />
-                    {date ? (
-                      format(date, 'dd MMM yyyy')
-                    ) : (
-                      <span>Seleccionar fecha</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  align='start'
-                  className='p-0 bg-popover text-popover-foreground border border-border rounded-md'
+              <div className='flex items-center justify-between gap-2'>
+                <div className='flex items-center gap-2'>
+                  <span className='text-sm font-medium'>Fecha</span>
+                  <InfoHint side='top'>
+                    Se guarda a <b>mediodía local</b> para evitar saltos por
+                    husos horarios.
+                  </InfoHint>
+                </div>
+                <Button
+                  type='button'
+                  size='sm'
+                  variant='outline'
+                  onClick={() => setDate(new Date())}
+                  disabled={saving}
+                  className='h-8'
                 >
-                  <DayPicker
-                    mode='single'
-                    selected={date}
-                    onSelect={setDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+                  Hoy
+                </Button>
+              </div>
 
+              {/* Nuestro DatePicker (Popover sólido y por encima del modal) */}
+              <DatePicker
+                value={date}
+                onChange={setDate}
+                disabled={saving}
+                className='z-[140]' // PopoverContent
+                buttonClassName='bg-white h-9' // altura y contraste como input
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* FOOTER */}
+        <footer className={cn('border-t', headerFooterTint)}>
+          <div className='px-4 py-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
+            <DialogClose asChild>
+              <Button
+                className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
+                disabled={saving}
+              >
+                Cancelar
+              </Button>
+            </DialogClose>
             <Button
               onClick={handleSubmit}
-              className='w-full'
               disabled={saving}
               aria-disabled={saving}
+              className={cn('sm:min-w-[160px]', ctaClass)}
             >
               {saving ? 'Guardando…' : 'Guardar cambios'}
             </Button>
           </div>
-        </div>
+        </footer>
       </DialogContent>
     </Dialog>
   );

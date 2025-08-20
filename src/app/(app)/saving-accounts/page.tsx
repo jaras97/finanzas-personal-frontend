@@ -1,10 +1,10 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { useSavingAccounts } from '@/hooks/useSavingAccounts';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useEffect, useMemo, useState } from 'react';
-import { SavingAccount } from '@/types';
+import { currencyType, SavingAccount } from '@/types';
 
 import NewSavingAccountModal from '@/components/forms/NewSavingAccountModal';
 import EditSavingAccountModal from '@/components/forms/EditSavingAccountModal';
@@ -18,12 +18,63 @@ import { formatCurrency } from '@/lib/format';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import axios from 'axios';
+import { cn } from '@/lib/utils';
+import AccountsSection from '@/components/accounts/AccountsSection';
+import KpiTotalsCard from '@/components/kpi/KpiTotalsCard';
 
+// ===== helpers
 type HasTxMap = Record<number, boolean>;
+type Currency = currencyType | string;
+
+function sumByCurrency(items: SavingAccount[]) {
+  return items.reduce<Record<Currency, number>>((acc, a) => {
+    acc[a.currency] = (acc[a.currency] || 0) + (a.balance || 0);
+    return acc;
+  }, {});
+}
+
+// ===== tonos por tipo de cuenta
+const toneMap = {
+  cash: {
+    card: 'bg-emerald-50 border-emerald-200 text-emerald-950 dark:bg-emerald-950/25 dark:border-emerald-900/60 dark:text-emerald-100',
+    solid:
+      'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-300',
+    outline:
+      'border-emerald-300 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:text-emerald-200 dark:hover:bg-emerald-950/40',
+    secondary:
+      'bg-emerald-100 text-emerald-900 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-100',
+  },
+  bank: {
+    card: 'bg-sky-50 border-sky-200 text-sky-950 dark:bg-sky-950/25 dark:border-sky-900/60 dark:text-sky-100',
+    solid: 'bg-sky-600 text-white hover:bg-sky-700 focus-visible:ring-sky-300',
+    outline:
+      'border-sky-300 text-sky-700 hover:bg-sky-100 dark:border-sky-800 dark:text-sky-200 dark:hover:bg-sky-950/40',
+    secondary:
+      'bg-sky-100 text-sky-900 hover:bg-sky-200 dark:bg-sky-900/50 dark:text-sky-100',
+  },
+  investment: {
+    card: 'bg-violet-50 border-violet-200 text-violet-950 dark:bg-violet-950/25 dark:border-violet-900/60 dark:text-violet-100',
+    solid:
+      'bg-violet-600 text-white hover:bg-violet-700 focus-visible:ring-violet-300',
+    outline:
+      'border-violet-300 text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:text-violet-200 dark:hover:bg-violet-950/40',
+    secondary:
+      'bg-violet-100 text-violet-900 hover:bg-violet-200 dark:bg-violet-900/50 dark:text-violet-100',
+  },
+  closed: {
+    card: 'bg-slate-50 border-slate-200 text-slate-950 dark:bg-slate-900/40 dark:border-slate-800 dark:text-slate-100',
+    solid: 'bg-slate-600 text-white hover:bg-slate-700',
+    outline:
+      'border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800/50',
+    secondary:
+      'bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800/60 dark:text-slate-100',
+  },
+};
 
 export default function SavingAccountsPage() {
   const { accounts, loading, refresh } = useSavingAccounts();
 
+  // Modales
   const [createOpen, setCreateOpen] = useState(false);
   const [editAccount, setEditAccount] = useState<SavingAccount | null>(null);
   const [deleteAccount, setDeleteAccount] = useState<SavingAccount | null>(
@@ -37,17 +88,15 @@ export default function SavingAccountsPage() {
   const [viewTransactionsAccount, setViewTransactionsAccount] =
     useState<SavingAccount | null>(null);
 
-  // Cache local de si la cuenta tiene movimientos
+  // Cache local: si la cuenta tiene movimientos
   const [hasTxMap, setHasTxMap] = useState<HasTxMap>({});
 
-  // Cargar has-transactions para cuentas sin resolver aún
   useEffect(() => {
     if (!accounts.length) return;
     const pending = accounts
       .filter((a) => hasTxMap[a.id] === undefined)
       .map((a) => a.id);
-    if (pending.length === 0) return;
-
+    if (!pending.length) return;
     (async () => {
       try {
         const results = await Promise.all(
@@ -60,12 +109,12 @@ export default function SavingAccountsPage() {
         );
         setHasTxMap((prev) => ({ ...prev, ...Object.fromEntries(results) }));
       } catch {
-        // No bloqueamos la UI; el botón Eliminar simplemente no aparecerá si falla esta carga.
+        /* noop */
       }
     })();
   }, [accounts, hasTxMap]);
 
-  const handleCloseAccount = async (account: SavingAccount) => {
+  async function handleCloseAccount(account: SavingAccount) {
     try {
       const res = await api.post(`/saving-accounts/${account.id}/close`);
       toast.success(res.data.message || 'Cuenta cerrada correctamente');
@@ -77,9 +126,8 @@ export default function SavingAccountsPage() {
         );
       }
     }
-  };
-
-  const handleReopenAccount = async (account: SavingAccount) => {
+  }
+  async function handleReopenAccount(account: SavingAccount) {
     try {
       const res = await api.post(`/saving-accounts/${account.id}/reopen`);
       toast.success(res.data.message || 'Cuenta reabierta correctamente');
@@ -91,17 +139,16 @@ export default function SavingAccountsPage() {
         );
       }
     }
-  };
+  }
 
-  // Policy: centralizamos lógica en un sitio
   function getAccountActions(acc: SavingAccount) {
-    const hasTx = hasTxMap[acc.id]; // true/false/undefined(cargando)
-    const isPristine = hasTx === false; // solo si tenemos confirmación de false
-    const canDelete = isPristine && acc.status === 'active'; // eliminar solo prístina y activa
+    const hasTx = hasTxMap[acc.id];
+    const isPristine = hasTx === false;
+    const canDelete = isPristine && acc.status === 'active';
     const canClose = acc.status === 'active' && acc.balance === 0;
     const canReopen = acc.status === 'closed';
-    const canEditAll = isPristine; // editar todo (tipo/moneda/nombre)
-    const canEditNameOnly = hasTx === true; // si tiene movimientos, solo nombre
+    const canEditAll = isPristine;
+    const canEditNameOnly = hasTx === true;
     return {
       hasTx,
       isPristine,
@@ -113,174 +160,178 @@ export default function SavingAccountsPage() {
     };
   }
 
-  const activeAccounts = useMemo(
+  // Agrupaciones
+  const active = useMemo(
     () => accounts.filter((a) => a.status === 'active'),
     [accounts],
   );
-  const closedAccounts = useMemo(
+  const closed = useMemo(
     () => accounts.filter((a) => a.status === 'closed'),
     [accounts],
   );
 
+  const cash = useMemo(() => active.filter((a) => a.type === 'cash'), [active]);
+  const bank = useMemo(() => active.filter((a) => a.type === 'bank'), [active]);
+  const invest = useMemo(
+    () => active.filter((a) => a.type === 'investment'),
+    [active],
+  );
+
+  // Totales por tipo/currency
+  const tCash = useMemo(() => sumByCurrency(cash), [cash]);
+  const tBank = useMemo(() => sumByCurrency(bank), [bank]);
+  const tInvest = useMemo(() => sumByCurrency(invest), [invest]);
+  const tAll = useMemo(() => sumByCurrency(active), [active]);
+
   return (
     <div className='space-y-6'>
+      {/* Header acciones */}
       <div className='flex justify-between items-center flex-wrap gap-2'>
-        <h1 className='text-xl font-semibold'>Cuentas</h1>
+        <div className='min-w-0'>
+          <h1 className='text-2xl font-semibold'>Cuentas</h1>
+          <p className='text-sm text-muted-foreground'>
+            Administra tus cuentas y movimientos.
+          </p>
+        </div>
         <div className='flex gap-2 flex-wrap'>
-          <Button onClick={() => setTransferOpen(true)}>
+          <Button
+            onClick={() => setTransferOpen(true)}
+            variant={'soft-emerald'}
+          >
             Transferir entre cuentas
           </Button>
-          <Button onClick={() => setCreateOpen(true)}>+ Nueva Cuenta</Button>
+          <Button onClick={() => setCreateOpen(true)} variant={'soft-sky'}>
+            + Nueva Cuenta
+          </Button>
         </div>
       </div>
 
-      {/* ACTIVAS */}
-      <section className='space-y-3'>
-        <h2 className='text-sm font-medium text-muted-foreground'>
-          Cuentas activas
-        </h2>
-        {loading ? (
-          <p className='text-center p-4'>Cargando cuentas...</p>
-        ) : activeAccounts.length ? (
-          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
-            {activeAccounts.map((account) => {
-              const actions = getAccountActions(account);
-              return (
-                <Card
-                  key={account.id}
-                  className='p-4 flex flex-col justify-between bg-card text-foreground space-y-2'
-                >
-                  <div className='space-y-1'>
-                    <p className='font-medium'>{account.name}</p>
-                    <p className='text-sm text-muted-foreground'>
-                      Saldo: {formatCurrency(account.balance)}{' '}
-                      {account.currency}
-                    </p>
-                    <p className='text-sm text-muted-foreground capitalize'>
-                      Tipo:{' '}
-                      {account.type === 'cash'
-                        ? 'Efectivo'
-                        : account.type === 'bank'
-                        ? 'Banco'
-                        : 'Inversión'}
-                    </p>
-                    <p className='text-sm text-muted-foreground'>
-                      Estado: Activa
-                    </p>
-                    {actions.isPristine && (
-                      <p className='text-xs text-emerald-600'>
-                        Cuenta prístina (sin movimientos)
-                      </p>
-                    )}
-                  </div>
-
-                  <div className='flex flex-wrap gap-2 mt-2'>
-                    <Button
-                      size='sm'
-                      variant='secondary'
-                      onClick={() => setViewTransactionsAccount(account)}
-                    >
-                      Ver movimientos
-                    </Button>
-
-                    <Button
-                      size='sm'
-                      onClick={() => setDepositAccount(account)}
-                    >
-                      Depositar
-                    </Button>
-
-                    <Button
-                      size='sm'
-                      variant='outline'
-                      onClick={() => setEditAccount(account)}
-                    >
-                      Editar
-                    </Button>
-
-                    {account.type === 'investment' && (
-                      <Button
-                        size='sm'
-                        onClick={() => setYieldAccount(account)}
-                      >
-                        Agregar rendimiento
-                      </Button>
-                    )}
-
-                    {actions.canClose && (
-                      <Button
-                        size='sm'
-                        variant='destructive'
-                        onClick={() => handleCloseAccount(account)}
-                      >
-                        Cerrar
-                      </Button>
-                    )}
-
-                    {/* Mostrar Eliminar solo si sabemos que es prístina y está activa */}
-                    {actions.canDelete && (
-                      <Button
-                        size='sm'
-                        variant='destructive'
-                        onClick={() => setDeleteAccount(account)}
-                      >
-                        Eliminar
-                      </Button>
-                    )}
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        ) : (
-          <p className='text-center p-4 text-muted-foreground'>
-            No tienes cuentas activas.
-          </p>
-        )}
+      {/* KPIs */}
+      <section className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
+        <KpiTotalsCard
+          title='Total en efectivo'
+          totals={tCash}
+          gradient
+          cardVariant='kpi-balance'
+        />
+        <KpiTotalsCard
+          title='Total en cuentas bancarias'
+          totals={tBank}
+          gradient
+          cardVariant='white'
+        />
+        <KpiTotalsCard
+          title='Total en inversión'
+          totals={tInvest}
+          gradient
+          cardVariant='white'
+        />
+        <KpiTotalsCard
+          title='Total general'
+          totals={tAll}
+          cardVariant='kpi-green'
+        />
       </section>
 
-      {/* CERRADAS */}
+      {/* 2) Efectivo */}
+      <AccountsSection
+        title='Cuentas de efectivo'
+        hint='Billetes/monedas en caja o billeteras.'
+        loading={loading}
+        emptyText='No tienes cuentas de efectivo.'
+        items={cash}
+        getAccountActions={getAccountActions}
+        onViewTx={setViewTransactionsAccount}
+        onDeposit={setDepositAccount}
+        onEdit={setEditAccount}
+        onYield={setYieldAccount}
+        onClose={handleCloseAccount}
+        onDelete={setDeleteAccount}
+        showYield={false}
+        tone='cash'
+      />
+
+      {/* 3) Bancarias */}
+      <AccountsSection
+        title='Cuentas bancarias'
+        hint='Cuentas corrientes/ahorro.'
+        loading={loading}
+        emptyText='No tienes cuentas bancarias.'
+        items={bank}
+        getAccountActions={getAccountActions}
+        onViewTx={setViewTransactionsAccount}
+        onDeposit={setDepositAccount}
+        onEdit={setEditAccount}
+        onYield={setYieldAccount}
+        onClose={handleCloseAccount}
+        onDelete={setDeleteAccount}
+        showYield={false}
+        tone='bank'
+      />
+
+      {/* 4) Inversión */}
+      <AccountsSection
+        title='Cuentas de inversión'
+        hint='Fondos, brókers o productos con rendimiento.'
+        loading={loading}
+        emptyText='No tienes cuentas de inversión.'
+        items={invest}
+        getAccountActions={getAccountActions}
+        onViewTx={setViewTransactionsAccount}
+        onDeposit={setDepositAccount}
+        onEdit={setEditAccount}
+        onYield={setYieldAccount}
+        onClose={handleCloseAccount}
+        onDelete={setDeleteAccount}
+        showYield
+        tone='investment'
+      />
+
+      {/* 5) Cerradas */}
       <section className='space-y-3'>
-        <h2 className='text-sm font-medium text-muted-foreground'>
-          Cuentas cerradas
-        </h2>
+        <header className='flex items-center justify-between'>
+          <div>
+            <h2 className='text-sm font-medium text-muted-foreground'>
+              Cuentas cerradas
+            </h2>
+            <p className='text-xs text-muted-foreground/80'>
+              Se mantienen para historial; puedes reabrirlas.
+            </p>
+          </div>
+        </header>
+
         {loading ? (
           <p className='text-center p-4'>Cargando cuentas...</p>
-        ) : closedAccounts.length ? (
+        ) : closed.length ? (
           <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
-            {closedAccounts.map((account) => (
+            {closed.map((account) => (
               <Card
                 key={account.id}
-                className='p-4 flex flex-col justify-between bg-muted/60 text-foreground border-dashed space-y-2'
+                className={cn(
+                  'p-4 flex flex-col justify-between space-y-2 border',
+                  toneMap.closed.card,
+                )}
+                variant='white'
               >
                 <div className='space-y-1'>
                   <p className='font-medium'>{account.name}</p>
-                  <p className='text-sm text-muted-foreground'>
+                  <p className='text-sm opacity-80'>
                     Saldo: {formatCurrency(account.balance)} {account.currency}
-                  </p>
-                  <p className='text-sm text-muted-foreground capitalize'>
-                    Tipo:{' '}
-                    {account.type === 'cash'
-                      ? 'Efectivo'
-                      : account.type === 'bank'
-                      ? 'Banco'
-                      : 'Inversión'}
                   </p>
                   <p className='text-sm text-amber-700'>Estado: Cerrada</p>
                 </div>
-
                 <div className='flex flex-wrap gap-2 mt-2'>
                   <Button
                     size='sm'
                     variant='outline'
+                    className={toneMap.closed.outline}
                     onClick={() => setViewTransactionsAccount(account)}
                   >
                     Ver movimientos
                   </Button>
-
-                  {/* Reabrir (no se puede eliminar una vez cerrada) */}
                   <Button
                     size='sm'
+                    className={toneMap.closed.solid}
                     onClick={() => handleReopenAccount(account)}
                   >
                     Reabrir

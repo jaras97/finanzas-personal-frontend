@@ -4,8 +4,8 @@ import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,7 @@ export default function DepositToAccountModal({
   };
 
   const handleDeposit = async () => {
-    if (saving) return; // evita dobles envíos
+    if (saving) return;
     const amt = parseNumber(amount);
     if (isNaN(amt) || amt <= 0) {
       toast.error('Ingresa un monto válido (> 0)');
@@ -72,42 +72,44 @@ export default function DepositToAccountModal({
     }
   };
 
-  // IDs accesibles
+  // 🎨 Tinte positivo
+  const panelTint = 'bg-emerald-50';
+  const headerFooterTint = 'bg-emerald-100';
+  const ctaClass =
+    'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-300';
+
   const idAmount = 'deposit-amount';
   const idDesc = 'deposit-desc';
+
+  // Nota: mantenemos 2 decimales (formato ES) según diseño de este modal
+  const decimalScale = 2;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
       <DialogContent
         className={cn(
-          'bg-card text-foreground',
-          'w-[min(100vw-1rem,520px)]',
-          'p-0',
+          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
+          'w-[min(100vw-1rem,520px)] rounded-2xl overflow-hidden',
+          panelTint,
         )}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onPointerDownOutside={(e) => saving && e.preventDefault()}
-        onEscapeKeyDown={(e) => saving && e.preventDefault()}
+        size='md'
       >
-        {/* Contenedor scrollable para mobile/teclado */}
-        <div
-          className={cn(
-            'max-h-[85dvh] sm:max-h-[80vh]',
-            'overflow-y-auto overscroll-contain',
-            'px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
-          )}
+        {/* HEADER */}
+        <header className={cn('border-b px-4 py-3', headerFooterTint)}>
+          <DialogTitle className='flex items-center gap-2 text-base sm:text-lg font-semibold'>
+            Depositar en {account.name} ({account.currency})
+            <InfoHint side='top'>
+              Este movimiento se registrará como un <b>ingreso</b> en la cuenta.
+              Si te equivocas, puedes compensarlo creando un <b>retiro</b>.
+            </InfoHint>
+          </DialogTitle>
+        </header>
+
+        {/* BODY */}
+        <section
+          className='overflow-y-auto overscroll-contain px-4 py-4'
           aria-busy={saving}
         >
-          <DialogHeader>
-            <DialogTitle className='flex items-center gap-2'>
-              Depositar en {account.name} ({account.currency})
-              <InfoHint side='top'>
-                Este movimiento se registrará como un <b>ingreso</b> en la
-                cuenta. No puedes deshacerlo, pero sí revertirlo creando un
-                retiro equivalente si te equivocaste.
-              </InfoHint>
-            </DialogTitle>
-          </DialogHeader>
-
           <div className='space-y-4'>
             <p className='text-xs text-muted-foreground'>
               Saldo actual:{' '}
@@ -134,10 +136,11 @@ export default function DepositToAccountModal({
                 thousandSeparator='.'
                 decimalSeparator=','
                 allowNegative={false}
-                decimalScale={2}
+                decimalScale={decimalScale}
                 inputMode='decimal'
                 customInput={Input}
                 disabled={saving}
+                className='bg-white'
               />
             </div>
 
@@ -152,7 +155,7 @@ export default function DepositToAccountModal({
                 </label>
                 <InfoHint side='top'>
                   Añade un detalle como “Pago de nómina” o “Transferencia desde
-                  X cuenta” para reconocerlo después.
+                  X cuenta”.
                 </InfoHint>
               </div>
               <Input
@@ -160,19 +163,33 @@ export default function DepositToAccountModal({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={saving}
+                className='bg-white'
               />
             </div>
+          </div>
+        </section>
 
+        {/* FOOTER */}
+        <footer className={cn('border-t', headerFooterTint)}>
+          <div className='px-4 py-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
+            <DialogClose asChild>
+              <Button
+                className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
+                disabled={saving}
+              >
+                Cancelar
+              </Button>
+            </DialogClose>
             <Button
               onClick={handleDeposit}
-              className='w-full'
               disabled={saving}
               aria-disabled={saving}
+              className={cn('sm:min-w-[160px]', ctaClass)}
             >
               {saving ? 'Depositando…' : 'Depositar'}
             </Button>
           </div>
-        </div>
+        </footer>
       </DialogContent>
     </Dialog>
   );

@@ -4,8 +4,8 @@ import { useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -22,9 +22,9 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 import axios from 'axios';
-import { toIsoAtLocalNoon } from '@/utils/dates';
 import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
+import { DatePicker } from '@/components/ui/date-picker';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -33,6 +33,10 @@ interface Props {
   debt: Debt;
   onPaid: () => void;
 }
+
+// Helper: ISO a mediodía local desde Date
+const dateToIsoAtLocalNoon = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0).toISOString();
 
 export default function PayDebtModal({
   open,
@@ -45,7 +49,7 @@ export default function PayDebtModal({
   const [amount, setAmount] = useState('');
   const [savingAccountId, setSavingAccountId] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState<Date | undefined>(undefined);
   const [saving, setSaving] = useState(false);
 
   const parseNumber = (v: string) => {
@@ -74,7 +78,6 @@ export default function PayDebtModal({
     [eligibleAccounts, savingAccountId],
   );
 
-  const idDate = 'pay-debt-date';
   const idAmount = 'pay-debt-amount';
   const idAccount = 'pay-debt-account';
   const idDesc = 'pay-debt-desc';
@@ -82,7 +85,7 @@ export default function PayDebtModal({
   const handleFillMax = () => {
     if (!selectedAccount) return;
     const maxPay = Math.min(debt.total_amount, selectedAccount.balance);
-    setAmount(String(maxPay)); // NumericFormat recibe el valor crudo
+    setAmount(String(maxPay)); // NumericFormat espera valor crudo
   };
 
   const handlePay = async () => {
@@ -119,7 +122,7 @@ export default function PayDebtModal({
         amount: amt,
         saving_account_id: parseInt(savingAccountId, 10),
         description: description || `Pago de deuda: ${debt.name}`,
-        date: date ? toIsoAtLocalNoon(date) : undefined, // ⬅️ mediodía local
+        date: date ? dateToIsoAtLocalNoon(date) : undefined, // ⬅️ mediodía local
       });
 
       toast.success('Deuda pagada correctamente');
@@ -130,7 +133,7 @@ export default function PayDebtModal({
       setAmount('');
       setSavingAccountId('');
       setDescription('');
-      setDate('');
+      setDate(undefined);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         toast.error(error?.response?.data?.detail || 'Error al pagar la deuda');
@@ -142,46 +145,53 @@ export default function PayDebtModal({
     }
   };
 
+  // 🎨 Tintes del panel (neutro)
+  const panelTint = 'bg-[hsl(var(--accent))]';
+  const headerTint = 'bg-[hsl(var(--muted))]';
+  const ctaClass = 'bg-primary text-primary-foreground hover:bg-primary/90';
+
   return (
     <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
       <DialogContent
-        className={cn('w-[min(100vw-1rem,520px)] p-0 bg-card text-foreground')}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onPointerDownOutside={(e) => saving && e.preventDefault()}
-        onEscapeKeyDown={(e) => saving && e.preventDefault()}
+        size='xl'
+        className={cn(
+          // layout header | body | footer
+          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
+          'w-[min(100vw-1rem,560px)] rounded-2xl overflow-hidden',
+          panelTint,
+        )}
       >
-        <div
-          className={cn(
-            'max-h-[85dvh] sm:max-h-[80vh]',
-            'overflow-y-auto overscroll-contain',
-            'px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
-          )}
+        {/* HEADER */}
+        <header className={cn('border-b px-4 py-3', headerTint)}>
+          <DialogTitle className='text-base sm:text-lg font-semibold'>
+            Pagar deuda: {debt.name} ({debt.currency})
+          </DialogTitle>
+        </header>
+
+        {/* BODY (scroll) */}
+        <section
+          className='overflow-y-auto overscroll-contain px-4 py-4'
           aria-busy={saving}
         >
-          <DialogHeader>
-            <DialogTitle>
-              Pagar deuda: {debt.name} ({debt.currency})
-            </DialogTitle>
-          </DialogHeader>
-
           <div className='space-y-4'>
             {/* Fecha */}
             <div className='space-y-1'>
-              <div className='flex items-center gap-2'>
-                <label htmlFor={idDate} className='text-sm font-medium'>
-                  Fecha de pago
-                </label>
-                <InfoHint side='top'>
-                  Opcional. Se guarda a <b>mediodía local</b> para evitar saltos
-                  de día por husos horarios.
-                </InfoHint>
+              <div className='flex items-center justify-between gap-2'>
+                <div className='flex items-center gap-2'>
+                  <span className='text-sm font-medium'>Fecha de pago</span>
+                  <InfoHint side='top'>
+                    Opcional. Se guarda a <b>mediodía local</b> para evitar
+                    saltos de día por husos horarios.
+                  </InfoHint>
+                </div>
+                {/* Accesos rápidos ya vienen en el Popover (Limpiar/Hoy) */}
               </div>
-              <Input
-                id={idDate}
-                type='date'
+              <DatePicker
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={setDate}
                 disabled={saving}
+                className='z-[140]'
+                buttonClassName='bg-white h-9'
               />
             </div>
 
@@ -208,6 +218,7 @@ export default function PayDebtModal({
                   inputMode='decimal'
                   customInput={Input}
                   disabled={saving}
+                  className='bg-white'
                 />
                 <Button
                   type='button'
@@ -242,7 +253,7 @@ export default function PayDebtModal({
                 onValueChange={setSavingAccountId}
                 disabled={saving || eligibleAccounts.length === 0}
               >
-                <SelectTrigger id={idAccount}>
+                <SelectTrigger id={idAccount} className='bg-white'>
                   <SelectValue
                     placeholder={
                       eligibleAccounts.length
@@ -251,7 +262,7 @@ export default function PayDebtModal({
                     }
                   />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className='select-solid z-[140]'>
                   {eligibleAccounts.map((acc) => (
                     <SelectItem key={acc.id} value={acc.id.toString()}>
                       ({formatCurrency(acc.balance)} {acc.currency}) {acc.name}
@@ -293,19 +304,33 @@ export default function PayDebtModal({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={saving}
+                className='bg-white'
               />
             </div>
+          </div>
+        </section>
 
+        {/* FOOTER */}
+        <footer className={cn('border-t px-4 py-3', headerTint)}>
+          <div className='flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
+            <DialogClose asChild>
+              <Button
+                className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
+                disabled={saving}
+              >
+                Cancelar
+              </Button>
+            </DialogClose>
             <Button
               onClick={handlePay}
-              className='w-full'
               disabled={saving || eligibleAccounts.length === 0}
               aria-disabled={saving || eligibleAccounts.length === 0}
+              className={cn('sm:min-w-[160px]', ctaClass)}
             >
               {saving ? 'Pagando…' : 'Pagar deuda'}
             </Button>
           </div>
-        </div>
+        </footer>
       </DialogContent>
     </Dialog>
   );

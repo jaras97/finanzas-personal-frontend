@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import { Debt, currencyType } from '@/types';
 import axios from 'axios';
 import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
+import { DatePicker } from '@/components/ui/date-picker';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -42,7 +43,9 @@ export default function EditDebtModal({
   const [interestRate, setInterestRate] = useState(
     (debt.interest_rate ?? 0).toString(),
   );
-  const [dueDate, setDueDate] = useState(debt.due_date || '');
+  const [dueDate, setDueDate] = useState<Date | undefined>(
+    debt.due_date ? ymdToLocalDate(debt.due_date) : undefined,
+  );
   const [currency, setCurrency] = useState<currencyType>(debt.currency);
   const [saving, setSaving] = useState(false);
 
@@ -57,13 +60,33 @@ export default function EditDebtModal({
     setName(debt.name);
     setTotalAmount(debt.total_amount.toString());
     setInterestRate((debt.interest_rate ?? 0).toString());
-    setDueDate(debt.due_date || '');
+    setDueDate(debt.due_date ? ymdToLocalDate(debt.due_date) : undefined);
     setCurrency(debt.currency);
-  }, [debt?.id]);
+  }, [debt?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const parseNumber = (v: string) => {
     const n = parseFloat((v || '').replace(',', '.'));
     return isNaN(n) ? 0 : n;
+  };
+
+  // Evitar toasts con objetos (422)
+  const extractApiError = (err: unknown) => {
+    if (axios.isAxiosError(err)) {
+      const data: any = err.response?.data;
+      const detail =
+        data?.detail ?? data?.message ?? data?.error ?? data?.errors;
+      if (typeof detail === 'string') return detail;
+      if (Array.isArray(detail)) {
+        const msgs = detail.map((e: any) => e?.msg).filter(Boolean);
+        if (msgs.length) return msgs.join(' • ');
+      }
+      try {
+        return JSON.stringify(detail ?? data ?? err);
+      } catch {
+        return (err as any)?.message || 'Error inesperado';
+      }
+    }
+    return 'Error inesperado';
   };
 
   const handleUpdate = async () => {
@@ -75,14 +98,13 @@ export default function EditDebtModal({
       return;
     }
 
-    // Payload (si hay movimientos, bloqueamos monto/moneda)
     const payload = {
       name: cleanedName,
       total_amount: hasTransactions
         ? debt.total_amount
         : parseNumber(totalAmount),
       interest_rate: parseNumber(interestRate),
-      due_date: dueDate || null,
+      due_date: dueDate ? toLocalYMD(dueDate) : null, // ← string "YYYY-MM-DD" o null
       currency: hasTransactions ? debt.currency : currency,
       kind: debt.kind,
     };
@@ -94,46 +116,46 @@ export default function EditDebtModal({
       onUpdated();
       onOpenChange(false);
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        toast.error(
-          error?.response?.data?.detail || 'Error al actualizar deuda',
-        );
-      } else {
-        toast.error('Error inesperado al actualizar deuda');
-      }
+      toast.error(extractApiError(error));
     } finally {
       setSaving(false);
     }
   };
 
-  // IDs para accesibilidad
+  // IDs accesibles
   const idName = 'edit-debt-name';
   const idAmount = 'edit-debt-total-amount';
   const idRate = 'edit-debt-interest-rate';
-  const idDue = 'edit-debt-due-date';
   const idCurrency = 'edit-debt-currency';
+
+  // 🎨 Tintes neutros
+  const panelTint = 'bg-[hsl(var(--accent))]';
+  const headerTint = 'bg-[hsl(var(--muted))]';
+  const ctaClass = 'bg-primary text-primary-foreground hover:bg-primary/90';
 
   return (
     <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
       <DialogContent
-        className={cn('w-[min(100vw-1rem,520px)] p-0 bg-card text-foreground')}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onPointerDownOutside={(e) => saving && e.preventDefault()}
-        onEscapeKeyDown={(e) => saving && e.preventDefault()}
+        size='xl'
+        className={cn(
+          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
+          'w-[min(100vw-1rem,560px)] rounded-2xl overflow-hidden',
+          panelTint,
+        )}
       >
-        <div
-          className={cn(
-            'max-h-[85dvh] sm:max-h-[80vh]',
-            'overflow-y-auto overscroll-contain',
-            'px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
-          )}
+        {/* HEADER tintado */}
+        <header className={cn('border-b px-4 py-3', headerTint)}>
+          <DialogTitle className='text-base sm:text-lg font-semibold'>
+            Editar Deuda
+          </DialogTitle>
+        </header>
+
+        {/* BODY (scroll) */}
+        <section
+          className='overflow-y-auto overscroll-contain px-4 py-4'
           aria-busy={saving}
         >
-          <DialogHeader>
-            <DialogTitle>Editar Deuda</DialogTitle>
-          </DialogHeader>
-
-          <div className='space-y-4 mt-2'>
+          <div className='space-y-4'>
             {/* Nombre */}
             <div className='space-y-1'>
               <div className='flex items-center gap-2'>
@@ -149,6 +171,7 @@ export default function EditDebtModal({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={saving}
+                className='bg-white'
               />
             </div>
 
@@ -163,7 +186,6 @@ export default function EditDebtModal({
                   modificarse.
                 </InfoHint>
               </div>
-
               <NumericFormat
                 id={idAmount}
                 value={totalAmount}
@@ -175,6 +197,7 @@ export default function EditDebtModal({
                 inputMode='decimal'
                 customInput={Input}
                 disabled={saving || hasTransactions}
+                className='bg-white'
               />
               {hasTransactions && (
                 <p className='text-xs text-muted-foreground'>
@@ -204,23 +227,24 @@ export default function EditDebtModal({
                 inputMode='decimal'
                 customInput={Input}
                 disabled={saving}
+                className='bg-white'
               />
             </div>
 
-            {/* Fecha de vencimiento */}
+            {/* Fecha de vencimiento (DatePicker) */}
             <div className='space-y-1'>
               <div className='flex items-center gap-2'>
-                <label htmlFor={idDue} className='text-sm font-medium'>
+                <span className='text-sm font-medium'>
                   Fecha de vencimiento
-                </label>
+                </span>
                 <InfoHint side='top'>Opcional. Solo referencia.</InfoHint>
               </div>
-              <Input
-                id={idDue}
-                type='date'
+              <DatePicker
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+                onChange={setDueDate}
                 disabled={saving}
+                className='z-[140]'
+                buttonClassName='bg-white h-9'
               />
             </div>
 
@@ -240,10 +264,10 @@ export default function EditDebtModal({
                 onValueChange={(v) => setCurrency(v as currencyType)}
                 disabled={saving || hasTransactions}
               >
-                <SelectTrigger id={idCurrency}>
-                  <SelectValue />
+                <SelectTrigger id={idCurrency} className='bg-white'>
+                  <SelectValue placeholder='Selecciona la moneda' />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className='select-solid z-[140]'>
                   <SelectItem value='COP'>COP — Peso Colombiano</SelectItem>
                   <SelectItem value='USD'>USD — Dólar</SelectItem>
                   <SelectItem value='EUR'>EUR — Euro</SelectItem>
@@ -261,18 +285,43 @@ export default function EditDebtModal({
                 </p>
               )}
             </div>
+          </div>
+        </section>
 
+        {/* FOOTER tintado */}
+        <footer className={cn('border-t px-4 py-3', headerTint)}>
+          <div className='flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
+            <DialogClose asChild>
+              <Button
+                className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
+                disabled={saving}
+              >
+                Cancelar
+              </Button>
+            </DialogClose>
             <Button
               onClick={handleUpdate}
-              className='w-full'
               disabled={saving}
               aria-disabled={saving}
+              className={cn('sm:min-w-[160px]', ctaClass)}
             >
               {saving ? 'Guardando…' : 'Actualizar Deuda'}
             </Button>
           </div>
-        </div>
+        </footer>
       </DialogContent>
     </Dialog>
   );
+}
+
+/* Utils de fecha locales y seguras */
+function toLocalYMD(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function ymdToLocalDate(ymd: string) {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
 }

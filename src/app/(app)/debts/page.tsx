@@ -1,16 +1,13 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { useDebts } from '@/hooks/useDebts';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/lib/format';
-import { format } from 'date-fns';
-import { useMemo, useState } from 'react';
-import { Debt } from '@/types';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import axios from 'axios';
+
+import type { currencyType, Debt } from '@/types';
 
 import NewDebtModal from '@/components/forms/NewDebtModal';
 import EditDebtModal from '@/components/forms/EditDebtModal';
@@ -18,10 +15,23 @@ import DeleteDebtModal from '@/components/forms/DeleteDebtModal';
 import PayDebtModal from '@/components/forms/PayDebtModal';
 import AddChargeToDebtModal from '@/components/forms/AddChargeToDebtModal';
 import DebtTransactionsModal from '@/components/forms/DebtTransactionsModal';
+import DebtsSection from '@/components/debts/DebtsSection';
+import KpiTotalsCard from '@/components/kpi/KpiTotalsCard';
+
+// ==== helpers
+type Currency = currencyType | string;
+
+function sumByCurrency(items: Debt[]) {
+  return items.reduce<Record<Currency, number>>((acc, d) => {
+    acc[d.currency] = (acc[d.currency] || 0) + (d.total_amount || 0);
+    return acc;
+  }, {});
+}
 
 export default function DebtsPage() {
   const { debts, loading, refresh } = useDebts();
 
+  // Modales
   const [createOpen, setCreateOpen] = useState(false);
   const [editDebt, setEditDebt] = useState<Debt | null>(null);
   const [deleteDebt, setDeleteDebt] = useState<Debt | null>(null);
@@ -31,25 +41,40 @@ export default function DebtsPage() {
     null,
   );
 
-  const getKindLabel = (kind: string) =>
-    kind === 'credit_card' ? 'Tarjeta de Crédito' : 'Préstamo';
-  const getKindBadgeVariant = (kind: string) =>
-    kind === 'credit_card' ? 'secondary' : 'outline';
-
-  const activeDebts = useMemo(
+  // Agrupaciones
+  const active = useMemo(
     () => debts.filter((d) => d.status === 'active'),
     [debts],
   );
-  const closedDebts = useMemo(
+  const closed = useMemo(
     () => debts.filter((d) => d.status === 'closed'),
     [debts],
   );
 
-  const isPristine = (d: Debt) => (d.transactions_count ?? 0) === 0;
-  const canClose = (d: Debt) => d.status === 'active' && d.total_amount === 0;
-  const canReopen = (d: Debt) => d.status === 'closed';
+  const loans = useMemo(
+    () => active.filter((d) => d.kind === 'loan'),
+    [active],
+  );
+  const cards = useMemo(
+    () => active.filter((d) => d.kind === 'credit_card'),
+    [active],
+  );
 
-  const handleCloseDebt = async (debt: Debt) => {
+  // Totales por kind/currency
+  const tLoans = useMemo(() => sumByCurrency(loans), [loans]);
+  const tCards = useMemo(() => sumByCurrency(cards), [cards]);
+  const tAll = useMemo(() => sumByCurrency(active), [active]);
+
+  // Policy de acciones (igual que tenías, centralizada)
+  function getDebtActions(d: Debt) {
+    const txCount = d.transactions_count ?? 0;
+    const isPristine = txCount === 0;
+    const canClose = d.status === 'active' && d.total_amount === 0;
+    const canReopen = d.status === 'closed';
+    return { isPristine, canClose, canReopen };
+  }
+
+  async function handleCloseDebt(debt: Debt) {
     try {
       const res = await api.post(`/debts/${debt.id}/close`);
       toast.success(res.data?.message || 'Deuda cerrada correctamente');
@@ -61,9 +86,8 @@ export default function DebtsPage() {
         );
       }
     }
-  };
-
-  const handleReopenDebt = async (debt: Debt) => {
+  }
+  async function handleReopenDebt(debt: Debt) {
     try {
       const res = await api.post(`/debts/${debt.id}/reopen`);
       toast.success(res.data?.message || 'Deuda reabierta correctamente');
@@ -75,197 +99,100 @@ export default function DebtsPage() {
         );
       }
     }
-  };
+  }
 
   return (
     <div className='space-y-6'>
-      <div className='flex justify-between items-center'>
-        <h1 className='text-xl font-semibold'>Deudas</h1>
-        <Button onClick={() => setCreateOpen(true)}>+ Nueva Deuda</Button>
+      {/* Header + CTA */}
+      <div className='flex justify-between items-center flex-wrap gap-2'>
+        <div className='min-w-0'>
+          <h1 className='text-2xl font-semibold'>Deudas</h1>
+          <p className='text-sm text-muted-foreground'>
+            Gestiona tus préstamos y tarjetas de crédito.
+          </p>
+        </div>
+        <div className='flex gap-2 flex-wrap'>
+          <Button onClick={() => setCreateOpen(true)} variant='soft-rose'>
+            + Nueva deuda
+          </Button>
+        </div>
       </div>
 
-      {/* ACTIVAS */}
-      <section className='space-y-3'>
-        <h2 className='text-sm font-medium text-muted-foreground'>
-          Deudas activas
-        </h2>
+      {/* KPIs (mismo patrón de Savings) */}
+      <section className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
+        <KpiTotalsCard
+          title='Total en préstamos'
+          totals={tLoans}
+          gradient
+          cardVariant='white'
+        />
+        <KpiTotalsCard
+          title='Total en tarjetas de crédito'
+          totals={tCards}
+          gradient
+          cardVariant='white'
+        />
 
-        {loading ? (
-          <p className='text-center p-4 text-muted-foreground'>
-            Cargando deudas...
-          </p>
-        ) : activeDebts.length ? (
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
-            {activeDebts.map((debt) => (
-              <Card
-                key={debt.id}
-                className='p-4 space-y-1 bg-card text-foreground border border-border rounded-md'
-              >
-                <div className='flex items-center justify-between'>
-                  <p className='font-medium'>{debt.name}</p>
-                  <Badge variant={getKindBadgeVariant(debt.kind)}>
-                    {getKindLabel(debt.kind)}
-                  </Badge>
-                </div>
-
-                <p className='text-sm text-muted-foreground'>
-                  Saldo: {formatCurrency(debt.total_amount)} {debt.currency}
-                </p>
-                <p className='text-sm text-muted-foreground'>
-                  Tasa de interés: {debt.interest_rate}%
-                </p>
-                {debt.due_date && (
-                  <p className='text-sm text-muted-foreground'>
-                    Vence: {format(new Date(debt.due_date), 'dd MMM yyyy')}
-                  </p>
-                )}
-                <p className='text-sm'>
-                  Estado:{' '}
-                  <span className='text-green-600 font-medium'>Activa</span>
-                </p>
-                {isPristine(debt) && (
-                  <p className='text-xs text-emerald-600'>
-                    Deuda prístina (sin movimientos)
-                  </p>
-                )}
-
-                <div className='flex flex-wrap gap-2 mt-2'>
-                  {/* Acciones */}
-                  <Button size='sm' onClick={() => setPayDebt(debt)}>
-                    Pagar
-                  </Button>
-                  <Button
-                    size='sm'
-                    variant='secondary'
-                    onClick={() => setAddChargeDebt(debt)}
-                  >
-                    Agregar Cargo
-                  </Button>
-                  <Button
-                    size='sm'
-                    variant='outline'
-                    onClick={() => setViewTransactionsDebt(debt)}
-                  >
-                    Ver Movimientos
-                  </Button>
-                  <Button
-                    size='sm'
-                    variant='outline'
-                    onClick={() => setEditDebt(debt)}
-                  >
-                    Editar
-                  </Button>
-
-                  {canClose(debt) && (
-                    <Button
-                      size='sm'
-                      variant='destructive'
-                      onClick={() => handleCloseDebt(debt)}
-                    >
-                      Cerrar
-                    </Button>
-                  )}
-
-                  {/* Eliminar solo si no tiene transacciones de ningún tipo */}
-                  {isPristine(debt) && (
-                    <Button
-                      size='sm'
-                      variant='destructive'
-                      onClick={() => setDeleteDebt(debt)}
-                    >
-                      Eliminar
-                    </Button>
-                  )}
-                </div>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <p className='text-center p-4 text-muted-foreground'>
-            No tienes deudas activas.
-          </p>
-        )}
+        {/* Total general: mejor neutra (surface) para pasivos */}
+        <KpiTotalsCard
+          title='Total general'
+          totals={tAll}
+          cardVariant='white'
+        />
       </section>
 
-      {/* CERRADAS */}
-      <section className='space-y-3'>
-        <h2 className='text-sm font-medium text-muted-foreground'>
-          Deudas cerradas
-        </h2>
+      {/* 1) Préstamos */}
+      <DebtsSection
+        title='Préstamos'
+        hint='Créditos de consumo, estudiantiles, personales, etc.'
+        items={loans}
+        loading={loading}
+        emptyText='No tienes préstamos activos.'
+        tone='loan'
+        getDebtActions={getDebtActions}
+        onPay={setPayDebt}
+        onCharge={setAddChargeDebt}
+        onViewTx={setViewTransactionsDebt}
+        onEdit={setEditDebt}
+        onClose={handleCloseDebt}
+        onDelete={setDeleteDebt}
+      />
 
-        {loading ? (
-          <p className='text-center p-4 text-muted-foreground'>
-            Cargando deudas...
-          </p>
-        ) : closedDebts.length ? (
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
-            {closedDebts.map((debt) => (
-              <Card
-                key={debt.id}
-                className='p-4 space-y-1 bg-muted/60 text-foreground border border-dashed rounded-md'
-              >
-                <div className='flex items-center justify-between'>
-                  <p className='font-medium'>{debt.name}</p>
-                  <Badge variant={getKindBadgeVariant(debt.kind)}>
-                    {getKindLabel(debt.kind)}
-                  </Badge>
-                </div>
+      {/* 2) Tarjetas de crédito */}
+      <DebtsSection
+        title='Tarjetas de crédito'
+        hint='Movimientos rotativos, pagos mínimos, etc.'
+        items={cards}
+        loading={loading}
+        emptyText='No tienes tarjetas activas.'
+        tone='credit'
+        getDebtActions={getDebtActions}
+        onPay={setPayDebt}
+        onCharge={setAddChargeDebt}
+        onViewTx={setViewTransactionsDebt}
+        onEdit={setEditDebt}
+        onClose={handleCloseDebt}
+        onDelete={setDeleteDebt}
+      />
 
-                <p className='text-sm text-muted-foreground'>
-                  Saldo: {formatCurrency(debt.total_amount)} {debt.currency}
-                </p>
-                <p className='text-sm text-muted-foreground'>
-                  Tasa de interés: {debt.interest_rate}%
-                </p>
-                {debt.due_date && (
-                  <p className='text-sm text-muted-foreground'>
-                    Vence: {format(new Date(debt.due_date), 'dd MMM yyyy')}
-                  </p>
-                )}
-                <p className='text-sm text-amber-700'>Estado: Cerrada</p>
-
-                <div className='flex flex-wrap gap-2 mt-2'>
-                  <Button
-                    size='sm'
-                    variant='outline'
-                    onClick={() => setViewTransactionsDebt(debt)}
-                  >
-                    Ver Movimientos
-                  </Button>
-                  <Button
-                    size='sm'
-                    variant='outline'
-                    onClick={() => setEditDebt(debt)}
-                  >
-                    Editar
-                  </Button>
-
-                  {canReopen(debt) && (
-                    <Button size='sm' onClick={() => handleReopenDebt(debt)}>
-                      Reabrir
-                    </Button>
-                  )}
-
-                  {/* Eliminar solo si no tiene transacciones de ningún tipo */}
-                  {isPristine(debt) && (
-                    <Button
-                      size='sm'
-                      variant='destructive'
-                      onClick={() => setDeleteDebt(debt)}
-                    >
-                      Eliminar
-                    </Button>
-                  )}
-                </div>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <p className='text-center p-4 text-muted-foreground'>
-            No tienes deudas cerradas.
-          </p>
-        )}
-      </section>
+      {/* 3) Cerradas */}
+      <DebtsSection
+        title='Deudas cerradas'
+        hint='Se conservan para consulta histórica.'
+        items={closed}
+        loading={loading}
+        emptyText='No tienes deudas cerradas.'
+        tone='loan'
+        closed
+        getDebtActions={getDebtActions}
+        onPay={() => {}}
+        onCharge={() => {}}
+        onViewTx={setViewTransactionsDebt}
+        onEdit={setEditDebt}
+        onClose={() => {}}
+        onDelete={setDeleteDebt}
+        onReopen={handleReopenDebt}
+      />
 
       {/* Modales */}
       <NewDebtModal
@@ -279,7 +206,7 @@ export default function DebtsPage() {
           debt={editDebt}
           onUpdated={refresh}
           open={!!editDebt}
-          onOpenChange={(open) => !open && setEditDebt(null)}
+          onOpenChange={(o) => !o && setEditDebt(null)}
         />
       )}
 
@@ -288,7 +215,7 @@ export default function DebtsPage() {
           debt={deleteDebt}
           onDeleted={refresh}
           open={!!deleteDebt}
-          onOpenChange={(open) => !open && setDeleteDebt(null)}
+          onOpenChange={(o) => !o && setDeleteDebt(null)}
         />
       )}
 
@@ -297,7 +224,7 @@ export default function DebtsPage() {
           debt={payDebt}
           onPaid={refresh}
           open={!!payDebt}
-          onOpenChange={(open) => !open && setPayDebt(null)}
+          onOpenChange={(o) => !o && setPayDebt(null)}
         />
       )}
 
@@ -306,7 +233,7 @@ export default function DebtsPage() {
           debt={addChargeDebt}
           onCompleted={refresh}
           open={!!addChargeDebt}
-          onOpenChange={(open) => !open && setAddChargeDebt(null)}
+          onOpenChange={(o) => !o && setAddChargeDebt(null)}
         />
       )}
 
@@ -314,7 +241,7 @@ export default function DebtsPage() {
         <DebtTransactionsModal
           debt={viewTransactionsDebt}
           open={!!viewTransactionsDebt}
-          onOpenChange={(open) => !open && setViewTransactionsDebt(null)}
+          onOpenChange={(o) => !o && setViewTransactionsDebt(null)}
         />
       )}
     </div>
