@@ -1,42 +1,68 @@
-// app/(dashboard)/layout.tsx o donde tengas AppLayout
+// app/(dashboard)/layout.tsx
 'use client';
 
 import Sidebar from '@/components/layout/Sidebar';
 import { toast } from 'sonner';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { useSidebarStore } from '@/lib/store/sidebarStore';
 import { cn } from '@/lib/utils';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { status } = useSubscriptionStatus();
+  // 1) Hooks SIEMPRE arriba, sin condicionales
+  const { status, initialized, isNone, isExpired, isInactive } =
+    useSubscriptionStatus();
   const router = useRouter();
   const { toggle } = useSidebarStore();
+  const didToast = useRef(false);
 
-  const loading = status === 'loading';
-  const isExpired = status === 'expired';
-  const noSubscription = status === 'none';
-  const isInactive = status === 'inactive';
-
+  // 2) Efecto incondicional: decide navegación cuando haya veredicto
   useEffect(() => {
-    if (!loading) {
-      if (isExpired || noSubscription) {
-        toast.error(
-          'Tu suscripción ha expirado o no existe. Contacta al administrador para renovarla.',
-        );
-        router.push('/auth/expired');
-      } else if (isInactive) {
-        toast.error(
-          'Tu suscripción está inactiva. Contacta al administrador para activarla.',
-        );
-        router.push('/auth/inactive');
-      }
-    }
-  }, [status, loading, isExpired, noSubscription, isInactive, router]);
+    if (!initialized) return;
 
-  if (loading) {
+    // Detectar si vienes del login SOLO dentro del efecto (lado cliente)
+    const fromLogin =
+      typeof window !== 'undefined' &&
+      window.sessionStorage.getItem('fromLogin') === '1';
+
+    if (fromLogin) {
+      window.sessionStorage.removeItem('fromLogin');
+
+      // Redirecciones silenciosas (sin toasts)
+      if (isNone) {
+        router.replace('/auth/no-subscription');
+      } else if (isExpired) {
+        router.replace('/auth/expired');
+      } else if (isInactive) {
+        router.replace('/auth/inactive');
+      }
+      return;
+    }
+
+    // Caso “deep link” o cambios dentro de la app (con toasts)
+    if (didToast.current) return;
+
+    if (isNone) {
+      toast.error(
+        'Tu cuenta aún no tiene una suscripción activa. Contacta al administrador.',
+      );
+      didToast.current = true;
+      router.replace('/auth/no-subscription');
+    } else if (isExpired) {
+      toast.error('Tu suscripción ha expirado. Por favor renuévala.');
+      didToast.current = true;
+      router.replace('/auth/expired');
+    } else if (isInactive) {
+      toast.error('Tu suscripción está inactiva. Contacta al administrador.');
+      didToast.current = true;
+      router.replace('/auth/inactive');
+    }
+  }, [initialized, isNone, isExpired, isInactive, router]);
+
+  // 3) Renders (estos returns pueden ir DESPUÉS de los hooks sin romper el orden)
+  if (!initialized) {
     return (
       <div className='flex items-center justify-center h-screen'>
         <p className='text-muted-foreground text-lg'>
@@ -46,14 +72,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (isExpired || noSubscription || isInactive) return null;
+  if (isNone || isExpired || isInactive) return null;
 
   return (
     <div className='min-h-screen'>
-      {/* Sidebar fijo en desktop + overlay mobile controlado dentro del componente */}
       <Sidebar />
 
-      {/* FAB para abrir sidebar en mobile al no tener Header */}
+      {/* FAB para abrir sidebar en mobile */}
       <button
         onClick={toggle}
         className={cn(
@@ -65,7 +90,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Menu className='h-5 w-5' />
       </button>
 
-      {/* Contenido: deja espacio al sidebar en desktop */}
       <main className='md:pl-64'>
         <div className='px-4 py-4 md:px-6 md:py-6'>{children}</div>
       </main>

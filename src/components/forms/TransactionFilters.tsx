@@ -82,7 +82,7 @@ export default function TransactionFilters({ onFilterChange }: Props) {
     <div className='space-y-4'>
       {/* Panel con leve realce */}
       <div className={cn('rounded-xl border p-3', 'bg-[hsl(var(--accent))]')}>
-        <div className='grid grid-cols-1 md:grid-cols-12 gap-3 items-start'>
+        <div className='grid grid-cols-1 md:grid-cols-14 gap-3 items-start'>
           {/* Rango de fechas */}
           <div className='min-w-0 md:col-span-5'>
             <DateRangePicker
@@ -92,12 +92,12 @@ export default function TransactionFilters({ onFilterChange }: Props) {
           </div>
 
           {/* Tipo */}
-          <div className='min-w-0 md:col-span-2'>
+          <div className='min-w-0 md:col-span-3'>
             <Select onValueChange={setType} value={type}>
               <SelectTrigger className='w-full truncate'>
                 <SelectValue placeholder='Filtrar por tipo' />
               </SelectTrigger>
-              <SelectContent className='z-[60]'>
+              <SelectContent className='z-[60] max-h-[50vh]'>
                 <SelectItem value='income'>Ingreso</SelectItem>
                 <SelectItem value='expense'>Egreso</SelectItem>
               </SelectContent>
@@ -105,7 +105,7 @@ export default function TransactionFilters({ onFilterChange }: Props) {
           </div>
 
           {/* Categoría */}
-          <div className='min-w-0 md:col-span-3'>
+          <div className='min-w-0 md:col-span-4'>
             <Select onValueChange={setCategoryId} value={categoryId}>
               <SelectTrigger className='w-full truncate'>
                 <SelectValue placeholder='Filtrar por categoría' />

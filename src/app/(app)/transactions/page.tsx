@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTransactions } from '@/hooks/useTransactions';
 import TransactionFilters, {
   Filters,
@@ -31,7 +31,11 @@ import { Input } from '@/components/ui/input';
 import { DataTable } from '@/components/ui/data-table';
 import { buildTransactionColumns } from './columns';
 
-/* === NEW: helpers de estilo para categorías === */
+/* Summary por rango (solo fecha) para KPIs */
+import { useSummary } from '@/hooks/useSummary';
+
+type Currency = 'COP' | 'USD' | 'EUR';
+
 const SYSTEM_CATEGORY_STYLES: Record<string, string> = {
   Transferencia: 'bg-sky-50 text-sky-700 border-sky-200',
   'Pago de deuda': 'bg-amber-50 text-amber-700 border-amber-200',
@@ -58,15 +62,18 @@ function categoryBadgeClasses(tx: TransactionWithCategoryRead) {
   return 'bg-slate-50 text-slate-700 border-slate-200';
 }
 
-/* === NEW: helper de currency para KPIs === */
-function getTxCurrency(tx: TransactionWithCategoryRead) {
-  return (
-    tx.saving_account?.currency ||
-    tx.debt?.currency ||
-    tx.from_account?.currency ||
-    tx.to_account?.currency ||
-    ''
-  );
+/* Helpers fechas */
+const dayKey = (d: Date | undefined) =>
+  d ? new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() : 0;
+
+function parseMaybeDate(v: unknown): Date | undefined {
+  if (!v) return undefined;
+  if (v instanceof Date) return v;
+  if (typeof v === 'string') {
+    const d = new Date(v);
+    return isNaN(+d) ? undefined : d;
+  }
+  return undefined;
 }
 
 export default function TransactionsPage() {
@@ -103,16 +110,6 @@ export default function TransactionsPage() {
     }
   };
 
-  const getStatusLabel = (tx: TransactionWithCategoryRead) => {
-    if (tx.is_cancelled) return 'Reversada';
-    if (tx.reversed_transaction_id) return 'Reversa';
-    if (tx.source_type === 'credit_card_purchase') return 'Compra con tarjeta';
-    if (tx.type === 'income') return 'Ingreso';
-    if (tx.type === 'expense') return 'Egreso';
-    return 'Transferencia';
-  };
-
-  /* Columnas (sin selector de visibilidad) */
   const allColumns = useMemo(
     () =>
       buildTransactionColumns({
@@ -125,8 +122,6 @@ export default function TransactionsPage() {
           setNoteTx(tx);
           setNoteOpen(true);
         },
-        // usePastelButtons: true,
-        // categoryClassName: categoryBadgeClasses,
       }).map((c, i) => ({
         ...c,
         id: (c as any).id ?? (c as any).accessorKey ?? `col_${i}`,
@@ -137,7 +132,6 @@ export default function TransactionsPage() {
   /* ===== toolbar: búsqueda ===== */
   const [search, setSearch] = useState('');
 
-  /* Filtro simple por búsqueda (sobre el dataset actual de página) */
   const filteredData = useMemo(() => {
     if (!search.trim()) return transactions;
     const q = search.toLowerCase();
@@ -156,27 +150,74 @@ export default function TransactionsPage() {
     });
   }, [transactions, search]);
 
-  /* KPIs por moneda (COP / USD) */
-  const kpisByCurrency = useMemo(() => {
-    const acc: Record<
-      string,
-      { income: number; expense: number; count: number }
-    > = {};
-    for (const tx of filteredData) {
-      if (tx.is_cancelled) continue;
-      const cur = getTxCurrency(tx) || 'COP';
-      if (!acc[cur]) acc[cur] = { income: 0, expense: 0, count: 0 };
-      acc[cur].count++;
-      if (tx.type === 'income') acc[cur].income += tx.amount;
-      else if (tx.type === 'expense') acc[cur].expense += tx.amount;
-    }
-    return acc;
-  }, [filteredData]);
+  /* ====== KPIs por moneda con summary (SOLO cambia con RANGO DE FECHAS) ====== */
 
-  const currenciesInView = useMemo(
-    () => Object.keys(kpisByCurrency).filter((c) => c === 'COP' || c === 'USD'),
-    [kpisByCurrency],
+  // Rango por defecto (mes actual completo) calculado UNA sola vez
+  const defaultDateRange = useMemo(() => {
+    const now = new Date();
+    return {
+      from: new Date(now.getFullYear(), now.getMonth(), 1),
+      to: new Date(now.getFullYear(), now.getMonth() + 1, 0), // último día del mes
+    };
+  }, []);
+
+  // Keys en estado: cuando cambian → se refetch el summary
+  const [dateRangeKeys, setDateRangeKeys] = useState(() => ({
+    fromKey: dayKey(defaultDateRange.from),
+    toKey: dayKey(defaultDateRange.to),
+  }));
+
+  // Sync automático: si cambia el rango dentro de "filters" (sin importar cómo lo pase TransactionFilters),
+  // recalculamos las keys. Si cambian otros filtros, no se tocan las keys (no hay refetch).
+  useEffect(() => {
+    const f: any = filters ?? {};
+    // soporta dos formas: dateRange:{from,to} O startDate/endDate (string/Date)
+    const rawFrom =
+      parseMaybeDate(f?.dateRange?.from) ??
+      parseMaybeDate(f?.startDate) ??
+      defaultDateRange.from;
+    const rawTo =
+      parseMaybeDate(f?.dateRange?.to) ??
+      parseMaybeDate(f?.endDate) ??
+      defaultDateRange.to;
+
+    const nextFromKey = dayKey(rawFrom);
+    const nextToKey = dayKey(rawTo);
+
+    setDateRangeKeys((prev) =>
+      prev.fromKey !== nextFromKey || prev.toKey !== nextToKey
+        ? { fromKey: nextFromKey, toKey: nextToKey }
+        : prev,
+    );
+  }, [filters, defaultDateRange.from, defaultDateRange.to]);
+
+  // Construimos DateRange SOLO a partir de las keys en estado (estables)
+  const dateRangeForSummary = useMemo(
+    () => ({
+      from: new Date(dateRangeKeys.fromKey),
+      to: new Date(dateRangeKeys.toKey),
+    }),
+    [dateRangeKeys],
   );
+
+  // Memo del objeto de parámetros para evitar nuevas referencias
+  const summaryParams = useMemo(
+    () => ({ dateRange: dateRangeForSummary }),
+    [dateRangeForSummary],
+  );
+
+  // Hook de summary: depende EXCLUSIVAMENTE del rango de fechas (vía state keys)
+  const {
+    data: summary,
+    loading: sumLoading,
+    error: sumError,
+  } = useSummary(summaryParams);
+
+  // Solo queremos COP y USD si existen en la respuesta
+  const currenciesInSummary = useMemo(() => {
+    const all = summary ? (Object.keys(summary) as Currency[]) : [];
+    return (['COP', 'USD'] as Currency[]).filter((c) => all.includes(c));
+  }, [summary]);
 
   const nf = useMemo(() => new Intl.NumberFormat('es-CO'), []);
 
@@ -190,55 +231,56 @@ export default function TransactionsPage() {
             Historial y gestión de tus movimientos.
           </p>
         </div>
-        {/* Sin botón aquí (solo en toolbar) */}
       </div>
 
-      {/* KPIs (pastel) con líneas por moneda */}
-      {!loading && (
+      {/* KPIs por moneda basados en SUMMARY del rango (se actualizan al cambiar fechas) */}
+      {!sumLoading && summary && (
         <section className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
           <Card variant='kpi-income' interactive>
             <CardContent className='py-5 px-6'>
-              <p className='text-sm text-slate-700'>Ingresos (vista)</p>
+              <p className='text-sm text-slate-700'>Ingresos (rango)</p>
               <div className='mt-1 space-y-1.5'>
-                {currenciesInView.map((cur) => (
+                {currenciesInSummary.map((cur) => (
                   <div
                     key={`inc-${cur}`}
                     className='flex items-center justify-between'
                   >
                     <span className='text-xs text-slate-600'>{cur}</span>
                     <span className='text-xl font-semibold tracking-tight'>
-                      {nf.format(kpisByCurrency[cur]?.income ?? 0)} {cur}
+                      {nf.format(summary[cur]?.total_income ?? 0)} {cur}
                     </span>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
+
           <Card variant='kpi-expense' interactive>
             <CardContent className='py-5 px-6'>
-              <p className='text-sm text-slate-700'>Gastos (vista)</p>
+              <p className='text-sm text-slate-700'>Gastos (rango)</p>
               <div className='mt-1 space-y-1.5'>
-                {currenciesInView.map((cur) => (
+                {currenciesInSummary.map((cur) => (
                   <div
                     key={`exp-${cur}`}
                     className='flex items-center justify-between'
                   >
                     <span className='text-xs text-slate-600'>{cur}</span>
                     <span className='text-xl font-semibold tracking-tight'>
-                      {nf.format(kpisByCurrency[cur]?.expense ?? 0)} {cur}
+                      {nf.format(summary[cur]?.total_expense ?? 0)} {cur}
                     </span>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
+
           <Card variant='kpi-balance' interactive>
             <CardContent className='py-5 px-6'>
-              <p className='text-sm text-slate-700'>Neto (vista)</p>
+              <p className='text-sm text-slate-700'>Neto (rango)</p>
               <div className='mt-1 space-y-1.5'>
-                {currenciesInView.map((cur) => {
-                  const inc = kpisByCurrency[cur]?.income ?? 0;
-                  const exp = kpisByCurrency[cur]?.expense ?? 0;
+                {currenciesInSummary.map((cur) => {
+                  const inc = summary[cur]?.total_income ?? 0;
+                  const exp = summary[cur]?.total_expense ?? 0;
                   const net = inc - exp;
                   return (
                     <div
@@ -258,9 +300,10 @@ export default function TransactionsPage() {
         </section>
       )}
 
-      {/* Tabla (desktop) con toolbar y paginación dentro del Card */}
+      {sumError && <div className='text-sm text-rose-600'>{sumError}</div>}
+
+      {/* Toolbar (desktop) + Tabla */}
       <Card variant='white' className='hidden md:block'>
-        {/* Toolbar DESKTOP */}
         <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-4 py-3'>
           <div className='flex items-center gap-2'>
             <Popover>
@@ -289,7 +332,6 @@ export default function TransactionsPage() {
               Actualizar
             </Button>
 
-            {/* Búsqueda */}
             <div className='relative'>
               <Input
                 className='w-[240px] pl-9'
@@ -301,11 +343,9 @@ export default function TransactionsPage() {
             </div>
           </div>
 
-          {/* ÚNICO botón de nueva transacción */}
           <NewTransactionModal onCreated={refresh} />
         </div>
 
-        {/* Tabla */}
         <CardContent className='p-0'>
           <div className='px-4'>
             <DataTable
@@ -319,7 +359,6 @@ export default function TransactionsPage() {
           </div>
         </CardContent>
 
-        {/* Paginación DESKTOP dentro del card */}
         {!loading && totalPages > 1 && (
           <div className='border-t px-4 py-3'>
             <Pagination
@@ -331,7 +370,7 @@ export default function TransactionsPage() {
         )}
       </Card>
 
-      {/* Toolbar MOBILE (md:hidden) */}
+      {/* Toolbar MOBILE */}
       <div className='md:hidden px-2 pt-1'>
         <div className='flex flex-wrap items-center gap-2'>
           <Popover>

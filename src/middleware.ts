@@ -78,6 +78,9 @@ export const config = {
     '/saving-accounts/:path*',
     '/categories/:path*',
     '/debts/:path*',
-    '/auth/login',
+     '/auth/login',
+    '/auth/expired',
+    '/auth/inactive',
+    '/auth/no-subscription',
   ],
 };

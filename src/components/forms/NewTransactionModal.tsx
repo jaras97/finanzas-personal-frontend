@@ -184,6 +184,7 @@ export default function NewTransactionModal({ onCreated }: Props) {
         await api.post(`/debts/${debtId}/purchase`, {
           amount: amountNum,
           description,
+          category_id: parseInt(categoryId, 10),
           date: dateToIsoAtLocalNoon(date!),
         });
       } else {

@@ -29,19 +29,27 @@ export default function LoginForm() {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
 
-      const { access_token } = response.data;
+      const { access_token } = response.data as { access_token: string };
+
+      // Persistencia de token
       setToken(access_token);
+      api.defaults.headers.common.Authorization = `Bearer ${access_token}`;
       Cookies.set('access_token', access_token, {
         expires: 7,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'Lax',
       });
+      localStorage.setItem('access_token', access_token);
+
+      // Marca que vienes del login (el layout hará redirecciones silenciosas)
+      sessionStorage.setItem('fromLogin', '1');
+
       toast.success('Inicio de sesión exitoso.');
       router.push('/summary');
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
-        const detail = error.response?.data?.detail;
+        const detail = (error.response?.data as any)?.detail;
 
         if (status === 401) {
           toast.error(detail || 'Correo o contraseña incorrectos.');
@@ -80,7 +88,7 @@ export default function LoginForm() {
         disabled={loading}
       />
       <Button type='submit' className='w-full' disabled={loading}>
-        {loading ? 'Iniciando...' : 'Iniciar Sesión'}
+        {loading ? 'Iniciando…' : 'Iniciar Sesión'}
       </Button>
     </form>
   );
