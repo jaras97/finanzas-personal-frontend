@@ -137,7 +137,7 @@ export default function DebtsPage() {
         <KpiTotalsCard
           title='Total general'
           totals={tAll}
-          cardVariant='white'
+          cardVariant='kpi-red'
         />
       </section>
 

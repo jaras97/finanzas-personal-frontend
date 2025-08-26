@@ -87,7 +87,12 @@ export default function LoginForm() {
         required
         disabled={loading}
       />
-      <Button type='submit' className='w-full' disabled={loading}>
+      <Button
+        type='submit'
+        className='w-full'
+        disabled={loading}
+        variant='soft-emerald'
+      >
         {loading ? 'Iniciando…' : 'Iniciar Sesión'}
       </Button>
     </form>

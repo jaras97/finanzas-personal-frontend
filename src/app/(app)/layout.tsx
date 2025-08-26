@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { useSidebarStore } from '@/lib/store/sidebarStore';
 import { cn } from '@/lib/utils';
+import Footer from '@/components/layout/Footer';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   // 1) Hooks SIEMPRE arriba, sin condicionales
@@ -92,6 +93,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <main className='md:pl-64'>
         <div className='px-4 py-4 md:px-6 md:py-6'>{children}</div>
+        <Footer />
       </main>
     </div>
   );

@@ -133,13 +133,13 @@ export default function AccountsSection({
                     Ver movimientos
                   </Button>
 
-                  <Button
+                  {/* <Button
                     size='sm'
                     className={t.solid}
                     onClick={() => onDeposit(account)}
                   >
                     Depositar
-                  </Button>
+                  </Button> */}
 
                   <Button
                     size='sm'

@@ -57,6 +57,11 @@
   --color-chart-3: 43 96% 56%; /* amber-400 */
   --color-chart-4: 0 84% 60%; /* red-500 */
   --color-chart-5: 258 90% 66%; /* violet-500 */
+
+  --color-footer: var(--footer);
+  --color-footer-foreground: var(--footer-foreground);
+  --color-footer-border: var(--footer-border);
+  --color-footer-ring: var(--footer-ring);
 }
 
 /* =========================================
@@ -93,6 +98,11 @@
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-border: 217 33% 17%;
   --sidebar-ring: 220 83% 56%;
+
+  --footer: 221 35% 22%; /* ≈ slate-800 azulado, +claro que sidebar (14%) */
+  --footer-foreground: 210 40% 98%; /* casi blanco */
+  --footer-border: 221 30% 28%; /* borde ligeramente más claro que el fondo */
+  --footer-ring: 220 83% 56%;
 }
 
 /* Capa fija de fondo (evita “saltos” en mobile al scrollear) */
@@ -145,6 +155,11 @@
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-border: 222 20% 18%;
   --sidebar-ring: 220 83% 56%;
+
+  --footer: 222 32% 12%; /* intermedio; se diferencia de background(7%) y card(11%) */
+  --footer-foreground: 210 40% 98%;
+  --footer-border: 222 20% 18%;
+  --footer-ring: 220 83% 56%;
 }
 
 /* =========================================
@@ -205,6 +220,19 @@
     );
     @apply text-white rounded-2xl;
     box-shadow: 0 14px 40px -12px rgba(37, 99, 235, 0.55);
+  }
+
+  .bg-footer {
+    background-color: hsl(var(--footer)) !important;
+  }
+  .text-footer-foreground {
+    color: hsl(var(--footer-foreground)) !important;
+  }
+  .border-footer-border {
+    border-color: hsl(var(--footer-border)) !important;
+  }
+  .ring-footer-ring {
+    --tw-ring-color: hsl(var(--footer-ring)) !important;
   }
 }
 

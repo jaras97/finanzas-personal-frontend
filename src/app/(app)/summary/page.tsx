@@ -104,12 +104,12 @@ export default function SummaryPage() {
             {
               label: 'Ingresos',
               value: formatCurrency(s.total_income, currency),
-              variant: 'kpi-income' as const,
+              variant: 'kpi-balance' as const,
             },
             {
               label: 'Gastos',
               value: formatCurrency(s.total_expense, currency),
-              variant: 'kpi-expense' as const,
+              variant: 'kpi-balance' as const,
             },
           ].map(({ label, value, variant }) => (
             <Card key={label} variant={variant} interactive>
@@ -134,6 +134,7 @@ export default function SummaryPage() {
                 assets.total_assets[currency] || 0,
                 currency,
               ),
+              variant: 'kpi-income' as const,
             },
             {
               label: 'Total deudas',
@@ -141,6 +142,7 @@ export default function SummaryPage() {
                 liabilities.total_liabilities[currency] || 0,
                 currency,
               ),
+              variant: 'kpi-income' as const,
             },
             {
               label: 'Patrimonio neto',
@@ -148,9 +150,10 @@ export default function SummaryPage() {
                 netWorth[currency]?.net_worth || 0,
                 currency,
               ),
+              variant: 'kpi-income' as const,
             },
-          ].map(({ label, value }) => (
-            <Card key={label} variant='surface'>
+          ].map(({ label, value, variant }) => (
+            <Card key={label} variant={variant}>
               <CardContent className='p-5'>
                 <p className='text-sm text-muted-foreground'>{label}</p>
                 <p className='text-xl font-semibold'>{value}</p>
@@ -167,12 +170,12 @@ export default function SummaryPage() {
             {
               l: 'Ingresos de caja',
               v: cashFlow[currency]?.total_income || 0,
-              variant: 'panel-positive' as const,
+              variant: 'panel-warning' as const,
             },
             {
               l: 'Egresos de caja',
               v: cashFlow[currency]?.total_expense || 0,
-              variant: 'panel-negative' as const,
+              variant: 'panel-warning' as const,
             },
             {
               l: 'Pagos de deudas',
