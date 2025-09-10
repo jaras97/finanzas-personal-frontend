@@ -103,6 +103,15 @@
   --footer-foreground: 210 40% 98%; /* casi blanco */
   --footer-border: 221 30% 28%; /* borde ligeramente más claro que el fondo */
   --footer-ring: 220 83% 56%;
+
+  --skeleton-base: hsl(var(--muted) / 0.8);
+  /* Base alternativa con más contraste (para KPIs/paneles) */
+  --skeleton-base-contrast: hsl(var(--foreground) / 0.08);
+  /* Para superficies blancas (charts/cards) */
+  --skeleton-base-surface: hsl(var(--card) / 0.7);
+
+  /* La franja del shimmer: oscurita en light para que se note */
+  --skeleton-via: hsl(var(--foreground) / 0.12);
 }
 
 /* Capa fija de fondo (evita “saltos” en mobile al scrollear) */
@@ -160,6 +169,11 @@
   --footer-foreground: 210 40% 98%;
   --footer-border: 222 20% 18%;
   --footer-ring: 220 83% 56%;
+
+  --skeleton-base: hsl(var(--muted) / 0.5);
+  --skeleton-base-contrast: hsl(var(--foreground) / 0.16);
+  --skeleton-base-surface: hsl(var(--card) / 0.55);
+  --skeleton-via: hsl(0 0% 100% / 0.18);
 }
 
 /* =========================================
@@ -273,4 +287,13 @@
   }
 
   /* Root del calendario */
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }

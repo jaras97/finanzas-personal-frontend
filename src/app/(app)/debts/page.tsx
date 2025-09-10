@@ -17,6 +17,11 @@ import AddChargeToDebtModal from '@/components/forms/AddChargeToDebtModal';
 import DebtTransactionsModal from '@/components/forms/DebtTransactionsModal';
 import DebtsSection from '@/components/debts/DebtsSection';
 import KpiTotalsCard from '@/components/kpi/KpiTotalsCard';
+import {
+  DebtsHeaderCtaSkeleton,
+  DebtsKpisSkeleton,
+  DebtsSectionSkeleton,
+} from '@/components/skeletons/DebtsSkeleton';
 
 // ==== helpers
 type Currency = currencyType | string;
@@ -111,88 +116,138 @@ export default function DebtsPage() {
             Gestiona tus préstamos y tarjetas de crédito.
           </p>
         </div>
-        <div className='flex gap-2 flex-wrap'>
-          <Button onClick={() => setCreateOpen(true)} variant='soft-rose'>
-            + Nueva deuda
-          </Button>
-        </div>
+        {loading ? (
+          <DebtsHeaderCtaSkeleton />
+        ) : (
+          <div className='flex gap-2 flex-wrap'>
+            <Button onClick={() => setCreateOpen(true)} variant='soft-rose'>
+              + Nueva deuda
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* KPIs (mismo patrón de Savings) */}
-      <section className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
-        <KpiTotalsCard
-          title='Total en préstamos'
-          totals={tLoans}
-          gradient
-          cardVariant='white'
-        />
-        <KpiTotalsCard
-          title='Total en tarjetas de crédito'
-          totals={tCards}
-          gradient
-          cardVariant='white'
-        />
+      {loading ? (
+        <DebtsKpisSkeleton />
+      ) : (
+        <section className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
+          <KpiTotalsCard
+            title='Total en préstamos'
+            totals={tLoans}
+            gradient
+            cardVariant='white'
+          />
+          <KpiTotalsCard
+            title='Total en tarjetas de crédito'
+            totals={tCards}
+            gradient
+            cardVariant='white'
+          />
 
-        {/* Total general: mejor neutra (surface) para pasivos */}
-        <KpiTotalsCard
-          title='Total general'
-          totals={tAll}
-          cardVariant='kpi-red'
-        />
-      </section>
+          {/* Total general: mejor neutra (surface) para pasivos */}
+          <KpiTotalsCard
+            title='Total general'
+            totals={tAll}
+            cardVariant='kpi-red'
+          />
+        </section>
+      )}
 
       {/* 1) Préstamos */}
-      <DebtsSection
-        title='Préstamos'
-        hint='Créditos de consumo, estudiantiles, personales, etc.'
-        items={loans}
-        loading={loading}
-        emptyText='No tienes préstamos activos.'
-        tone='loan'
-        getDebtActions={getDebtActions}
-        onPay={setPayDebt}
-        onCharge={setAddChargeDebt}
-        onViewTx={setViewTransactionsDebt}
-        onEdit={setEditDebt}
-        onClose={handleCloseDebt}
-        onDelete={setDeleteDebt}
-      />
+      {loading ? (
+        <>
+          <header className='space-y-1'>
+            <h2 className='text-sm font-medium text-muted-foreground'>
+              Préstamos
+            </h2>
+            <p className='text-xs text-muted-foreground/80'>
+              Créditos de consumo, estudiantiles, personales, etc.
+            </p>
+          </header>
+          <DebtsSectionSkeleton tone='loan' items={3} />
+        </>
+      ) : (
+        <DebtsSection
+          title='Préstamos'
+          hint='Créditos de consumo, estudiantiles, personales, etc.'
+          items={loans}
+          loading={loading}
+          emptyText='No tienes préstamos activos.'
+          tone='loan'
+          getDebtActions={getDebtActions}
+          onPay={setPayDebt}
+          onCharge={setAddChargeDebt}
+          onViewTx={setViewTransactionsDebt}
+          onEdit={setEditDebt}
+          onClose={handleCloseDebt}
+          onDelete={setDeleteDebt}
+        />
+      )}
 
       {/* 2) Tarjetas de crédito */}
-      <DebtsSection
-        title='Tarjetas de crédito'
-        hint='Movimientos rotativos, pagos mínimos, etc.'
-        items={cards}
-        loading={loading}
-        emptyText='No tienes tarjetas activas.'
-        tone='credit'
-        getDebtActions={getDebtActions}
-        onPay={setPayDebt}
-        onCharge={setAddChargeDebt}
-        onViewTx={setViewTransactionsDebt}
-        onEdit={setEditDebt}
-        onClose={handleCloseDebt}
-        onDelete={setDeleteDebt}
-      />
+      {loading ? (
+        <>
+          <header className='space-y-1'>
+            <h2 className='text-sm font-medium text-muted-foreground'>
+              Tarjetas de crédito
+            </h2>
+            <p className='text-xs text-muted-foreground/80'>
+              Movimientos rotativos, pagos mínimos, etc.
+            </p>
+          </header>
+          <DebtsSectionSkeleton tone='credit' items={3} />
+        </>
+      ) : (
+        <DebtsSection
+          title='Tarjetas de crédito'
+          hint='Movimientos rotativos, pagos mínimos, etc.'
+          items={cards}
+          loading={loading}
+          emptyText='No tienes tarjetas activas.'
+          tone='credit'
+          getDebtActions={getDebtActions}
+          onPay={setPayDebt}
+          onCharge={setAddChargeDebt}
+          onViewTx={setViewTransactionsDebt}
+          onEdit={setEditDebt}
+          onClose={handleCloseDebt}
+          onDelete={setDeleteDebt}
+        />
+      )}
 
       {/* 3) Cerradas */}
-      <DebtsSection
-        title='Deudas cerradas'
-        hint='Se conservan para consulta histórica.'
-        items={closed}
-        loading={loading}
-        emptyText='No tienes deudas cerradas.'
-        tone='loan'
-        closed
-        getDebtActions={getDebtActions}
-        onPay={() => {}}
-        onCharge={() => {}}
-        onViewTx={setViewTransactionsDebt}
-        onEdit={setEditDebt}
-        onClose={() => {}}
-        onDelete={setDeleteDebt}
-        onReopen={handleReopenDebt}
-      />
+      {loading ? (
+        <>
+          <header className='space-y-1'>
+            <h2 className='text-sm font-medium text-muted-foreground'>
+              Deudas cerradas
+            </h2>
+            <p className='text-xs text-muted-foreground/80'>
+              Se conservan para consulta histórica.
+            </p>
+          </header>
+          <DebtsSectionSkeleton tone='loan' items={3} closed />
+        </>
+      ) : (
+        <DebtsSection
+          title='Deudas cerradas'
+          hint='Se conservan para consulta histórica.'
+          items={closed}
+          loading={loading}
+          emptyText='No tienes deudas cerradas.'
+          tone='loan'
+          closed
+          getDebtActions={getDebtActions}
+          onPay={() => {}}
+          onCharge={() => {}}
+          onViewTx={setViewTransactionsDebt}
+          onEdit={setEditDebt}
+          onClose={() => {}}
+          onDelete={setDeleteDebt}
+          onReopen={handleReopenDebt}
+        />
+      )}
 
       {/* Modales */}
       <NewDebtModal

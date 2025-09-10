@@ -8,17 +8,19 @@ import { useNetWorthSummary } from '@/hooks/useNetWorthSummary';
 import { useCashFlowSummary } from '@/hooks/useCashFlowSummary';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { formatDayLabel } from '@/lib/formatDayLabel';
 import { CurrencyToggle } from '@/components/ui/CurrencyToggle';
 import { AreaIncomeExpense } from '@/components/chart/AreaIncomeExpense';
 import { DonutByCategory } from '@/components/chart/DonutByCategory';
+import type { FC } from 'react';
+import { SummarySkeleton } from '@/components/skeletons/SummarySkeleton';
 
 type Currency = 'COP' | 'USD' | 'EUR';
 
-export default function SummaryPage() {
+const SummaryPage: FC = () => {
   const today = new Date();
   const [dateRange, setDateRange] = useState({
     startDate: new Date(today.getFullYear(), today.getMonth(), 1),
@@ -51,7 +53,7 @@ export default function SummaryPage() {
   const s = summary?.[currency];
 
   return (
-    <div className='space-y-6'>
+    <div className='space-y-6' aria-busy={isBusy}>
       {/* Saludo + filtros */}
       <div className='flex flex-col gap-3 sm:gap-4 md:flex-row md:items-end md:justify-between'>
         <div className='min-w-0'>
@@ -79,12 +81,7 @@ export default function SummaryPage() {
         </div>
       </div>
 
-      {/* Estado */}
-      {isBusy && (
-        <div className='grid place-items-center h-40'>
-          <Loader className='animate-spin w-8 h-8 text-primary' />
-        </div>
-      )}
+      {/* Estado de error */}
       {error && (
         <div className='flex items-center text-red-600 gap-2'>
           <AlertCircle className='w-5 h-5' />
@@ -92,6 +89,10 @@ export default function SummaryPage() {
         </div>
       )}
 
+      {/* === LOADING: Skeletons === */}
+      {isBusy && !error && <SummarySkeleton />}
+
+      {/* === CONTENT === */}
       {/* 1) KPIs */}
       {!isBusy && s && (
         <section className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
@@ -163,7 +164,7 @@ export default function SummaryPage() {
         </section>
       )}
 
-      {/* 3) Flujo de caja (paneles semánticos suaves) */}
+      {/* 3) Flujo de caja */}
       {!isBusy && cashFlow && (
         <section className='grid grid-cols-1 sm:grid-cols-4 gap-4'>
           {[
@@ -185,7 +186,6 @@ export default function SummaryPage() {
             {
               l: 'Flujo neto',
               v: cashFlow[currency]?.net_cash_flow || 0,
-              // verde si >= 0, rojo si < 0
               variant:
                 (cashFlow[currency]?.net_cash_flow || 0) >= 0
                   ? ('panel-positive' as const)
@@ -254,4 +254,6 @@ export default function SummaryPage() {
       )}
     </div>
   );
-}
+};
+
+export default SummaryPage;

@@ -21,6 +21,12 @@ import axios from 'axios';
 import { cn } from '@/lib/utils';
 import AccountsSection from '@/components/accounts/AccountsSection';
 import KpiTotalsCard from '@/components/kpi/KpiTotalsCard';
+import {
+  AccountsSectionSkeleton,
+  ClosedAccountsSkeleton,
+  SavingAccountsHeaderButtonsSkeleton,
+  SavingAccountsKpisSkeleton,
+} from '@/components/skeletons/SavingAccountsSkeleton';
 
 // ===== helpers
 type HasTxMap = Record<number, boolean>;
@@ -193,159 +199,214 @@ export default function SavingAccountsPage() {
             Administra tus cuentas y movimientos.
           </p>
         </div>
-        <div className='flex gap-2 flex-wrap'>
-          <Button
-            onClick={() => setTransferOpen(true)}
-            variant={'soft-emerald'}
-          >
-            Transferir entre cuentas
-          </Button>
-          <Button onClick={() => setCreateOpen(true)} variant={'soft-sky'}>
-            + Nueva Cuenta
-          </Button>
-        </div>
+        {loading ? (
+          <SavingAccountsHeaderButtonsSkeleton />
+        ) : (
+          <div className='flex gap-2 flex-wrap'>
+            <Button
+              onClick={() => setTransferOpen(true)}
+              variant={'soft-emerald'}
+            >
+              Transferir entre cuentas
+            </Button>
+            <Button onClick={() => setCreateOpen(true)} variant={'soft-sky'}>
+              + Nueva Cuenta
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* KPIs */}
-      <section className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
-        <KpiTotalsCard
-          title='Total en efectivo'
-          totals={tCash}
-          gradient
-          cardVariant='kpi-balance'
-        />
-        <KpiTotalsCard
-          title='Total en cuentas bancarias'
-          totals={tBank}
-          gradient
-          cardVariant='white'
-        />
-        <KpiTotalsCard
-          title='Total en inversión'
-          totals={tInvest}
-          gradient
-          cardVariant='white'
-        />
-        <KpiTotalsCard
-          title='Total general'
-          totals={tAll}
-          cardVariant='kpi-green'
-        />
-      </section>
+      {loading ? (
+        <SavingAccountsKpisSkeleton />
+      ) : (
+        <section className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
+          <KpiTotalsCard
+            title='Total en efectivo'
+            totals={tCash}
+            gradient
+            cardVariant='kpi-balance'
+          />
+          <KpiTotalsCard
+            title='Total en cuentas bancarias'
+            totals={tBank}
+            gradient
+            cardVariant='white'
+          />
+          <KpiTotalsCard
+            title='Total en inversión'
+            totals={tInvest}
+            gradient
+            cardVariant='white'
+          />
+          <KpiTotalsCard
+            title='Total general'
+            totals={tAll}
+            cardVariant='kpi-green'
+          />
+        </section>
+      )}
 
       {/* 2) Efectivo */}
-      <AccountsSection
-        title='Cuentas de efectivo'
-        hint='Billetes/monedas en caja o billeteras.'
-        loading={loading}
-        emptyText='No tienes cuentas de efectivo.'
-        items={cash}
-        getAccountActions={getAccountActions}
-        onViewTx={setViewTransactionsAccount}
-        onDeposit={setDepositAccount}
-        onEdit={setEditAccount}
-        onYield={setYieldAccount}
-        onClose={handleCloseAccount}
-        onDelete={setDeleteAccount}
-        showYield={false}
-        tone='cash'
-      />
-
-      {/* 3) Bancarias */}
-      <AccountsSection
-        title='Cuentas bancarias'
-        hint='Cuentas corrientes/ahorro.'
-        loading={loading}
-        emptyText='No tienes cuentas bancarias.'
-        items={bank}
-        getAccountActions={getAccountActions}
-        onViewTx={setViewTransactionsAccount}
-        onDeposit={setDepositAccount}
-        onEdit={setEditAccount}
-        onYield={setYieldAccount}
-        onClose={handleCloseAccount}
-        onDelete={setDeleteAccount}
-        showYield={false}
-        tone='bank'
-      />
-
-      {/* 4) Inversión */}
-      <AccountsSection
-        title='Cuentas de inversión'
-        hint='Fondos, brókers o productos con rendimiento.'
-        loading={loading}
-        emptyText='No tienes cuentas de inversión.'
-        items={invest}
-        getAccountActions={getAccountActions}
-        onViewTx={setViewTransactionsAccount}
-        onDeposit={setDepositAccount}
-        onEdit={setEditAccount}
-        onYield={setYieldAccount}
-        onClose={handleCloseAccount}
-        onDelete={setDeleteAccount}
-        showYield
-        tone='investment'
-      />
-
-      {/* 5) Cerradas */}
-      <section className='space-y-3'>
-        <header className='flex items-center justify-between'>
-          <div>
+      {loading ? (
+        <>
+          <header className='space-y-1'>
             <h2 className='text-sm font-medium text-muted-foreground'>
-              Cuentas cerradas
+              Cuentas de efectivo
             </h2>
             <p className='text-xs text-muted-foreground/80'>
-              Se mantienen para historial; puedes reabrirlas.
+              Billetes/monedas en caja o billeteras.
             </p>
-          </div>
-        </header>
+          </header>
+          <AccountsSectionSkeleton tone='cash' items={3} />
+        </>
+      ) : (
+        <AccountsSection
+          title='Cuentas de efectivo'
+          hint='Billetes/monedas en caja o billeteras.'
+          loading={loading}
+          emptyText='No tienes cuentas de efectivo.'
+          items={cash}
+          getAccountActions={getAccountActions}
+          onViewTx={setViewTransactionsAccount}
+          onDeposit={setDepositAccount}
+          onEdit={setEditAccount}
+          onYield={setYieldAccount}
+          onClose={handleCloseAccount}
+          onDelete={setDeleteAccount}
+          showYield={false}
+          tone='cash'
+        />
+      )}
 
-        {loading ? (
-          <p className='text-center p-4'>Cargando cuentas...</p>
-        ) : closed.length ? (
-          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
-            {closed.map((account) => (
-              <Card
-                key={account.id}
-                className={cn(
-                  'p-4 flex flex-col justify-between space-y-2 border',
-                  toneMap.closed.card,
-                )}
-                variant='white'
-              >
-                <div className='space-y-1'>
-                  <p className='font-medium'>{account.name}</p>
-                  <p className='text-sm opacity-80'>
-                    Saldo: {formatCurrency(account.balance)} {account.currency}
-                  </p>
-                  <p className='text-sm text-amber-700'>Estado: Cerrada</p>
-                </div>
-                <div className='flex flex-wrap gap-2 mt-2'>
-                  <Button
-                    size='sm'
-                    variant='outline'
-                    className={toneMap.closed.outline}
-                    onClick={() => setViewTransactionsAccount(account)}
-                  >
-                    Ver movimientos
-                  </Button>
-                  <Button
-                    size='sm'
-                    className={toneMap.closed.solid}
-                    onClick={() => handleReopenAccount(account)}
-                  >
-                    Reabrir
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <p className='text-center p-4 text-muted-foreground'>
-            No tienes cuentas cerradas.
-          </p>
-        )}
-      </section>
+      {/* 3) Bancarias */}
+      {loading ? (
+        <>
+          <header className='space-y-1'>
+            <h2 className='text-sm font-medium text-muted-foreground'>
+              Cuentas bancarias
+            </h2>
+            <p className='text-xs text-muted-foreground/80'>
+              Cuentas corrientes/ahorro.
+            </p>
+          </header>
+          <AccountsSectionSkeleton tone='bank' items={3} />
+        </>
+      ) : (
+        <AccountsSection
+          title='Cuentas bancarias'
+          hint='Cuentas corrientes/ahorro.'
+          loading={loading}
+          emptyText='No tienes cuentas bancarias.'
+          items={bank}
+          getAccountActions={getAccountActions}
+          onViewTx={setViewTransactionsAccount}
+          onDeposit={setDepositAccount}
+          onEdit={setEditAccount}
+          onYield={setYieldAccount}
+          onClose={handleCloseAccount}
+          onDelete={setDeleteAccount}
+          showYield={false}
+          tone='bank'
+        />
+      )}
+
+      {/* 4) Inversión */}
+      {loading ? (
+        <>
+          <header className='space-y-1'>
+            <h2 className='text-sm font-medium text-muted-foreground'>
+              Cuentas de inversión
+            </h2>
+            <p className='text-xs text-muted-foreground/80'>
+              Fondos, brókers o productos con rendimiento.
+            </p>
+          </header>
+          <AccountsSectionSkeleton tone='investment' items={3} />
+        </>
+      ) : (
+        <AccountsSection
+          title='Cuentas de inversión'
+          hint='Fondos, brókers o productos con rendimiento.'
+          loading={loading}
+          emptyText='No tienes cuentas de inversión.'
+          items={invest}
+          getAccountActions={getAccountActions}
+          onViewTx={setViewTransactionsAccount}
+          onDeposit={setDepositAccount}
+          onEdit={setEditAccount}
+          onYield={setYieldAccount}
+          onClose={handleCloseAccount}
+          onDelete={setDeleteAccount}
+          showYield
+          tone='investment'
+        />
+      )}
+
+      {/* 5) Cerradas */}
+      {loading ? (
+        <ClosedAccountsSkeleton items={3} />
+      ) : (
+        <section className='space-y-3'>
+          <header className='flex items-center justify-between'>
+            <div>
+              <h2 className='text-sm font-medium text-muted-foreground'>
+                Cuentas cerradas
+              </h2>
+              <p className='text-xs text-muted-foreground/80'>
+                Se mantienen para historial; puedes reabrirlas.
+              </p>
+            </div>
+          </header>
+
+          {loading ? (
+            <p className='text-center p-4'>Cargando cuentas...</p>
+          ) : closed.length ? (
+            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
+              {closed.map((account) => (
+                <Card
+                  key={account.id}
+                  className={cn(
+                    'p-4 flex flex-col justify-between space-y-2 border',
+                    toneMap.closed.card,
+                  )}
+                  variant='white'
+                >
+                  <div className='space-y-1'>
+                    <p className='font-medium'>{account.name}</p>
+                    <p className='text-sm opacity-80'>
+                      Saldo: {formatCurrency(account.balance)}{' '}
+                      {account.currency}
+                    </p>
+                    <p className='text-sm text-amber-700'>Estado: Cerrada</p>
+                  </div>
+                  <div className='flex flex-wrap gap-2 mt-2'>
+                    <Button
+                      size='sm'
+                      variant='outline'
+                      className={toneMap.closed.outline}
+                      onClick={() => setViewTransactionsAccount(account)}
+                    >
+                      Ver movimientos
+                    </Button>
+                    <Button
+                      size='sm'
+                      className={toneMap.closed.solid}
+                      onClick={() => handleReopenAccount(account)}
+                    >
+                      Reabrir
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <p className='text-center p-4 text-muted-foreground'>
+              No tienes cuentas cerradas.
+            </p>
+          )}
+        </section>
+      )}
 
       {/* Modales */}
       <NewSavingAccountModal

@@ -33,6 +33,11 @@ import { buildTransactionColumns } from './columns';
 
 /* Summary por rango (solo fecha) para KPIs */
 import { useSummary } from '@/hooks/useSummary';
+import {
+  TransactionsDesktopSkeleton,
+  TransactionsKpisSkeleton,
+  TransactionsMobileSkeleton,
+} from '@/components/skeletons/TransactionsSkeleton';
 
 type Currency = 'COP' | 'USD' | 'EUR';
 
@@ -233,6 +238,8 @@ export default function TransactionsPage() {
         </div>
       </div>
 
+      {sumLoading && <TransactionsKpisSkeleton />}
+
       {/* KPIs por moneda basados en SUMMARY del rango (se actualizan al cambiar fechas) */}
       {!sumLoading && summary && (
         <section className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
@@ -303,12 +310,84 @@ export default function TransactionsPage() {
       {sumError && <div className='text-sm text-rose-600'>{sumError}</div>}
 
       {/* Toolbar (desktop) + Tabla */}
-      <Card variant='white' className='hidden md:block'>
-        <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-4 py-3'>
-          <div className='flex items-center gap-2'>
+      {loading ? (
+        <TransactionsDesktopSkeleton />
+      ) : (
+        <Card variant='white' className='hidden md:block'>
+          <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-4 py-3'>
+            <div className='flex items-center gap-2'>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant='outline' className='gap-2'>
+                    <Filter className='h-4 w-4' />
+                    Filtros
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align='start'
+                  sideOffset={8}
+                  className='p-3 w-[min(92vw,720px)]'
+                >
+                  <TransactionFilters
+                    onFilterChange={(f) => {
+                      setPage(1);
+                      setFilters(f);
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <Button variant='outline' className='gap-2' onClick={refresh}>
+                <RotateCw className='h-4 w-4' />
+                Actualizar
+              </Button>
+
+              <div className='relative'>
+                <Input
+                  className='w-[240px] pl-9'
+                  placeholder='Buscar…'
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                <Search className='pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60' />
+              </div>
+            </div>
+
+            <NewTransactionModal onCreated={refresh} disabled={loading} />
+          </div>
+
+          <CardContent className='p-0'>
+            <div className='px-4'>
+              <DataTable
+                columns={allColumns as any}
+                data={filteredData}
+                loading={loading}
+                density='normal'
+                rowSeparator='inset'
+                tableClassName='min-w-[960px] xl:min-w-0'
+              />
+            </div>
+          </CardContent>
+
+          {!loading && totalPages > 1 && (
+            <div className='border-t px-4 py-3'>
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+              />
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Toolbar MOBILE */}
+      {!loading && (
+        <div className='md:hidden px-2 pt-1'>
+          <div className='flex flex-wrap items-center gap-2'>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant='outline' className='gap-2'>
+                <Button variant='outline' size='sm' className='gap-2'>
                   <Filter className='h-4 w-4' />
                   Filtros
                 </Button>
@@ -327,101 +406,38 @@ export default function TransactionsPage() {
               </PopoverContent>
             </Popover>
 
-            <Button variant='outline' className='gap-2' onClick={refresh}>
+            <Button
+              variant='outline'
+              size='sm'
+              className='shrink-0'
+              onClick={refresh}
+            >
               <RotateCw className='h-4 w-4' />
-              Actualizar
+              <span className='sr-only'>Actualizar</span>
             </Button>
 
-            <div className='relative'>
+            <div className='relative flex-1 basis-full'>
               <Input
-                className='w-[240px] pl-9'
+                className='w-full pl-9 h-9'
                 placeholder='Buscar…'
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
               <Search className='pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60' />
             </div>
-          </div>
 
-          <NewTransactionModal onCreated={refresh} />
-        </div>
-
-        <CardContent className='p-0'>
-          <div className='px-4'>
-            <DataTable
-              columns={allColumns as any}
-              data={filteredData}
-              loading={loading}
-              density='normal'
-              rowSeparator='inset'
-              tableClassName='min-w-[960px] xl:min-w-0'
-            />
-          </div>
-        </CardContent>
-
-        {!loading && totalPages > 1 && (
-          <div className='border-t px-4 py-3'>
-            <Pagination
-              page={page}
-              totalPages={totalPages}
-              onPageChange={setPage}
-            />
-          </div>
-        )}
-      </Card>
-
-      {/* Toolbar MOBILE */}
-      <div className='md:hidden px-2 pt-1'>
-        <div className='flex flex-wrap items-center gap-2'>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant='outline' size='sm' className='gap-2'>
-                <Filter className='h-4 w-4' />
-                Filtros
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              align='start'
-              sideOffset={8}
-              className='p-3 w-[min(92vw,720px)]'
-            >
-              <TransactionFilters
-                onFilterChange={(f) => {
-                  setPage(1);
-                  setFilters(f);
-                }}
-              />
-            </PopoverContent>
-          </Popover>
-
-          <Button
-            variant='outline'
-            size='sm'
-            className='shrink-0'
-            onClick={refresh}
-          >
-            <RotateCw className='h-4 w-4' />
-            <span className='sr-only'>Actualizar</span>
-          </Button>
-
-          <div className='relative flex-1 basis-full'>
-            <Input
-              className='w-full pl-9 h-9'
-              placeholder='Buscar…'
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <Search className='pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60' />
-          </div>
-
-          <div className='ml-auto'>
-            <NewTransactionModal onCreated={refresh} />
+            <div className='ml-auto'>
+              <NewTransactionModal onCreated={refresh} disabled={loading} />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Mobile: lista en cards */}
-      {!loading && (
+
+      {loading ? (
+        <TransactionsMobileSkeleton />
+      ) : (
         <div className='md:hidden space-y-2'>
           {filteredData.length === 0 ? (
             <Card variant='white'>

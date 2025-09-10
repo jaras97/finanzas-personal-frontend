@@ -18,6 +18,11 @@ import TopCategoryByCurrencyCard, {
   type TopByCurrency,
 } from '@/components/kpi/TopCategoryByCurrencyCard';
 import { cn } from '@/lib/utils';
+import {
+  CategoriesHeaderSkeleton,
+  CategoriesKpisSkeleton,
+  CategoriesListSkeleton,
+} from '@/components/skeletons/CategoriesSkeleton';
 
 /* ====== tonos para badges por tipo ====== */
 const typeBadgeTone: Record<Category['type'], string> = {
@@ -199,43 +204,50 @@ export default function CategoriesPage() {
             Organiza tus ingresos y gastos por categoría.
           </p>
         </div>
-
-        <div className='flex flex-col sm:flex-row gap-3 sm:items-center w-full md:w-auto'>
-          <div className='w-full sm:w-[min(420px,100%)]'>
-            <DateRangePicker
-              value={{
-                startDate: dateRange.startDate,
-                endDate: dateRange.endDate,
-              }}
-              onChange={setDateRange}
-              disabled={sLoading}
-            />
+        {loading || sLoading ? (
+          <CategoriesHeaderSkeleton />
+        ) : (
+          <div className='flex flex-col sm:flex-row gap-3 sm:items-center w-full md:w-auto'>
+            <div className='w-full sm:w-[min(420px,100%)]'>
+              <DateRangePicker
+                value={{
+                  startDate: dateRange.startDate,
+                  endDate: dateRange.endDate,
+                }}
+                onChange={setDateRange}
+                disabled={sLoading}
+              />
+            </div>
+            <div className='flex gap-2'>
+              <Button onClick={() => setModalOpen(true)} variant='soft-sky'>
+                + Nueva categoría
+              </Button>
+            </div>
           </div>
-          <div className='flex gap-2'>
-            <Button onClick={() => setModalOpen(true)} variant='soft-sky'>
-              + Nueva categoría
-            </Button>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* KPIs: SOLO top gasto / top ingreso, y SOLO COP & USD */}
-      <section className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-        <TopCategoryByCurrencyCard
-          title='Top categoría de gasto'
-          data={topExpense}
-          cardVariant='kpi-expense'
-          prefer={['COP', 'USD']}
-          only={['COP', 'USD']}
-        />
-        <TopCategoryByCurrencyCard
-          title='Top categoría de ingreso'
-          data={topIncome}
-          cardVariant='kpi-income'
-          prefer={['COP', 'USD']}
-          only={['COP', 'USD']}
-        />
-      </section>
+      {sLoading ? (
+        <CategoriesKpisSkeleton />
+      ) : (
+        <section className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+          <TopCategoryByCurrencyCard
+            title='Top categoría de gasto'
+            data={topExpense}
+            cardVariant='kpi-expense'
+            prefer={['COP', 'USD']}
+            only={['COP', 'USD']}
+          />
+          <TopCategoryByCurrencyCard
+            title='Top categoría de ingreso'
+            data={topIncome}
+            cardVariant='kpi-income'
+            prefer={['COP', 'USD']}
+            only={['COP', 'USD']}
+          />
+        </section>
+      )}
 
       {/* Activas */}
       <section className='space-y-3'>
@@ -251,7 +263,7 @@ export default function CategoriesPage() {
         </header>
 
         {loading ? (
-          <p className='text-center p-4'>Cargando categorías...</p>
+          <CategoriesListSkeleton items={6} />
         ) : active.length ? (
           <div className='space-y-2'>
             {active.map((cat) => (
@@ -339,7 +351,7 @@ export default function CategoriesPage() {
         </header>
 
         {loading ? (
-          <p className='text-center p-4'>Cargando categorías...</p>
+          <CategoriesListSkeleton inactive items={4} />
         ) : inactive.length ? (
           <div className='space-y-2'>
             {inactive.map((cat) => (

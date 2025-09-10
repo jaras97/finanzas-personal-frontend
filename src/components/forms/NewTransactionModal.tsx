@@ -31,9 +31,10 @@ type UiAccount = { id: string; name: string; currency?: 'COP' | 'USD' | 'EUR' };
 
 interface Props {
   onCreated: () => void;
+  disabled?: boolean;
 }
 
-export default function NewTransactionModal({ onCreated }: Props) {
+export default function NewTransactionModal({ onCreated, disabled }: Props) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -253,11 +254,14 @@ export default function NewTransactionModal({ onCreated }: Props) {
   return (
     <Dialog
       open={open}
-      onOpenChange={(o) => !submitting && setOpen(o)}
+      onOpenChange={(o) => (!submitting || disabled) && setOpen(o)}
       initialFocus={descRef as any}
     >
       <DialogTrigger asChild>
-        <Button className='bg-emerald-600 text-white hover:bg-emerald-700'>
+        <Button
+          className='bg-emerald-600 text-white hover:bg-emerald-700'
+          disabled={disabled}
+        >
           + Nueva Transacción
         </Button>
       </DialogTrigger>
@@ -287,7 +291,7 @@ export default function NewTransactionModal({ onCreated }: Props) {
           <form
             onSubmit={handleSubmit}
             className='space-y-5'
-            aria-busy={submitting}
+            aria-busy={submitting || disabled}
           >
             {/* Descripción */}
             <div className='space-y-1'>
@@ -303,7 +307,7 @@ export default function NewTransactionModal({ onCreated }: Props) {
                 ref={descRef}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                disabled={submitting}
+                disabled={submitting || disabled}
                 autoComplete='off'
                 placeholder='Ej. Pago suscripción / Venta producto'
                 className='bg-white'
@@ -338,7 +342,7 @@ export default function NewTransactionModal({ onCreated }: Props) {
                   allowNegative={false}
                   inputMode='decimal'
                   customInput={Input}
-                  disabled={submitting}
+                  disabled={submitting || disabled}
                   onValueChange={(v) => {
                     setAmount(v.value ?? '');
                     setAmountNum(v.floatValue);
@@ -362,7 +366,7 @@ export default function NewTransactionModal({ onCreated }: Props) {
                     size='sm'
                     variant='outline'
                     onClick={() => setDate(new Date())}
-                    disabled={submitting}
+                    disabled={submitting || disabled}
                     className='h-8'
                   >
                     Hoy
@@ -373,7 +377,7 @@ export default function NewTransactionModal({ onCreated }: Props) {
                 <DatePicker
                   value={date}
                   onChange={setDate}
-                  disabled={submitting}
+                  disabled={submitting || disabled}
                   buttonClassName='bg-white h-9'
                 />
               </div>
@@ -390,7 +394,7 @@ export default function NewTransactionModal({ onCreated }: Props) {
                   <Button
                     type='button'
                     onClick={() => setType('income')}
-                    disabled={submitting}
+                    disabled={submitting || disabled}
                     className={cn(
                       'border',
                       type === 'income'
@@ -403,7 +407,7 @@ export default function NewTransactionModal({ onCreated }: Props) {
                   <Button
                     type='button'
                     onClick={() => setType('expense')}
-                    disabled={submitting}
+                    disabled={submitting || disabled}
                     className={cn(
                       'border',
                       type === 'expense'
