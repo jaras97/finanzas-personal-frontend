@@ -3,6 +3,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { KpiTileSkeleton } from './SavingAccountsSkeleton';
 
 /** Tonos aproximados al look de DebtsSection */
 const toneMap = {
@@ -33,47 +34,27 @@ export function DebtsHeaderCtaSkeleton() {
    KPIs (3 tarjetas)
    =========================== */
 export function DebtsKpisSkeleton() {
-  const KpiCard = () => (
-    <Card variant='white' className='h-full'>
-      <CardContent className='py-5 px-6'>
-        <Skeleton
-          className='h-4 w-48'
-          tone='contrast'
-          variant='pulse-shimmer'
-        />
-        <div className='mt-3 space-y-2'>
-          {[0, 1, 2].map((i) => (
-            <div key={i} className='flex items-center justify-between gap-3'>
-              <Skeleton
-                className='h-3 w-12 rounded'
-                tone='contrast'
-                variant='pulse-shimmer'
-              />
-              <Skeleton
-                className='h-6 w-40 rounded'
-                tone='contrast'
-                variant='pulse-shimmer'
-              />
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-
   return (
     <section
       className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
       aria-live='polite'
       role='status'
+      aria-label='Cargando KPIs de deudas'
     >
-      <KpiCard />
-      <KpiCard />
-      <KpiCard />
-      {/* En xl hay 4 columnas; si quieres, duplica uno: */}
-      <div className='hidden xl:block'>
-        <KpiCard />
-      </div>
+      {/* 1) Total en préstamos (gradient sobre white) */}
+      <Card variant='white' className='kpi-gradient-strong h-full'>
+        <KpiTileSkeleton titleLabel='Total en préstamos' />
+      </Card>
+
+      {/* 2) Total en tarjetas de crédito (gradient sobre white) */}
+      <Card variant='white' className='kpi-gradient-strong h-full'>
+        <KpiTileSkeleton titleLabel='Total en tarjetas de crédito' />
+      </Card>
+
+      {/* 3) Total general: neutra para pasivos */}
+      <Card variant='kpi-red' className='h-full'>
+        <KpiTileSkeleton titleLabel='Total general' />
+      </Card>
     </section>
   );
 }

@@ -40,49 +40,64 @@ export function SavingAccountsHeaderButtonsSkeleton() {
 /* ===========================
    KPIs (4 tarjetas)
    =========================== */
-export function SavingAccountsKpisSkeleton() {
-  const CardKpi = ({
-    variant,
-  }: {
-    variant: 'kpi-balance' | 'white' | 'kpi-green';
-  }) => (
-    <Card variant={variant} className='h-full'>
-      <CardContent className='py-5 px-6'>
-        <Skeleton
-          className='h-4 w-40'
-          tone='contrast'
-          variant='pulse-shimmer'
-        />
-        <div className='mt-3 space-y-2'>
-          {[0, 1, 2].map((i) => (
-            <div key={i} className='flex items-center justify-between gap-3'>
-              <Skeleton
-                className='h-3 w-10 rounded'
-                tone='contrast'
-                variant='pulse-shimmer'
-              />
-              <Skeleton
-                className='h-6 w-36 rounded'
-                tone='contrast'
-                variant='pulse-shimmer'
-              />
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
+export function KpiTileSkeleton({
+  titleLabel,
+  rows = 3,
+  className,
+}: {
+  titleLabel?: string;
+  rows?: number;
+  className?: string;
+}) {
+  return (
+    <CardContent className={cn('py-4 px-6', className)}>
+      {/* Título (oculto para lectores), línea visible como placeholder */}
+      {titleLabel && <p className='sr-only'>{titleLabel}</p>}
+      <Skeleton className='h-4 w-36' variant='pulse-shimmer' />
 
+      {/* Bloque que imita <TotalsRows /> */}
+      <div className='mt-2 space-y-2'>
+        {Array.from({ length: rows }).map((_, i) => (
+          <div key={i} className='flex items-center justify-between'>
+            <Skeleton className='h-3 w-28' variant='pulse-shimmer' />
+            <Skeleton className='h-4 w-20' variant='pulse-shimmer' />
+          </div>
+        ))}
+      </div>
+    </CardContent>
+  );
+}
+
+/* ------------------------------------ */
+/* Skeleton de las 4 tarjetas KPI */
+/* ------------------------------------ */
+export function SavingAccountsKpisSkeleton() {
   return (
     <section
       className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'
       aria-live='polite'
       role='status'
+      aria-label='Cargando KPIs de cuentas de ahorro'
     >
-      <CardKpi variant='kpi-balance' />
-      <CardKpi variant='white' />
-      <CardKpi variant='white' />
-      <CardKpi variant='kpi-green' />
+      {/* 1) Total en efectivo */}
+      <Card variant='kpi-balance' interactive className='kpi-gradient-strong'>
+        <KpiTileSkeleton titleLabel='Total en efectivo' />
+      </Card>
+
+      {/* 2) Total en cuentas bancarias */}
+      <Card variant='white' interactive className='kpi-gradient-strong'>
+        <KpiTileSkeleton titleLabel='Total en cuentas bancarias' />
+      </Card>
+
+      {/* 3) Total en inversión */}
+      <Card variant='white' interactive className='kpi-gradient-strong'>
+        <KpiTileSkeleton titleLabel='Total en inversión' />
+      </Card>
+
+      {/* 4) Total general */}
+      <Card variant='kpi-green' interactive>
+        <KpiTileSkeleton titleLabel='Total general' />
+      </Card>
     </section>
   );
 }
