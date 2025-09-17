@@ -30,18 +30,18 @@ export function RowsTopCategory({
   className?: string;
   formatter?: (value: number, currency: currencyType) => string;
 }) {
-  const keys = (only ?? (Object.keys(data) as currencyType[])).filter(
-    (c) => data[c] !== undefined,
-  );
+  // 🔁 Monedas a mostrar: si viene `only`, úsalo tal cual (aunque no haya datos).
+  // Si no, usa las presentes en data.
+  const displayKeys = only ?? (Object.keys(data) as currencyType[]);
 
   const preferred = prefer
-    .filter((c) => keys.includes(c))
-    .map((c) => [c, data[c]!] as const);
+    .filter((c) => displayKeys.includes(c))
+    .map((c) => [c, data[c]] as const);
 
-  const extras = keys
+  const extras = displayKeys
     .filter((c) => !prefer.includes(c))
     .sort((a, b) => currencyOrder.indexOf(a) - currencyOrder.indexOf(b))
-    .map((c) => [c, data[c]!] as const);
+    .map((c) => [c, data[c]] as const);
 
   const Row = ({
     c,
@@ -107,6 +107,15 @@ export default function TopCategoryByCurrencyCard({
     ? 'text-white/85'
     : 'text-muted-foreground';
 
+  // 🧠 Detecta si no hay datos útiles para las monedas a mostrar
+  const currenciesToCheck = only ?? (Object.keys(data) as currencyType[]);
+  const isEmpty =
+    currenciesToCheck.length === 0 ||
+    currenciesToCheck.every((c) => {
+      const v = data[c];
+      return !v || (v.total ?? 0) <= 0;
+    });
+
   return (
     <Card
       variant={cardVariant}
@@ -116,13 +125,32 @@ export default function TopCategoryByCurrencyCard({
         <p className={cn('text-sm/5', titleClassName ?? defaultTitleClass)}>
           {title}
         </p>
-        <RowsTopCategory
-          data={data}
-          prefer={prefer}
-          only={only}
-          className='mt-2'
-          formatter={formatter}
-        />
+
+        {isEmpty ? (
+          // 🎯 Empty-state compacto para KPI
+          <div
+            role='status'
+            aria-live='polite'
+            className='mt-2 rounded-lg 
+                        text-[hsl(var(--muted-foreground))]
+                       px-3 py-2 text-xs'
+          >
+            <div className='font-medium text-[hsl(var(--foreground))]'>
+              Sin datos en este período
+            </div>
+            <div className='mt-0.5'>
+              Registra transacciones o ajusta el rango de fechas.
+            </div>
+          </div>
+        ) : (
+          <RowsTopCategory
+            data={data}
+            prefer={prefer}
+            only={only}
+            className='mt-2'
+            formatter={formatter}
+          />
+        )}
       </CardContent>
     </Card>
   );
