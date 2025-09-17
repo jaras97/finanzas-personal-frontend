@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import axios from "axios";
+import { currencyType } from "@/types";
 
 interface AssetsSummary {
-  total_savings: Record<"COP" | "USD" | "EUR", number>;
-  total_investments: Record<"COP" | "USD" | "EUR", number>;
-  total_assets: Record<"COP" | "USD" | "EUR", number>;
+  total_savings: Record<currencyType, number>;
+  total_investments: Record<currencyType, number>;
+  total_assets: Record<currencyType, number>;
 }
 
 export function useAssetsSummary() {

@@ -39,7 +39,7 @@ export type Transaction = {
   to_account?: SavingAccount | null;
 };
 
-export type currencyType = "COP" | "USD" | "EUR";
+export type currencyType = "COP" | "USD" ;
 
 export type Account ="cash" | "bank" | "investment"
 // 🏦 Saving Account
@@ -115,5 +115,5 @@ export interface SubscriptionStatusRead {
 }
 
 export type TotalesPorMoneda = {
-  [key in "COP" | "USD" | "EUR"]: number;
+  [key in currencyType]: number;
 };

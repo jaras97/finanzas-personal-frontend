@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { DateRange } from "react-day-picker";
 import { extractErrorMessage } from "@/lib/extractErrorMessage";
 import { buildDateParamsFromRange } from "@/lib/dateParams";
+import { currencyType } from "@/types";
 
 interface CategorySummary { category_id: number; category_name: string; total: number; percentage: number; }
 interface DailyEvolution { date: string; total_income: number; total_expense: number; }
@@ -13,14 +14,13 @@ interface SummaryData {
   daily_evolution: DailyEvolution[]; top_expense_category: CategorySummary | null;
   top_income_category: CategorySummary | null; top_expense_day: DaySummary | null; top_income_day: DaySummary | null;
 }
-type Currency = "COP" | "USD" | "EUR";
 
 export function useSummary(filters: {
   dateRange: DateRange;
   type?: "income" | "expense" | "all";
   categoryId?: number;
 }) {
-  const [data, setData] = useState<Record<Currency, SummaryData> | null>(null);
+  const [data, setData] = useState<Record<currencyType, SummaryData> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

@@ -1,11 +1,12 @@
+import { currencyType } from "@/types";
+
 export function formatCurrency(
   amount: number,
-  currency: "COP" | "USD" | "EUR" = "COP"
+  currency: currencyType  = "COP"
 ): string {
   const symbols: Record<typeof currency, string> = {
     COP: "$",
     USD: "$",
-    EUR: "€",
   };
 
   const formatter = new Intl.NumberFormat("es-CO", {

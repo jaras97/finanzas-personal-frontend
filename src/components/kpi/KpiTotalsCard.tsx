@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/format';
 import { currencyType } from '@/types';
 
-const currencyOrder: currencyType[] = ['COP', 'USD', 'EUR'];
+const currencyOrder: currencyType[] = ['COP', 'USD'];
 
 type CardVariant = NonNullable<React.ComponentProps<typeof Card>['variant']>;
 

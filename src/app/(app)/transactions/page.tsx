@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import NewTransactionModal from '@/components/forms/NewTransactionModal';
 import EditTransactionModal from '@/components/forms/EditTransactionModal';
-import { TransactionWithCategoryRead } from '@/types';
+import { currencyType, TransactionWithCategoryRead } from '@/types';
 import { reverseTransaction } from '@/utils/reverseTransaction';
 import { Pagination } from '@/components/ui/pagination';
 import DateTimeDisplay from '@/components/ui/DateTimeDisplay';
@@ -38,8 +38,6 @@ import {
   TransactionsKpisSkeleton,
   TransactionsMobileSkeleton,
 } from '@/components/skeletons/TransactionsSkeleton';
-
-type Currency = 'COP' | 'USD' | 'EUR';
 
 const SYSTEM_CATEGORY_STYLES: Record<string, string> = {
   Transferencia: 'bg-sky-50 text-sky-700 border-sky-200',
@@ -220,8 +218,8 @@ export default function TransactionsPage() {
 
   // Solo queremos COP y USD si existen en la respuesta
   const currenciesInSummary = useMemo(() => {
-    const all = summary ? (Object.keys(summary) as Currency[]) : [];
-    return (['COP', 'USD'] as Currency[]).filter((c) => all.includes(c));
+    const all = summary ? (Object.keys(summary) as currencyType[]) : [];
+    return (['COP', 'USD'] as currencyType[]).filter((c) => all.includes(c));
   }, [summary]);
 
   const nf = useMemo(() => new Intl.NumberFormat('es-CO'), []);

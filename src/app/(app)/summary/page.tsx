@@ -17,8 +17,7 @@ import { AreaIncomeExpense } from '@/components/chart/AreaIncomeExpense';
 import { DonutByCategory } from '@/components/chart/DonutByCategory';
 import type { FC } from 'react';
 import { SummarySkeleton } from '@/components/skeletons/SummarySkeleton';
-
-type Currency = 'COP' | 'USD' | 'EUR';
+import { currencyType } from '@/types';
 
 const SummaryPage: FC = () => {
   const today = new Date();
@@ -26,7 +25,7 @@ const SummaryPage: FC = () => {
     startDate: new Date(today.getFullYear(), today.getMonth(), 1),
     endDate: today,
   });
-  const [currency, setCurrency] = useState<Currency>('COP');
+  const [currency, setCurrency] = useState<currencyType>('COP');
 
   const filters = useMemo(
     () => ({
@@ -74,7 +73,7 @@ const SummaryPage: FC = () => {
           <div className='w-full sm:w-40'>
             <CurrencyToggle
               value={currency}
-              onChange={(c) => setCurrency(c as Currency)}
+              onChange={(c) => setCurrency(c as currencyType)}
               disabled={isBusy}
             />
           </div>

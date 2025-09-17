@@ -270,7 +270,6 @@ export default function EditDebtModal({
                 <SelectContent className='select-solid z-[140]'>
                   <SelectItem value='COP'>COP — Peso Colombiano</SelectItem>
                   <SelectItem value='USD'>USD — Dólar</SelectItem>
-                  <SelectItem value='EUR'>EUR — Euro</SelectItem>
                 </SelectContent>
               </Select>
               {hasTransactions ? (

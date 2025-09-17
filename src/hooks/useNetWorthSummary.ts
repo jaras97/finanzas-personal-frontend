@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import axios from "axios";
+import { currencyType } from "@/types";
 
 interface NetWorthDetail {
   total_assets: number;
@@ -9,7 +10,7 @@ interface NetWorthDetail {
   debt_ratio: number;
 }
 
-type NetWorthSummary = Record<"COP" | "USD" | "EUR", NetWorthDetail>;
+type NetWorthSummary = Record<currencyType, NetWorthDetail>;
 
 export function useNetWorthSummary() {
   const [data, setData] = useState<NetWorthSummary | null>(null);

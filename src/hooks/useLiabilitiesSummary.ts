@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import axios from "axios";
+import { currencyType } from "@/types";
 
 interface LiabilitiesSummary {
-  total_liabilities: Record<"COP" | "USD" | "EUR", number>;
+  total_liabilities: Record<currencyType, number>;
 }
 
 export function useLiabilitiesSummary() {

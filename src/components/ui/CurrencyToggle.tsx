@@ -6,9 +6,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { currencyType } from '@/types';
 
 type Props = {
-  value: 'COP' | 'USD' | 'EUR';
+  value: currencyType;
   onChange: (c: any) => void;
   disabled?: boolean;
 };
@@ -23,7 +24,6 @@ export function CurrencyToggle({ value, onChange, disabled }: Props) {
       <SelectContent className='select-solid'>
         <SelectItem value='COP'>COP</SelectItem>
         <SelectItem value='USD'>USD</SelectItem>
-        <SelectItem value='EUR'>EUR</SelectItem>
       </SelectContent>
     </Select>
   );

@@ -23,6 +23,7 @@ import axios from 'axios';
 import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
 import { cn } from '@/lib/utils';
+import { currencyType } from '@/types';
 
 interface Props {
   open: boolean;
@@ -38,7 +39,7 @@ export default function NewSavingAccountModal({
   const [name, setName] = useState('');
   const [balance, setBalance] = useState('');
   const [type, setType] = useState<'cash' | 'bank' | 'investment'>('cash');
-  const [currency, setCurrency] = useState<'COP' | 'USD' | 'EUR'>('COP');
+  const [currency, setCurrency] = useState<currencyType>('COP');
   const [saving, setSaving] = useState(false);
 
   const nameRef = useRef<HTMLInputElement>(null);
@@ -229,7 +230,7 @@ export default function NewSavingAccountModal({
             </div>
             <Select
               value={currency}
-              onValueChange={(v) => setCurrency(v as 'COP' | 'USD' | 'EUR')}
+              onValueChange={(v) => setCurrency(v as currencyType)}
               disabled={saving}
             >
               <SelectTrigger id={idCurrency} className='bg-white'>
@@ -238,7 +239,6 @@ export default function NewSavingAccountModal({
               <SelectContent className='select-solid z-[140]'>
                 <SelectItem value='COP'>COP — Peso colombiano</SelectItem>
                 <SelectItem value='USD'>USD — Dólar</SelectItem>
-                <SelectItem value='EUR'>EUR — Euro</SelectItem>
               </SelectContent>
             </Select>
           </div>

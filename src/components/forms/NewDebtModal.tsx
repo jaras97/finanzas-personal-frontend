@@ -23,6 +23,7 @@ import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
 import { DatePicker } from '@/components/ui/date-picker';
 import { cn } from '@/lib/utils';
+import { currencyType } from '@/types';
 
 interface Props {
   open: boolean;
@@ -35,7 +36,7 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
   const [totalAmount, setTotalAmount] = useState('');
   const [interestRate, setInterestRate] = useState(''); // opcional
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined); // ← ahora Date
-  const [currency, setCurrency] = useState<'COP' | 'USD' | 'EUR'>('COP');
+  const [currency, setCurrency] = useState<currencyType>('COP');
   const [kind, setKind] = useState<'loan' | 'credit_card'>('loan');
   const [saving, setSaving] = useState(false);
 
@@ -266,7 +267,7 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
               </div>
               <Select
                 value={currency}
-                onValueChange={(v) => setCurrency(v as 'COP' | 'USD' | 'EUR')}
+                onValueChange={(v) => setCurrency(v as currencyType)}
                 disabled={saving}
               >
                 <SelectTrigger id={idCurr} className='bg-white'>
@@ -275,7 +276,6 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
                 <SelectContent className='select-solid z-[140]'>
                   <SelectItem value='COP'>COP — Peso Colombiano</SelectItem>
                   <SelectItem value='USD'>USD — Dólar</SelectItem>
-                  <SelectItem value='EUR'>EUR — Euro</SelectItem>
                 </SelectContent>
               </Select>
             </div>

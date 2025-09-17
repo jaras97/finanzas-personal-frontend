@@ -89,7 +89,6 @@ export default function EditSavingAccountModal({
   const currencyOptions = [
     { value: 'COP', label: 'COP — Peso Colombiano' },
     { value: 'USD', label: 'USD — Dólar' },
-    { value: 'EUR', label: 'EUR — Euro' },
   ] as const;
 
   // alias coherente con otros modales

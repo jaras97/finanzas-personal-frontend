@@ -21,13 +21,13 @@ import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import axios from 'axios';
-import { Category } from '@/types';
+import { Category, currencyType } from '@/types';
 import { formatCurrency } from '@/lib/format';
 import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
 import { DatePicker } from '@/components/ui/date-picker';
 
-type UiAccount = { id: string; name: string; currency?: 'COP' | 'USD' | 'EUR' };
+type UiAccount = { id: string; name: string; currency?: currencyType };
 
 interface Props {
   onCreated: () => void;
@@ -58,7 +58,7 @@ export default function NewTransactionModal({ onCreated, disabled }: Props) {
     id: number;
     name: string;
     balance: number;
-    currency: 'COP' | 'USD' | 'EUR';
+    currency: currencyType;
     status: 'active' | 'closed';
   };
   type DebtApiResponse = {
