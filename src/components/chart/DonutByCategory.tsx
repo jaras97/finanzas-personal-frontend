@@ -8,6 +8,7 @@ import {
   Tooltip,
   Label,
 } from 'recharts';
+import { EmptyState } from '../ui/EmptyState';
 
 type Datum = { name: string; value: number };
 
@@ -125,6 +126,8 @@ export function DonutByCategory({
     [currentData],
   );
 
+  const isEmpty = currentData.length === 0 || currentTotal === 0;
+
   // Si cambias modo, resetea el highlight
   const toggleShowAll = () => {
     setShowAll((s) => !s);
@@ -136,107 +139,118 @@ export function DonutByCategory({
       <div className='flex items-center justify-between gap-2'>
         <h3 className='text-sm font-medium'>{title}</h3>
 
-        <div className='flex items-center gap-2'>
-          {/* Toggle agrupación/todas */}
-          <button
-            className='text-[11px] px-2 py-1 rounded-lg
+        {!isEmpty && (
+          <div className='flex items-center gap-2'>
+            {/* Toggle agrupación/todas */}
+            <button
+              className='text-[11px] px-2 py-1 rounded-lg
                        bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]
                        border border-[hsl(var(--border))]
                        active:scale-[0.98] transition'
-            onClick={toggleShowAll}
-            title={
-              showAll
-                ? 'Agrupar categorías pequeñas'
-                : 'Ver todas las categorías'
-            }
-          >
-            {showAll ? 'Agrupar' : 'Ver todas'}
-          </button>
+              onClick={toggleShowAll}
+              title={
+                showAll
+                  ? 'Agrupar categorías pequeñas'
+                  : 'Ver todas las categorías'
+              }
+            >
+              {showAll ? 'Agrupar' : 'Ver todas'}
+            </button>
 
-          {/* Toggle de leyenda en mobile */}
-          <button
-            className='md:hidden text-[11px] px-2 py-1 rounded-lg
+            {/* Toggle de leyenda en mobile */}
+            <button
+              className='md:hidden text-[11px] px-2 py-1 rounded-lg
                        bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]
                        border border-[hsl(var(--border))]
                        active:scale-[0.98] transition'
-            onClick={() => setLegendOpen((s) => !s)}
-          >
-            {legendOpen ? 'Ocultar' : 'Categorías'}
-          </button>
-        </div>
+              onClick={() => setLegendOpen((s) => !s)}
+            >
+              {legendOpen ? 'Ocultar' : 'Categorías'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className='mt-3'>
-        <ResponsiveContainer width='100%' height={280}>
-          <PieChart>
-            <Pie
-              data={currentData.map((d) => ({ ...d, __total: currentTotal }))}
-              dataKey='value'
-              nameKey='name'
-              innerRadius={72}
-              outerRadius={110}
-              paddingAngle={2}
-              // Solo forzamos ángulo mínimo cuando se muestran TODAS (para evitar hairlines)
-              minAngle={showAll ? minSliceAngle : 0}
-              cx='50%'
-              cy='50%'
-              onMouseEnter={(_, idx) => setActiveIndex(idx)}
-              onMouseLeave={() => setActiveIndex(null)}
-            >
-              {currentData.map((entry, i) => (
-                <Cell
-                  key={entry.name + i}
-                  fill={colorAt(i)}
-                  stroke='transparent'
-                  opacity={activeIndex === null || activeIndex === i ? 1 : 0.45}
+        {isEmpty ? (
+          <EmptyState
+            description='No hay categorías con valor en este período.'
+            className='h-[280px]'
+          />
+        ) : (
+          <ResponsiveContainer width='100%' height={280}>
+            <PieChart>
+              <Pie
+                data={currentData.map((d) => ({ ...d, __total: currentTotal }))}
+                dataKey='value'
+                nameKey='name'
+                innerRadius={72}
+                outerRadius={110}
+                paddingAngle={2}
+                // Solo forzamos ángulo mínimo cuando se muestran TODAS (para evitar hairlines)
+                minAngle={showAll ? minSliceAngle : 0}
+                cx='50%'
+                cy='50%'
+                onMouseEnter={(_, idx) => setActiveIndex(idx)}
+                onMouseLeave={() => setActiveIndex(null)}
+              >
+                {currentData.map((entry, i) => (
+                  <Cell
+                    key={entry.name + i}
+                    fill={colorAt(i)}
+                    stroke='transparent'
+                    opacity={
+                      activeIndex === null || activeIndex === i ? 1 : 0.45
+                    }
+                  />
+                ))}
+
+                {/* Centro con Label y type guard */}
+                <Label
+                  position='center'
+                  content={({ viewBox }) => {
+                    if (!isRadialViewBox(viewBox)) return null;
+                    const { cx, cy } = viewBox;
+                    const active =
+                      activeIndex != null ? currentData[activeIndex] : null;
+                    const activePct = active
+                      ? Math.round((active.value / (currentTotal || 1)) * 100)
+                      : null;
+
+                    return (
+                      <g>
+                        <text
+                          x={cx}
+                          y={cy - 6}
+                          textAnchor='middle'
+                          className='fill-[hsl(var(--foreground))]'
+                          style={{ fontSize: 12, opacity: 0.8 }}
+                        >
+                          {active ? active.name : 'Total'}
+                        </text>
+                        <text
+                          x={cx}
+                          y={cy + 12}
+                          textAnchor='middle'
+                          className='fill-[hsl(var(--foreground))]'
+                          style={{ fontWeight: 600, fontSize: 16 }}
+                        >
+                          {active
+                            ? `${new Intl.NumberFormat().format(active.value)}${
+                                activePct != null ? ` · ${activePct}%` : ''
+                              }`
+                            : new Intl.NumberFormat().format(currentTotal)}
+                        </text>
+                      </g>
+                    );
+                  }}
                 />
-              ))}
+              </Pie>
 
-              {/* Centro con Label y type guard */}
-              <Label
-                position='center'
-                content={({ viewBox }) => {
-                  if (!isRadialViewBox(viewBox)) return null;
-                  const { cx, cy } = viewBox;
-                  const active =
-                    activeIndex != null ? currentData[activeIndex] : null;
-                  const activePct = active
-                    ? Math.round((active.value / (currentTotal || 1)) * 100)
-                    : null;
-
-                  return (
-                    <g>
-                      <text
-                        x={cx}
-                        y={cy - 6}
-                        textAnchor='middle'
-                        className='fill-[hsl(var(--foreground))]'
-                        style={{ fontSize: 12, opacity: 0.8 }}
-                      >
-                        {active ? active.name : 'Total'}
-                      </text>
-                      <text
-                        x={cx}
-                        y={cy + 12}
-                        textAnchor='middle'
-                        className='fill-[hsl(var(--foreground))]'
-                        style={{ fontWeight: 600, fontSize: 16 }}
-                      >
-                        {active
-                          ? `${new Intl.NumberFormat().format(active.value)}${
-                              activePct != null ? ` · ${activePct}%` : ''
-                            }`
-                          : new Intl.NumberFormat().format(currentTotal)}
-                      </text>
-                    </g>
-                  );
-                }}
-              />
-            </Pie>
-
-            <Tooltip content={<ChartTooltip />} />
-          </PieChart>
-        </ResponsiveContainer>
+              <Tooltip content={<ChartTooltip />} />
+            </PieChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       {/* Leyenda custom (scrollable en mobile) */}
