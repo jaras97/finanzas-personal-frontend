@@ -239,7 +239,7 @@ export default function TransferBetweenAccountsModal({
     <Dialog open={open} onOpenChange={(o) => !loading && onOpenChange(o)}>
       <DialogContent
         className={cn(
-          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
+          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh] h-full',
           'w-[min(100vw-1rem,560px)] rounded-2xl overflow-hidden',
           panelTint,
         )}
@@ -258,7 +258,7 @@ export default function TransferBetweenAccountsModal({
 
         {/* BODY */}
         <section
-          className='overflow-y-auto overscroll-contain px-4 py-4'
+          className='overflow-y-auto overscroll-contain px-4 py-4 min-h-0'
           aria-busy={loading}
         >
           <div className='space-y-4'>
