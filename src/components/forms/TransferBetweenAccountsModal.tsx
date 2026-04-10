@@ -239,8 +239,8 @@ export default function TransferBetweenAccountsModal({
     <Dialog open={open} onOpenChange={(o) => !loading && onOpenChange(o)}>
       <DialogContent
         className={cn(
-          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh] h-full',
-          'w-[min(100vw-1rem,560px)] rounded-2xl overflow-hidden',
+          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
+          'w-[min(100vw-1rem,560px)] rounded-2xl',
           panelTint,
         )}
         size='lg'
