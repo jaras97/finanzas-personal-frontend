@@ -115,6 +115,32 @@ export type ApiError = {
   message?: string;
 };
 
+export type CurrentUser = {
+  user_id: string;
+  email: string;
+  role: 'user' | 'admin';
+};
+
+export type AdminSubscriptionStatus = 'none' | 'active' | 'expired' | 'inactive';
+
+export type AdminUser = {
+  id: string;
+  email: string;
+  role: 'user' | 'admin';
+  created_at: string;
+  subscription_status: AdminSubscriptionStatus;
+  subscription_start: string | null;
+  subscription_end: string | null;
+};
+
+export type AdminUsersPage = {
+  items: AdminUser[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+};
+
 export interface SubscriptionStatusRead {
   id: number;
   user_id: string; 

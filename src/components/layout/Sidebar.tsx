@@ -8,9 +8,12 @@ import {
   CreditCard,
   Folder,
   Calendar,
+  Users,
   X,
   LogOut,
+  type LucideIcon,
 } from 'lucide-react';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { cn } from '@/lib/utils';
 import { useSidebarStore } from '@/lib/store/sidebarStore';
 import { Button } from '@/components/ui/button';
@@ -24,45 +27,74 @@ const links = [
   { href: '/categories', label: 'Categorías', icon: Folder },
 ];
 
+const adminLinks = [{ href: '/admin', label: 'Usuarios', icon: Users }];
+
 export default function Sidebar() {
   const pathname = usePathname();
   const { isOpen, toggle, close } = useSidebarStore();
   const router = useRouter();
+  const { isAdmin } = useCurrentUser();
 
   const handleLogout = async () => {
     await logout();
     router.push('/auth/login');
   };
 
+  const NavLink = ({
+    href,
+    label,
+    icon: Icon,
+    onItemClick,
+  }: {
+    href: string;
+    label: string;
+    icon: LucideIcon;
+    onItemClick?: () => void;
+  }) => {
+    const active = pathname === href;
+    return (
+      <Link
+        href={href}
+        onClick={onItemClick}
+        className={cn(
+          'group flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors',
+          'text-[hsl(var(--sidebar-foreground))]/80 hover:text-[hsl(var(--sidebar-foreground))]',
+          active
+            ? 'bg-white/10 text-[hsl(var(--sidebar-foreground))] ring-1 ring-white/15'
+            : 'hover:bg-white/5',
+        )}
+      >
+        <Icon
+          className={cn(
+            'h-5 w-5',
+            active
+              ? 'text-white'
+              : 'text-[hsl(var(--sidebar-foreground))]/90 group-hover:text-white',
+          )}
+        />
+        <span>{label}</span>
+      </Link>
+    );
+  };
+
   const Nav = ({ onItemClick }: { onItemClick?: () => void }) => (
     <nav className='mt-4 flex flex-col gap-1'>
-      {links.map(({ href, label, icon: Icon }) => {
-        const active = pathname === href;
-        return (
-          <Link
-            key={href}
-            href={href}
-            onClick={onItemClick}
-            className={cn(
-              'group flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors',
-              'text-[hsl(var(--sidebar-foreground))]/80 hover:text-[hsl(var(--sidebar-foreground))]',
-              active
-                ? 'bg-white/10 text-[hsl(var(--sidebar-foreground))] ring-1 ring-white/15'
-                : 'hover:bg-white/5',
-            )}
-          >
-            <Icon
-              className={cn(
-                'h-5 w-5',
-                active
-                  ? 'text-white'
-                  : 'text-[hsl(var(--sidebar-foreground))]/90 group-hover:text-white',
-              )}
-            />
-            <span>{label}</span>
-          </Link>
-        );
-      })}
+      {links.map((l) => (
+        <NavLink key={l.href} {...l} onItemClick={onItemClick} />
+      ))}
+
+      {/* Solo para administradores. El backend igual rechaza a los demás con
+          403 -- esto evita mostrar un enlace que no lleva a ninguna parte. */}
+      {isAdmin && (
+        <>
+          <p className='mt-4 px-3 text-[11px] tracking-widest text-white/40'>
+            ADMINISTRACIÓN
+          </p>
+          {adminLinks.map((l) => (
+            <NavLink key={l.href} {...l} onItemClick={onItemClick} />
+          ))}
+        </>
+      )}
     </nav>
   );
 

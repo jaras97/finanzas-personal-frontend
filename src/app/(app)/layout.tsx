@@ -4,6 +4,7 @@
 import Sidebar from '@/components/layout/Sidebar';
 import { toast } from 'sonner';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu } from 'lucide-react';
@@ -15,13 +16,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // 1) Hooks SIEMPRE arriba, sin condicionales
   const { status, initialized, isNone, isExpired, isInactive } =
     useSubscriptionStatus();
+  // Los administradores no son clientes: gestionan las suscripciones de los
+  // demás y no tienen por qué tener una propia. Sin esta excepción, un admin
+  // sin suscripción quedaría bloqueado fuera de su propio panel (el backend
+  // ya los deja pasar: get_current_admin_user no valida suscripción).
+  const { isAdmin, loading: userLoading } = useCurrentUser();
   const router = useRouter();
   const { toggle } = useSidebarStore();
   const didToast = useRef(false);
 
+  const gateReady = initialized && !userLoading;
+  const blocked = !isAdmin && (isNone || isExpired || isInactive);
+
   // 2) Efecto incondicional: decide navegación cuando haya veredicto
   useEffect(() => {
-    if (!initialized) return;
+    if (!gateReady || isAdmin) return;
 
     // Detectar si vienes del login SOLO dentro del efecto (lado cliente)
     const fromLogin =
@@ -60,10 +69,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       didToast.current = true;
       router.replace('/auth/inactive');
     }
-  }, [initialized, isNone, isExpired, isInactive, router]);
+  }, [gateReady, isAdmin, isNone, isExpired, isInactive, router]);
 
   // 3) Renders (estos returns pueden ir DESPUÉS de los hooks sin romper el orden)
-  if (!initialized) {
+  if (!gateReady) {
     return (
       <div className='flex items-center justify-center h-screen'>
         <p className='text-muted-foreground text-lg'>
@@ -73,7 +82,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (isNone || isExpired || isInactive) return null;
+  if (blocked) return null;
 
   return (
     <div className='min-h-screen'>

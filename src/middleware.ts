@@ -16,6 +16,9 @@ export async function middleware(request: NextRequest) {
     '/saving-accounts',
     '/categories',
     '/debts',
+    // El middleware solo verifica que haya sesión válida; que además sea
+    // admin lo valida el backend (403) y la propia página al montar.
+    '/admin',
   ];
 
   const isPrivateRoute = privatePaths.some(path =>
@@ -78,6 +81,7 @@ export const config = {
     '/saving-accounts/:path*',
     '/categories/:path*',
     '/debts/:path*',
+    '/admin/:path*',
      '/auth/login',
     '/auth/expired',
     '/auth/inactive',
