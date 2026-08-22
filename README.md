@@ -1,37 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# finanzas-personal-frontend
 
-## Getting Started
+Frontend web de **Balanced Cent**, una app de finanzas personales. Next.js (App Router) + TypeScript. Consume la API de [finanzas-personales-backend](../backend).
 
-First, run the development server:
+> Documentación detallada en [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): routing/middleware, flujo de autenticación, estado, y desglose de cada feature (resumen, transacciones, cuentas, deudas, categorías).
+
+## Stack
+
+- **Next.js 15** (App Router) + **React 19** + **TypeScript** (modo `strict` desactivado en `tsconfig.json`).
+- **shadcn/ui** (estilo `new-york`) sobre **Radix UI** para primitivos simples, pero los **modales usan un `Dialog` propio construido sobre Headless UI** (`src/components/ui/dialog.tsx`), no Radix Dialog.
+- **Zustand** para estado global mínimo (token de auth, estado del sidebar móvil).
+- **Axios** vía un cliente compartido (`src/lib/api.ts`); fetching de datos mayormente con hooks `useState`/`useEffect` hechos a mano (una sola excepción usa **SWR**: `useDebts`).
+- **Recharts** para gráficos, **Tailwind CSS v4** para estilos, **Luxon** para manejo de fechas/timezones.
+- **pnpm** como package manager.
+
+## Puesta en marcha local
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# 1. Instalar dependencias
+pnpm install
+
+# 2. Configurar variables de entorno
+cp .env.example .env.local
+# JWT_SECRET debe ser idéntico al SECRET_KEY del backend
+
+# 3. Levantar el servidor de desarrollo (con el backend corriendo en :8000)
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+La app queda disponible en `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Variables de entorno
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Ver [`.env.example`](.env.example). Resumen:
 
-## Learn More
+| Variable | Requerida | Descripción |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | no (default `http://localhost:8000`) | Base URL de la API backend |
+| `JWT_SECRET` | sí | Secreto para verificar el JWT en middleware de Edge — debe coincidir con `SECRET_KEY` del backend |
+| `NEXT_PUBLIC_APP_NAME` | no | Nombre mostrado en el footer |
+| `NEXT_PUBLIC_APP_VERSION` | no | Versión mostrada en el footer |
+| `NODE_ENV` | automática | Controla CSP headers, upgrade http→https, flag `secure` de cookies |
+| `DOCKER_BUILD` | no | Si es truthy, `next.config.ts` usa `output: "standalone"` (deploy en contenedor) |
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `pnpm dev` — servidor de desarrollo (`next dev --turbopack`)
+- `pnpm build` — build de producción
+- `pnpm start` — sirve el build de producción
+- `pnpm lint` — ESLint
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Estructura del proyecto
 
-## Deploy on Vercel
+```
+src/
+  app/
+    (app)/              # rutas protegidas: summary, transactions, saving-accounts, debts, categories
+    auth/                # login, expired, inactive, no-subscription
+    layout.tsx           # layout raíz (fuentes, Toaster)
+    middleware.ts         # protección de rutas por JWT (ver docs/ARCHITECTURE.md)
+  components/
+    auth/, forms/, chart/, kpi/, layout/, skeletons/, ui/
+  hooks/                 # un hook de datos por feature (useSummary, useTransactions, useDebts, ...)
+  lib/
+    api.ts               # cliente axios compartido
+    store.ts, store/sidebarStore.ts  # stores de Zustand
+    format.ts, formatDate.ts, formatDayLabel.ts, date.ts, dateParams.ts  # utils de fecha/moneda
+  types/index.ts          # tipos TypeScript de todo el dominio
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+No hay página en `src/app/page.tsx` — la ruta `/` la resuelve enteramente `middleware.ts` redirigiendo a `/summary` o `/auth/login`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# finanzas-personal-frontend
+## Notas importantes para desarrollo
+
+- El token de auth se guarda **por triplicado**: cookie `access_token`, `localStorage['access_token']` y `localStorage['token']` (vía el store de Zustand). Si algo de auth se comporta raro, revisar los tres.
+- Al cerrar sesión, `localStorage['access_token']` **no se limpia** (solo la cookie y `localStorage['token']`) — ver [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) para más detalle de este y otros puntos conocidos.
+- Los formularios usan `useState` manual por campo; `react-hook-form` + `zod` están instalados y hay un primitivo `form.tsx` de shadcn, pero **no se usan en ningún formulario actual** — están disponibles pero no adoptados.
