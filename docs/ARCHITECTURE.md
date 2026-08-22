@@ -3,21 +3,22 @@
 ## Routing y protección de rutas
 
 **Grupos de rutas** (App Router):
-- `src/app/(app)/` — shell autenticado: `summary`, `transactions`, `saving-accounts`, `debts`, `categories`. Tiene su propio `layout.tsx` que renderiza `Sidebar` + `Footer` y hace **gating de suscripción del lado del cliente**.
+- `src/app/(app)/` — shell autenticado: `summary`, `transactions`, `saving-accounts`, `debts`, `categories`, `admin`. Tiene su propio `layout.tsx` que renderiza `Sidebar` + `Footer` y hace **gating de suscripción del lado del cliente**.
 - `src/app/auth/` — `login`, `expired`, `inactive`, `no-subscription`. Fuera de `(app)`, sin sidebar/footer.
 
 No existe `src/app/page.tsx`: la ruta `/` la resuelve `src/middleware.ts`, que siempre redirige.
 
 **`src/middleware.ts`** (Edge runtime):
 - Lee la cookie `access_token` y la verifica con `jose.jwtVerify` usando `process.env.JWT_SECRET` (debe ser igual al `SECRET_KEY` del backend).
-- Rutas privadas (por prefijo): `/summary`, `/transactions`, `/saving-accounts`, `/categories`, `/debts` → sin token o token inválido, redirige a `/auth/login`.
+- Rutas privadas (por prefijo): `/summary`, `/transactions`, `/saving-accounts`, `/categories`, `/debts`, `/admin` → sin token o token inválido, redirige a `/auth/login`. El middleware solo verifica que haya **sesión válida**; que además sea admin lo valida el backend (403) y la propia página `/admin` al montar.
 - En `/`: token válido → `/summary`; si no, → `/auth/login`.
 - En `/auth/login`: token válido → redirige a `/summary` (evita mostrar login ya autenticado).
 - ⚠️ `/auth/expired`, `/auth/inactive`, `/auth/no-subscription` están en el `matcher` pero **no tienen lógica de protección dentro del middleware** — al vivir fuera de `(app)`, quedan libremente accesibles sin ningún control (la protección real de esas pantallas depende solo del gating de suscripción del layout `(app)`, que no aplica a rutas fuera de ese grupo).
 - Contiene bastante `console.log` de debug (con emojis) en cada rama — dejado en el código, no es solo de desarrollo.
 
 **Gating de suscripción** (`src/app/(app)/layout.tsx`, client component):
-- Llama a `useSubscriptionStatus()` al montar. Mientras no está `initialized`, muestra "Verificando suscripción..." sin sidebar.
+- Llama a `useSubscriptionStatus()` **y** `useCurrentUser()` al montar. Mientras alguno no ha resuelto, muestra "Verificando suscripción..." sin sidebar.
+- **Los administradores se saltan el gate por completo** (`isAdmin` → nunca se bloquea ni redirige). Son personal, no clientes: no tienen por qué tener suscripción propia, y sin esta excepción un admin sin suscripción quedaba bloqueado fuera del panel que justamente usa para otorgarlas. Coincide con el backend, donde `get_current_admin_user` nunca validó suscripción.
 - Si `sessionStorage['fromLogin'] === '1'` (seteado por `LoginForm` justo tras login exitoso), redirige **silenciosamente** (sin toast) a la pantalla de suscripción correspondiente y limpia el flag.
 - En cualquier otro caso (deep link, cambio de estado en caliente), muestra un `toast.error` y redirige — solo una vez por montaje (`didToast` ref).
 - Si el estado no es válido, el layout renderiza `null` mientras el `useEffect` async decide el redirect — puede haber un flash de contenido en blanco.
@@ -74,6 +75,7 @@ El patrón "fecha a mediodía local en ISO" (`dateToIsoAtLocalNoon` / `toIsoAtLo
 - **Cuentas de ahorro** (`(app)/saving-accounts`): agrupa por `type` (cash/bank/investment) + sección de cerradas. Política de acciones basada en si la cuenta tiene transacciones (`has-transactions`, cacheado localmente por cuenta): eliminar/editar-todo requieren "prístina" (sin transacciones), cerrar requiere balance 0, reabrir requiere estar cerrada. `WithdrawFromAccountModal.tsx` existe pero **no está enlazado a ningún botón** en la UI actual (el botón "Depositar" también está comentado en `AccountsSection.tsx`).
 - **Deudas** (`(app)/debts`): agrupa por `kind` (loan/credit_card) + cerradas. "Pristina" = `transactions_count === 0`. Pagar (`PayDebtModal`) solo permite cuentas activas de la **misma moneda** que la deuda. "Agregar cargo" (`AddChargeToDebtModal`) incrementa el saldo sin tocar ninguna cuenta.
 - **Categorías** (`(app)/categories`): lista activas/inactivas; las de sistema (`is_system`) están bloqueadas para editar/desactivar desde la UI. Desactivar = soft-delete (`DELETE`), con confirmación vía `ConfirmCategoryStatusModal`.
+- **Administración** (`(app)/admin`, solo admins, desde 2026-08-22): lista paginada de usuarios con buscador por correo (con debounce de 350ms), mostrando rol y estado de suscripción de cada uno. Acciones: gestionar suscripción (`ManageSubscriptionModal` → crear/renovar/eliminar, contra `/subscriptions/admin/*`) y promover/degradar admins (`PATCH /admin/users/{id}/role`). El enlace en el sidebar solo aparece si `useCurrentUser().isAdmin`; el acceso real lo hace cumplir el backend (403). El backend rechaza quitar el último admin, y la UI lo muestra como error normal.
 
 ## Utils compartidos (`src/lib/`)
 
