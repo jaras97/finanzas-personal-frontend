@@ -24,13 +24,14 @@ No existe `src/app/page.tsx`: la ruta `/` la resuelve `src/middleware.ts`, que s
 
 ## Autenticación
 
-**Cliente HTTP** (`src/lib/api.ts`):
-- `baseURL = NEXT_PUBLIC_API_URL` (default `http://localhost:8000`); en producción fuerza `https://` si la URL no es `localhost`.
-- `withCredentials: true`.
-- Interceptor de request: busca el token en orden cookie `access_token` → `localStorage['access_token']` → `localStorage['token']`, y setea `Authorization: Bearer <token>`.
-- **Sin interceptor de respuesta**: no hay refresh automático de token ni redirect global en 401 — cada hook maneja sus errores por su cuenta.
+Reescrito por completo el 2026-08-22: la sesión ya no vive en el cliente. El backend fija una cookie httpOnly (`access_token`, dominio `.balancedcent.com` en producción) en `/auth/login` y la limpia en `/auth/logout`; el frontend nunca lee ni guarda el JWT.
 
-**Login** (`LoginForm.tsx`): `POST /auth/login` (form-urlencoded, estilo OAuth2). Al éxito, el token se escribe en **tres lugares**: store de Zustand (→ `localStorage['token']`), cookie `access_token` (7 días, `secure` en prod), y `localStorage['access_token']`. Setea `sessionStorage['fromLogin']='1'` y navega a `/summary`.
+**Cliente HTTP** (`src/lib/api.ts`):
+- `baseURL = NEXT_PUBLIC_API_URL` (default `http://localhost:8000`; en producción apunta a `https://api.balancedcent.com`); fuerza `https://` si la URL no es `localhost`.
+- `withCredentials: true` — es lo único que hace falta para que el navegador adjunte la cookie en cada request. No hay interceptor de request ni de response: no se lee ni escribe ningún token, no hay refresh automático ni redirect global en 401 (cada hook sigue manejando sus errores por su cuenta).
+- Exporta `logout()`: hace `POST /auth/logout` (best-effort, ignora errores de red) para que el backend limpie la cookie — necesario porque JS no puede borrar una cookie httpOnly por sí mismo. Los 4 lugares que antes duplicaban la lógica de logout (`Header.tsx`, `Sidebar.tsx`, `auth/expired|inactive|no-subscription`) ahora solo llaman a este helper + `router.push('/auth/login')`.
+
+**Login** (`LoginForm.tsx`): `POST /auth/login` (form-urlencoded, estilo OAuth2). El frontend no toca la respuesta más allá de leer el status — la cookie la fija el backend vía `Set-Cookie`. Setea `sessionStorage['fromLogin']='1'` y navega a `/summary`.
 
 **Registro** (`RegisterForm.tsx`): `POST /auth/register` `{email, password}`. **No hay auto-login** tras registrarse — el usuario vuelve al tab de login. El mensaje de éxito indica que la cuenta necesita una suscripción activa (aprovisionamiento manual/admin, no self-serve).
 
@@ -38,11 +39,13 @@ No existe `src/app/page.tsx`: la ruta `/` la resuelve `src/middleware.ts`, que s
 
 **Estado de suscripción** (`useSubscriptionStatus.ts`): `GET /subscriptions/me`. Prioridad de estado: `end_date` vencida → `expired` (incluso si `is_active` es true) → `!is_active` → `inactive` → vence en ≤7 días → `expiring_soon` → si no, `active`. 401/404 → `none`. Otros errores no degradan el estado (evita falsos negativos por errores transitorios), pero si el primer request falla con algo distinto de 401/404, el estado puede quedar atascado indefinidamente en `loading`.
 
-**Logout**: implementado por separado en `Header.tsx`, `Sidebar.tsx` y cada pantalla `auth/expired|inactive|no-subscription` (código duplicado en vez de una función compartida). Limpia el store de Zustand y la cookie, pero **no limpia `localStorage['access_token']`**.
+**Logout**: centralizado en `logout()` (`src/lib/api.ts`), llamado desde `Header.tsx`, `Sidebar.tsx` y cada pantalla `auth/expired|inactive|no-subscription`. Ya no hay lógica duplicada ni token que limpiar del lado del cliente.
+
+> ⚠️ Nota de migración: cualquier usuario que ya tuviera una sesión iniciada antes de este cambio conserva la cookie **vieja** (`access_token`, no-httpOnly, con dominio scoped solo a `www.balancedcent.com` — la ponía el frontend antiguo vía `js-cookie`). Esa cookie sigue siendo válida para el middleware (que solo la lee, no le importa quién la puso), así que deja entrar al usuario a `(app)`, pero **nunca llega a `api.balancedcent.com`** (dominio distinto), así que toda llamada a la API sale sin credenciales → 401 → `useSubscriptionStatus` muestra "Suscripción pendiente" aunque la cuenta esté bien. Se resuelve solo con un logout+login (que limpia la cookie vieja y pone la nueva, correctamente scoped). Confirmado en producción el 2026-08-22.
 
 ## Estado y fetching de datos
 
-- **Zustand**: `useAuthStore` (token) y `useSidebarStore` (sidebar móvil). No hay un store global de datos de dominio.
+- **Zustand**: solo `useSidebarStore` (sidebar móvil) — el antiguo `useAuthStore` (token en `localStorage`) se eliminó junto con el resto de la persistencia de sesión en el cliente (ver Autenticación arriba). No hay un store global de datos de dominio.
 - **Sin caché de servidor compartida** (no React Query): cada feature tiene su propio hook `useState`+`useEffect`+axios con `loading`/`error`/`refresh()` manual. Única excepción: `useDebts.ts` usa **SWR** (revalida on focus/reconnect), inconsistente con el resto.
 - **Formularios**: todos manuales (`useState` por campo + validación a mano + `toast.error`), pese a tener `react-hook-form`/`zod`/`form.tsx` instalados y sin usar.
 - Los inputs de monto/tasa usan `react-number-format` (`NumericFormat`) para separadores de miles/decimales según locale.
@@ -81,7 +84,7 @@ Solo se soportan dos monedas en el tipo `currencyType` del frontend (`"COP" | "U
 
 ## Componentes de layout con posible código huérfano
 
-- `Header.tsx` no se usa en `(app)/layout.tsx` (que renderiza `Sidebar` + un FAB propio) — duplica la lógica de logout de `Sidebar.tsx`.
+- `Header.tsx` no se usa en `(app)/layout.tsx` (que renderiza `Sidebar` + un FAB propio) — sigue sin usarse, pero ya no duplica lógica de logout (ambos llaman a `logout()` de `src/lib/api.ts`).
 - `MobileSidebarTrigger.tsx` parece duplicar el FAB ya codificado inline en `(app)/layout.tsx`.
 
 Vale la pena confirmar con una búsqueda de imports antes de eliminar cualquiera de los dos, por si se usan en algún lugar no cubierto en este análisis.

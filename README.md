@@ -8,7 +8,7 @@ Frontend web de **Balanced Cent**, una app de finanzas personales. Next.js (App 
 
 - **Next.js 15** (App Router) + **React 19** + **TypeScript** (modo `strict` desactivado en `tsconfig.json`).
 - **shadcn/ui** (estilo `new-york`) sobre **Radix UI** para primitivos simples, pero los **modales usan un `Dialog` propio construido sobre Headless UI** (`src/components/ui/dialog.tsx`), no Radix Dialog.
-- **Zustand** para estado global mínimo (token de auth, estado del sidebar móvil).
+- **Zustand** para estado global mínimo (estado del sidebar móvil). La sesión ya no vive en el cliente — ver Autenticación abajo.
 - **Axios** vía un cliente compartido (`src/lib/api.ts`); fetching de datos mayormente con hooks `useState`/`useEffect` hechos a mano (una sola excepción usa **SWR**: `useDebts`).
 - **Recharts** para gráficos, **Tailwind CSS v4** para estilos, **Luxon** para manejo de fechas/timezones.
 - **pnpm** como package manager.
@@ -35,7 +35,7 @@ Ver [`.env.example`](.env.example). Resumen:
 
 | Variable | Requerida | Descripción |
 |---|---|---|
-| `NEXT_PUBLIC_API_URL` | no (default `http://localhost:8000`) | Base URL de la API backend |
+| `NEXT_PUBLIC_API_URL` | no (default `http://localhost:8000`) | Base URL de la API backend. En producción: `https://api.balancedcent.com` (debe compartir dominio padre con el frontend para que la cookie de sesión funcione) |
 | `JWT_SECRET` | sí | Secreto para verificar el JWT en middleware de Edge — debe coincidir con `SECRET_KEY` del backend |
 | `NEXT_PUBLIC_APP_NAME` | no | Nombre mostrado en el footer |
 | `NEXT_PUBLIC_APP_VERSION` | no | Versión mostrada en el footer |
@@ -62,8 +62,8 @@ src/
     auth/, forms/, chart/, kpi/, layout/, skeletons/, ui/
   hooks/                 # un hook de datos por feature (useSummary, useTransactions, useDebts, ...)
   lib/
-    api.ts               # cliente axios compartido
-    store.ts, store/sidebarStore.ts  # stores de Zustand
+    api.ts               # cliente axios compartido + logout()
+    store/sidebarStore.ts  # store de Zustand (sidebar móvil)
     format.ts, formatDate.ts, formatDayLabel.ts, date.ts, dateParams.ts  # utils de fecha/moneda
   types/index.ts          # tipos TypeScript de todo el dominio
 ```
@@ -72,6 +72,6 @@ No hay página en `src/app/page.tsx` — la ruta `/` la resuelve enteramente `mi
 
 ## Notas importantes para desarrollo
 
-- El token de auth se guarda **por triplicado**: cookie `access_token`, `localStorage['access_token']` y `localStorage['token']` (vía el store de Zustand). Si algo de auth se comporta raro, revisar los tres.
-- Al cerrar sesión, `localStorage['access_token']` **no se limpia** (solo la cookie y `localStorage['token']`) — ver [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) para más detalle de este y otros puntos conocidos.
+- La sesión vive en una cookie httpOnly que fija el backend (`/auth/login`) — el frontend nunca lee ni guarda el JWT (ni `localStorage` ni `document.cookie`). Para cerrar sesión siempre hay que llamar a `logout()` de `src/lib/api.ts` (hace `POST /auth/logout`), nunca manipular cookies/storage a mano.
+- Si un usuario que ya tenía sesión antes del 2026-08-22 ve "Suscripción pendiente" sin razón aparente, es la cookie vieja (no-httpOnly) quedando huérfana — un logout+login lo resuelve. Ver [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) para el detalle completo.
 - Los formularios usan `useState` manual por campo; `react-hook-form` + `zod` están instalados y hay un primitivo `form.tsx` de shadcn, pero **no se usan en ningún formulario actual** — están disponibles pero no adoptados.
