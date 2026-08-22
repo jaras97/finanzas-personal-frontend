@@ -27,6 +27,7 @@ import { formatCurrency } from '@/lib/format';
 import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
 import { DatePicker } from '@/components/ui/date-picker';
+import { readTxPreferences, rememberTx } from '@/lib/txPreferences';
 
 type UiAccount = { id: string; name: string; currency?: currencyType };
 
@@ -81,9 +82,17 @@ export default function NewTransactionModal({ onCreated, disabled }: Props) {
 
   useEffect(() => {
     if (open) {
+      // Retomar el último tipo usado dispara en cascada la precarga de cuenta
+      // y categoría (ver los efectos de abajo), así que al abrir el modal ya
+      // queda todo listo salvo monto y descripción.
+      if (!type) {
+        const remembered = readTxPreferences().type;
+        if (remembered) setType(remembered);
+      }
       const t = setTimeout(() => descRef.current?.focus(), 50);
       return () => clearTimeout(t);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -115,9 +124,17 @@ export default function NewTransactionModal({ onCreated, disabled }: Props) {
         }
 
         setAccounts(combined);
-        setAccountId((prev) =>
-          combined.some((a) => a.id === prev) ? prev : '',
-        );
+        setAccountId((prev) => {
+          if (combined.some((a) => a.id === prev)) return prev;
+          // Recuperar la última cuenta usada para este tipo, pero solo si
+          // sigue existiendo y activa (pudo cerrarse o eliminarse).
+          const remembered = type
+            ? readTxPreferences().accountByType?.[type]
+            : undefined;
+          return remembered && combined.some((a) => a.id === remembered)
+            ? remembered
+            : '';
+        });
       } catch {
         toast.error('Error al cargar cuentas y tarjetas');
         setAccounts([]);
@@ -127,12 +144,15 @@ export default function NewTransactionModal({ onCreated, disabled }: Props) {
       }
     };
 
-    if (type) fetchAccountsAndCards();
-    else {
+    // Depende también de `open`: como el tipo ya no se limpia tras guardar
+    // (para poder encadenar registros), sin esto la lista quedaría cacheada
+    // con los saldos previos -- y el nombre de cada cuenta incluye su saldo.
+    if (type && open) fetchAccountsAndCards();
+    else if (!type) {
       setAccounts([]);
       setAccountId('');
     }
-  }, [type]);
+  }, [type, open]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -148,7 +168,18 @@ export default function NewTransactionModal({ onCreated, disabled }: Props) {
         });
         const userCategories = (data as Category[]).filter((c) => !c.is_system);
         setCategories(userCategories);
-        if (userCategories.length === 0) setCategoryId('');
+        if (userCategories.length === 0) {
+          setCategoryId('');
+        } else {
+          setCategoryId((prev) => {
+            if (userCategories.some((c) => String(c.id) === prev)) return prev;
+            const remembered = readTxPreferences().categoryByType?.[type];
+            return remembered &&
+              userCategories.some((c) => String(c.id) === remembered)
+              ? remembered
+              : '';
+          });
+        }
       } catch {
         toast.error('Error al cargar categorías');
       } finally {
@@ -203,12 +234,22 @@ export default function NewTransactionModal({ onCreated, disabled }: Props) {
       }
 
       toast.success('Transacción creada correctamente');
+
+      // Recordar estas selecciones para la próxima vez. Se guardan solo tras
+      // un guardado exitoso: si la request falló, no queremos "aprender" una
+      // combinación que ni siquiera se pudo registrar.
+      rememberTx({
+        type: type as 'income' | 'expense',
+        accountId,
+        categoryId,
+      });
+
+      // El monto y la descripción sí se limpian (son distintos cada vez);
+      // tipo/cuenta/categoría se conservan para encadenar varios registros
+      // seguidos sin rearmar el formulario.
       setDescription('');
       setAmount('');
       setAmountNum(undefined);
-      setType('');
-      setCategoryId('');
-      setAccountId('');
       setDate(new Date());
       setOpen(false);
       onCreated();
