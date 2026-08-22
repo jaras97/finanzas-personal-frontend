@@ -58,9 +58,14 @@ Dos estrategias de parámetros de fecha coexisten (a tener en cuenta al tocar fi
 
 El patrón "fecha a mediodía local en ISO" (`dateToIsoAtLocalNoon` / `toIsoAtLocalNoon`) para evitar corrimientos de día por timezone está **copiado en al menos 4 lugares** distintos (`utils/dates.ts`, `NewTransactionModal.tsx`, `EditTransactionModal.tsx`, `PayDebtModal.tsx`) en vez de centralizado.
 
-`formatCurrency` (`src/lib/format.ts`) siempre muestra 0 decimales y el mismo símbolo `$` para COP y USD — la distinción de moneda depende de que el componente que llama añada el código de moneda como texto aparte.
+## Monedas (reescrito 2026-08-22)
 
-Solo se soportan dos monedas en el tipo `currencyType` del frontend (`"COP" | "USD"`), aunque el backend además contempla `EUR` en varios de sus modelos/respuestas.
+`currencyType` es `string` (antes un union cerrado `"COP" | "USD"`). El catálogo real viene de `GET /currencies` vía el hook `useCurrencies()` (`src/hooks/useCurrencies.ts`), que devuelve `{code, name, symbol, decimal_digits}[]` para las 42 monedas que el backend soporta. Está wireado en:
+- Todos los selects de moneda al crear/editar cuentas y deudas (`NewSavingAccountModal`, `NewDebtModal`, `EditDebtModal`) — antes hardcodeados a solo COP/USD.
+- Las heurísticas de escala decimal ("¿esta moneda usa centavos?") en `TransferBetweenAccountsModal`, `NewTransactionModal`, `PayDebtModal`, `AddChargeToDebtModal`, `RegisterYieldModal` — antes todas asumían `currency === 'COP' ? 0 : 2`, lo cual es incorrecto para cualquier otra moneda sin decimales (JPY, CLP, KRW, ...). Ahora leen `decimal_digits` del catálogo.
+- `CurrencyToggle` (dashboard) y las cards de "top categoría" — ya no filtran a `['COP','USD']`, muestran cualquier moneda que el usuario realmente tenga en sus datos (derivado de las respuestas de `/summary`, `/summary-extra/*`, no de una lista fija).
+
+`formatCurrency` (`src/lib/format.ts`) usa `Intl.NumberFormat` con `style: 'currency'` en vez de un mapa manual de símbolos — antes mostraba siempre 0 decimales y el mismo `$` plano para COP y USD (ocultaba los centavos en USD y era ambiguo entre monedas); ahora Intl resuelve símbolo y decimales correctos por código ISO.
 
 ## Features principales
 
