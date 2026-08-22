@@ -2,6 +2,8 @@
 
 Frontend web de **Balanced Cent**, una app de finanzas personales. Next.js (App Router) + TypeScript. Consume la API de [finanzas-personales-backend](../backend).
 
+> Pendientes y plan de mejora (transversales a ambos repos) viven en el repo del backend: [PENDIENTES.md](https://github.com/jaras97/finanzas-personales-backend/blob/main/docs/PENDIENTES.md) · [PLAN_DE_MEJORA.md](https://github.com/jaras97/finanzas-personales-backend/blob/main/docs/PLAN_DE_MEJORA.md).
+>
 > Documentación detallada en [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): routing/middleware, flujo de autenticación, estado, y desglose de cada feature (resumen, transacciones, cuentas, deudas, categorías).
 
 ## Stack
@@ -54,7 +56,7 @@ Ver [`.env.example`](.env.example). Resumen:
 ```
 src/
   app/
-    (app)/              # rutas protegidas: summary, transactions, saving-accounts, debts, categories
+    (app)/              # rutas protegidas: summary, transactions, recurring, saving-accounts, debts, categories, admin
     auth/                # login, expired, inactive, no-subscription
     layout.tsx           # layout raíz (fuentes, Toaster)
     middleware.ts         # protección de rutas por JWT (ver docs/ARCHITECTURE.md)
