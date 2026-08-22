@@ -39,7 +39,16 @@ export type Transaction = {
   to_account?: SavingAccount | null;
 };
 
-export type currencyType = "COP" | "USD" ;
+// Código ISO-4217 de una moneda (p. ej. "COP", "USD", "MXN"). Ya no es un
+// union cerrado -- el catálogo real viene de GET /currencies.
+export type currencyType = string;
+
+export type Currency = {
+  code: string;
+  name: string;
+  symbol: string;
+  decimal_digits: number;
+};
 
 export type Account ="cash" | "bank" | "investment"
 // 🏦 Saving Account
@@ -114,6 +123,4 @@ export interface SubscriptionStatusRead {
   is_active: boolean;
 }
 
-export type TotalesPorMoneda = {
-  [key in currencyType]: number;
-};
+export type TotalesPorMoneda = Record<currencyType, number>;

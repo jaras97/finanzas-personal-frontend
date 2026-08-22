@@ -14,6 +14,7 @@ import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
 import { DatePicker } from '@/components/ui/date-picker';
 import { cn } from '@/lib/utils';
+import { useCurrencies } from '@/hooks/useCurrencies';
 
 interface Props {
   open: boolean;
@@ -34,7 +35,9 @@ export default function AddChargeToDebtModal({
   const [saving, setSaving] = useState(false);
 
   const isClosed = useMemo(() => debt.status === 'closed', [debt.status]);
-  const amountDecimalScale = debt.currency === 'COP' ? 0 : 2;
+  const { currencies } = useCurrencies();
+  const amountDecimalScale =
+    currencies.find((c) => c.code === debt.currency)?.decimal_digits ?? 2;
 
   const parseNumber = (v: string) => {
     const n = parseFloat((v || '').replace(',', '.'));

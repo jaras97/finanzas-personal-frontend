@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { useCurrencies } from '@/hooks/useCurrencies';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -161,7 +162,9 @@ export default function NewTransactionModal({ onCreated, disabled }: Props) {
     () => accounts.find((a) => a.id === accountId)?.currency ?? 'COP',
     [accounts, accountId],
   );
-  const decimalScale = selectedCurrency === 'COP' ? 0 : 2;
+  const { currencies } = useCurrencies();
+  const decimalScale =
+    currencies.find((c) => c.code === selectedCurrency)?.decimal_digits ?? 2;
   const isCreditCardPurchase =
     accountId.startsWith('debt-') && type === 'expense';
 
@@ -324,8 +327,8 @@ export default function NewTransactionModal({ onCreated, disabled }: Props) {
                       Monto
                     </label>
                     <InfoHint side='top'>
-                      {selectedCurrency === 'COP'
-                        ? 'En COP normalmente no se usan decimales.'
+                      {decimalScale === 0
+                        ? `En ${selectedCurrency} normalmente no se usan decimales.`
                         : 'Puedes ingresar decimales.'}
                     </InfoHint>
                   </div>
@@ -347,7 +350,7 @@ export default function NewTransactionModal({ onCreated, disabled }: Props) {
                     setAmount(v.value ?? '');
                     setAmountNum(v.floatValue);
                   }}
-                  placeholder={selectedCurrency === 'COP' ? '0' : '0.00'}
+                  placeholder={decimalScale === 0 ? '0' : '0.00'}
                   className='bg-white'
                 />
               </div>

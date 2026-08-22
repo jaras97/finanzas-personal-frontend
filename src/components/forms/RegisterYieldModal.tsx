@@ -17,6 +17,7 @@ import axios from 'axios';
 import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
 import { cn } from '@/lib/utils';
+import { useCurrencies } from '@/hooks/useCurrencies';
 
 interface Props {
   open: boolean;
@@ -36,10 +37,11 @@ export default function RegisterYieldModal({
   const [description, setDescription] = useState('Rendimiento de inversión');
   const [saving, setSaving] = useState(false);
 
-  // Escala decimal por moneda: COP=0, USD/EUR=2
+  const { currencies } = useCurrencies();
   const decimalScale = useMemo(
-    () => (account?.currency === 'COP' ? 0 : 2),
-    [account?.currency],
+    () =>
+      currencies.find((c) => c.code === account?.currency)?.decimal_digits ?? 2,
+    [account?.currency, currencies],
   );
 
   const handleRegisterYield = async () => {
@@ -126,7 +128,7 @@ export default function RegisterYieldModal({
                 </label>
                 <InfoHint side='top'>
                   Usa{' '}
-                  <b>{account.currency === 'COP' ? 'enteros' : 'decimales'}</b>{' '}
+                  <b>{decimalScale === 0 ? 'enteros' : 'decimales'}</b>{' '}
                   según la moneda.
                 </InfoHint>
               </div>

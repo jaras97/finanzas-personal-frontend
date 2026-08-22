@@ -10,20 +10,24 @@ import { currencyType } from '@/types';
 
 type Props = {
   value: currencyType;
-  onChange: (c: any) => void;
+  onChange: (c: currencyType) => void;
+  options: currencyType[];
   disabled?: boolean;
 };
 
-export function CurrencyToggle({ value, onChange, disabled }: Props) {
+export function CurrencyToggle({ value, onChange, options, disabled }: Props) {
   return (
-    <Select value={value} onValueChange={onChange} disabled={disabled}>
+    <Select value={value} onValueChange={onChange} disabled={disabled || options.length === 0}>
       <SelectTrigger className='w-32' aria-label='Moneda'>
         <SelectValue placeholder='Selecciona moneda' />
       </SelectTrigger>
 
       <SelectContent className='select-solid'>
-        <SelectItem value='COP'>COP</SelectItem>
-        <SelectItem value='USD'>USD</SelectItem>
+        {options.map((code) => (
+          <SelectItem key={code} value={code}>
+            {code}
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );

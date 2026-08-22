@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSummary } from '@/hooks/useSummary';
 import { useAssetsSummary } from '@/hooks/useAssetsSummary';
 import { useLiabilitiesSummary } from '@/hooks/useLiabilitiesSummary';
@@ -49,6 +49,24 @@ const SummaryPage: FC = () => {
     hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
 
   const isBusy = loading || lA || lL || lN || lC;
+
+  // Las monedas disponibles son las que el usuario realmente tiene en uso
+  // (las que trae la propia respuesta del backend), no una lista fija.
+  const availableCurrencies = useMemo(() => {
+    const codes = new Set<currencyType>();
+    Object.keys(summary || {}).forEach((c) => codes.add(c));
+    Object.keys(assets?.total_assets || {}).forEach((c) => codes.add(c));
+    return Array.from(codes).sort();
+  }, [summary, assets]);
+
+  useEffect(() => {
+    if (availableCurrencies.length > 0 && !availableCurrencies.includes(currency)) {
+      setCurrency(
+        availableCurrencies.includes('COP') ? 'COP' : availableCurrencies[0],
+      );
+    }
+  }, [availableCurrencies, currency]);
+
   const s = summary?.[currency];
 
   return (
@@ -73,7 +91,8 @@ const SummaryPage: FC = () => {
           <div className='w-full sm:w-40'>
             <CurrencyToggle
               value={currency}
-              onChange={(c) => setCurrency(c as currencyType)}
+              onChange={(c) => setCurrency(c)}
+              options={availableCurrencies}
               disabled={isBusy}
             />
           </div>

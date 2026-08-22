@@ -24,6 +24,7 @@ import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
 import { DatePicker } from '@/components/ui/date-picker';
 import { cn } from '@/lib/utils';
+import { useCurrencies } from '@/hooks/useCurrencies';
 
 interface Props {
   open: boolean;
@@ -48,6 +49,7 @@ export default function EditDebtModal({
   );
   const [currency, setCurrency] = useState<currencyType>(debt.currency);
   const [saving, setSaving] = useState(false);
+  const { currencies } = useCurrencies();
 
   const hasTransactions = useMemo(
     () => (debt.transactions_count ?? 0) > 0,
@@ -268,8 +270,11 @@ export default function EditDebtModal({
                   <SelectValue placeholder='Selecciona la moneda' />
                 </SelectTrigger>
                 <SelectContent className='select-solid z-[140]'>
-                  <SelectItem value='COP'>COP — Peso Colombiano</SelectItem>
-                  <SelectItem value='USD'>USD — Dólar</SelectItem>
+                  {currencies.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.code} — {c.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {hasTransactions ? (

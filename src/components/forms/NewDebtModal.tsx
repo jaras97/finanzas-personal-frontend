@@ -24,6 +24,7 @@ import InfoHint from '@/components/ui/info-hint';
 import { DatePicker } from '@/components/ui/date-picker';
 import { cn } from '@/lib/utils';
 import { currencyType } from '@/types';
+import { useCurrencies } from '@/hooks/useCurrencies';
 
 interface Props {
   open: boolean;
@@ -38,6 +39,7 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined); // ← ahora Date
   const [currency, setCurrency] = useState<currencyType>('COP');
   const [kind, setKind] = useState<'loan' | 'credit_card'>('loan');
+  const { currencies } = useCurrencies();
   const [saving, setSaving] = useState(false);
 
   const parseNumber = (v: string) => {
@@ -274,8 +276,11 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
                   <SelectValue placeholder='Selecciona la moneda' />
                 </SelectTrigger>
                 <SelectContent className='select-solid z-[140]'>
-                  <SelectItem value='COP'>COP — Peso Colombiano</SelectItem>
-                  <SelectItem value='USD'>USD — Dólar</SelectItem>
+                  {currencies.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.code} — {c.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

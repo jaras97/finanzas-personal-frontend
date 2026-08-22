@@ -24,6 +24,7 @@ import { formatCurrency } from '@/lib/format';
 import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
 import { cn } from '@/lib/utils';
+import { useCurrencies } from '@/hooks/useCurrencies';
 
 interface Props {
   open: boolean;
@@ -83,8 +84,11 @@ export default function TransferBetweenAccountsModal({
   const requiresConversion =
     !!fromAccount && !!toAccount && fromAccount.currency !== toAccount.currency;
 
-  // Escalas decimales (COP: 0; USD/EUR: 2; tasa: más precisión)
-  const amountDecimalScale = fromAccount?.currency === 'COP' ? 0 : 2;
+  const { currencies } = useCurrencies();
+  // Escalas decimales según la moneda real (COP/JPY/CLP/... sin decimales,
+  // USD/EUR con 2, etc.) en vez de asumir que solo COP no tiene centavos.
+  const amountDecimalScale =
+    currencies.find((c) => c.code === fromAccount?.currency)?.decimal_digits ?? 2;
   const feeDecimalScale = amountDecimalScale;
   const rateDecimalScale = 6;
 

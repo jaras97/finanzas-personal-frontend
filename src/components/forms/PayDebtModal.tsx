@@ -26,6 +26,7 @@ import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
 import { DatePicker } from '@/components/ui/date-picker';
 import { cn } from '@/lib/utils';
+import { useCurrencies } from '@/hooks/useCurrencies';
 
 interface Props {
   open: boolean;
@@ -57,8 +58,9 @@ export default function PayDebtModal({
     return isNaN(n) ? NaN : n;
   };
 
-  // Escala decimal por moneda (COP→0, USD/EUR→2)
-  const amountDecimalScale = debt.currency === 'COP' ? 0 : 2;
+  const { currencies } = useCurrencies();
+  const amountDecimalScale =
+    currencies.find((c) => c.code === debt.currency)?.decimal_digits ?? 2;
 
   // ✅ Solo cuentas ACTIVAS y en la MISMA MONEDA que la deuda
   const eligibleAccounts = useMemo(

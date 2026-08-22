@@ -1,18 +1,28 @@
 import { currencyType } from "@/types";
 
+/**
+ * Formatea un monto con el símbolo y los decimales correctos de su moneda
+ * (vía Intl, que ya conoce esto para cualquier código ISO-4217 -- COP y JPY
+ * sin decimales, USD/EUR con 2, etc.). Antes esto era un mapa manual de solo
+ * dos símbolos, ambos mostrados como "$" plano y siempre sin decimales
+ * (ocultaba los centavos en USD/EUR). `decimalDigits` permite forzar un
+ * valor puntual si hace falta; por defecto se deja que Intl decida.
+ */
 export function formatCurrency(
   amount: number,
-  currency: currencyType  = "COP"
+  currency: currencyType = "COP",
+  decimalDigits?: number
 ): string {
-  const symbols: Record<typeof currency, string> = {
-    COP: "$",
-    USD: "$",
-  };
-
-  const formatter = new Intl.NumberFormat("es-CO", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  });
-
-  return `${symbols[currency]} ${formatter.format(amount)}`;
+  try {
+    return new Intl.NumberFormat("es-CO", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: decimalDigits,
+      maximumFractionDigits: decimalDigits,
+    }).format(amount);
+  } catch {
+    // Código de moneda no reconocido por Intl (no debería pasar con los
+    // códigos ISO-4217 reales que sirve el backend).
+    return `${currency} ${amount.toLocaleString("es-CO")}`;
+  }
 }

@@ -227,7 +227,7 @@ export default function CategoriesPage() {
         )}
       </div>
 
-      {/* KPIs: SOLO top gasto / top ingreso, y SOLO COP & USD */}
+      {/* KPIs: top gasto / top ingreso, en cualquier moneda que el usuario use */}
       {sLoading ? (
         <CategoriesKpisSkeleton />
       ) : (
@@ -237,14 +237,12 @@ export default function CategoriesPage() {
             data={topExpense}
             cardVariant='kpi-expense'
             prefer={['COP', 'USD']}
-            only={['COP', 'USD']}
           />
           <TopCategoryByCurrencyCard
             title='Top categoría de ingreso'
             data={topIncome}
             cardVariant='kpi-income'
             prefer={['COP', 'USD']}
-            only={['COP', 'USD']}
           />
         </section>
       )}

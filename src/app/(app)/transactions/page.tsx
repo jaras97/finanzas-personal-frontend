@@ -216,11 +216,11 @@ export default function TransactionsPage() {
     error: sumError,
   } = useSummary(summaryParams);
 
-  // Solo queremos COP y USD si existen en la respuesta
-  const currenciesInSummary = useMemo(() => {
-    const all = summary ? (Object.keys(summary) as currencyType[]) : [];
-    return (['COP', 'USD'] as currencyType[]).filter((c) => all.includes(c));
-  }, [summary]);
+  // Todas las monedas que el usuario realmente tiene en este período
+  const currenciesInSummary = useMemo(
+    () => (summary ? (Object.keys(summary) as currencyType[]) : []),
+    [summary],
+  );
 
   const nf = useMemo(() => new Intl.NumberFormat('es-CO'), []);
 

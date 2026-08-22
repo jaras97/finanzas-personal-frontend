@@ -24,6 +24,7 @@ import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
 import { cn } from '@/lib/utils';
 import { currencyType } from '@/types';
+import { useCurrencies } from '@/hooks/useCurrencies';
 
 interface Props {
   open: boolean;
@@ -41,6 +42,7 @@ export default function NewSavingAccountModal({
   const [type, setType] = useState<'cash' | 'bank' | 'investment'>('cash');
   const [currency, setCurrency] = useState<currencyType>('COP');
   const [saving, setSaving] = useState(false);
+  const { currencies } = useCurrencies();
 
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -237,8 +239,11 @@ export default function NewSavingAccountModal({
                 <SelectValue placeholder='Selecciona la moneda' />
               </SelectTrigger>
               <SelectContent className='select-solid z-[140]'>
-                <SelectItem value='COP'>COP — Peso colombiano</SelectItem>
-                <SelectItem value='USD'>USD — Dólar</SelectItem>
+                {currencies.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.code} — {c.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
