@@ -11,6 +11,7 @@ import { Menu } from 'lucide-react';
 import { useSidebarStore } from '@/lib/store/sidebarStore';
 import { cn } from '@/lib/utils';
 import Footer from '@/components/layout/Footer';
+import api from '@/lib/api';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   // 1) Hooks SIEMPRE arriba, sin condicionales
@@ -70,6 +71,36 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.replace('/auth/inactive');
     }
   }, [gateReady, isAdmin, isNone, isExpired, isInactive, router]);
+
+  // Materializa los movimientos recurrentes vencidos una vez por sesión, para
+  // que el usuario no tenga que acordarse de entrar a la sección. Silencioso
+  // cuando no hay nada que hacer; solo avisa si generó algo o si algo quedó
+  // pendiente (típicamente saldo insuficiente, que sí requiere su atención).
+  useEffect(() => {
+    if (!gateReady || blocked) return;
+    if (sessionStorage.getItem('recurringRun') === '1') return;
+    sessionStorage.setItem('recurringRun', '1');
+
+    (async () => {
+      try {
+        const { data } = await api.post('/recurring-transactions/run');
+        if (data.total_created > 0) {
+          toast.success(
+            `Se registraron ${data.total_created} ${
+              data.total_created === 1 ? 'movimiento recurrente' : 'movimientos recurrentes'
+            }.`,
+          );
+        }
+        data.skipped?.forEach((s: { description: string; reason: string }) =>
+          toast.warning(`${s.description}: ${s.reason}`, { duration: 8000 }),
+        );
+      } catch {
+        // Silencioso a propósito: es una tarea de fondo, no una acción que el
+        // usuario pidió. Si falla, la sección Recurrentes tiene un botón para
+        // reintentar manualmente.
+      }
+    })();
+  }, [gateReady, blocked]);
 
   // 3) Renders (estos returns pueden ir DESPUÉS de los hooks sin romper el orden)
   if (!gateReady) {

@@ -115,6 +115,37 @@ export type ApiError = {
   message?: string;
 };
 
+export type RecurrenceFrequency = 'weekly' | 'biweekly' | 'monthly' | 'yearly';
+
+export type RecurringTransaction = {
+  id: number;
+  description: string;
+  amount: number;
+  type: 'income' | 'expense';
+  category_id: number;
+  saving_account_id: number;
+  frequency: RecurrenceFrequency;
+  next_run: string; // YYYY-MM-DD
+  end_date: string | null;
+  is_active: boolean;
+  created_at: string;
+  last_run_at: string | null;
+  category_name: string | null;
+  account_name: string | null;
+  account_currency: currencyType | null;
+};
+
+export type RecurringRunResult = {
+  generated: {
+    recurring_id: number;
+    description: string;
+    transaction_ids: number[];
+    count: number;
+  }[];
+  skipped: { recurring_id: number; description: string; reason: string }[];
+  total_created: number;
+};
+
 export type CurrentUser = {
   user_id: string;
   email: string;

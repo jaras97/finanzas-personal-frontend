@@ -9,6 +9,7 @@ import {
   Folder,
   Calendar,
   Users,
+  Repeat,
   X,
   LogOut,
   type LucideIcon,
@@ -22,6 +23,7 @@ import { logout } from '@/lib/api';
 const links = [
   { href: '/summary', label: 'Resumen', icon: Calendar },
   { href: '/transactions', label: 'Transacciones', icon: List },
+  { href: '/recurring', label: 'Recurrentes', icon: Repeat },
   { href: '/saving-accounts', label: 'Cuentas', icon: Banknote },
   { href: '/debts', label: 'Deudas', icon: CreditCard },
   { href: '/categories', label: 'Categorías', icon: Folder },
