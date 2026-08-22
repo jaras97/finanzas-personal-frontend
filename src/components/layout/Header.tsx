@@ -2,19 +2,16 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { useAuthStore } from '@/lib/store';
+import { logout } from '@/lib/api';
 import { LogOut, Menu } from 'lucide-react';
-import Cookies from 'js-cookie';
 import { useSidebarStore } from '@/lib/store/sidebarStore';
 
 export default function Header() {
-  const { clearToken } = useAuthStore();
   const router = useRouter();
   const { toggle } = useSidebarStore();
 
-  const handleLogout = () => {
-    clearToken();
-    Cookies.remove('access_token');
+  const handleLogout = async () => {
+    await logout();
     router.push('/auth/login');
   };
 

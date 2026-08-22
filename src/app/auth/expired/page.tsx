@@ -1,13 +1,11 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { useAuthStore } from '@/lib/store';
+import { logout } from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import Cookies from 'js-cookie';
 
 export default function SubscriptionExpiredPage() {
   const router = useRouter();
-  const { clearToken } = useAuthStore();
 
   return (
     <div className='flex flex-col items-center justify-center min-h-screen px-4 text-center bg-background'>
@@ -41,9 +39,8 @@ export default function SubscriptionExpiredPage() {
         </p>
 
         <Button
-          onClick={() => {
-            clearToken();
-            Cookies.remove('access_token');
+          onClick={async () => {
+            await logout();
             router.push('/auth/login');
           }}
         >

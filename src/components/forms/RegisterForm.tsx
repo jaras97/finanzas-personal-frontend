@@ -7,9 +7,6 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import Cookies from 'js-cookie';
-import { useAuthStore } from '@/lib/store';
-import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, Check } from 'lucide-react';
 
 type Props = {
@@ -24,9 +21,6 @@ export default function RegisterForm({ onRegisteredSwitchToLogin }: Props) {
   const [loading, setLoading] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
   const [showPwd2, setShowPwd2] = useState(false);
-
-  const { setToken } = useAuthStore();
-  const router = useRouter();
 
   const valid = email && pwd.length >= 8 && pwd === pwd2;
 

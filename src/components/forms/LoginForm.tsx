@@ -4,16 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useAuthStore } from '@/lib/store';
 import api from '@/lib/api';
 import { toast } from 'sonner';
-import Cookies from 'js-cookie';
 import axios from 'axios';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { setToken } = useAuthStore();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -25,21 +22,11 @@ export default function LoginForm() {
       formData.append('username', email);
       formData.append('password', password);
 
-      const response = await api.post('/auth/login', formData, {
+      // El backend fija la sesión como cookie httpOnly en la respuesta
+      // (Set-Cookie); el frontend no toca el token en ningún momento.
+      await api.post('/auth/login', formData, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
-
-      const { access_token } = response.data as { access_token: string };
-
-      // Persistencia de token
-      setToken(access_token);
-      api.defaults.headers.common.Authorization = `Bearer ${access_token}`;
-      Cookies.set('access_token', access_token, {
-        expires: 7,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'Lax',
-      });
-      localStorage.setItem('access_token', access_token);
 
       // Marca que vienes del login (el layout hará redirecciones silenciosas)
       sessionStorage.setItem('fromLogin', '1');

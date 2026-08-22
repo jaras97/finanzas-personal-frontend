@@ -2,16 +2,13 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { useAuthStore } from '@/lib/store';
-import Cookies from 'js-cookie';
+import { logout } from '@/lib/api';
 
 export default function InactivePage() {
   const router = useRouter();
-  const { clearToken } = useAuthStore();
 
-  const handleBackToLogin = () => {
-    clearToken();
-    Cookies.remove('access_token');
+  const handleBackToLogin = async () => {
+    await logout();
     router.push('/auth/login');
   };
 

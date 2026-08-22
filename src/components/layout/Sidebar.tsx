@@ -14,8 +14,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useSidebarStore } from '@/lib/store/sidebarStore';
 import { Button } from '@/components/ui/button';
-import { useAuthStore } from '@/lib/store';
-import Cookies from 'js-cookie';
+import { logout } from '@/lib/api';
 
 const links = [
   { href: '/summary', label: 'Resumen', icon: Calendar },
@@ -29,11 +28,9 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { isOpen, toggle, close } = useSidebarStore();
   const router = useRouter();
-  const { clearToken } = useAuthStore();
 
-  const handleLogout = () => {
-    clearToken();
-    Cookies.remove('access_token');
+  const handleLogout = async () => {
+    await logout();
     router.push('/auth/login');
   };
 

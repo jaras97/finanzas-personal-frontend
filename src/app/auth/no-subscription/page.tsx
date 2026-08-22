@@ -2,12 +2,10 @@
 'use client';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import Cookies from 'js-cookie';
-import { useAuthStore } from '@/lib/store';
+import { logout } from '@/lib/api';
 
 export default function NoSubscriptionPage() {
   const router = useRouter();
-  const { clearToken } = useAuthStore();
   return (
     <div className='flex flex-col items-center justify-center min-h-screen bg-background text-center p-6'>
       <div className='max-w-md p-6 border rounded-lg shadow-sm bg-card'>
@@ -18,9 +16,8 @@ export default function NoSubscriptionPage() {
         </p>
         <Button
           variant='soft-sky'
-          onClick={() => {
-            clearToken();
-            Cookies.remove('access_token');
+          onClick={async () => {
+            await logout();
             router.push('/auth/login');
           }}
         >
