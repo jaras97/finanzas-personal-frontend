@@ -10,6 +10,7 @@ import {
   Calendar,
   Users,
   Repeat,
+  UserCog,
   X,
   LogOut,
   type LucideIcon,
@@ -27,6 +28,7 @@ const links = [
   { href: '/saving-accounts', label: 'Cuentas', icon: Banknote },
   { href: '/debts', label: 'Deudas', icon: CreditCard },
   { href: '/categories', label: 'Categorías', icon: Folder },
+  { href: '/account', label: 'Mi cuenta', icon: UserCog },
 ];
 
 const adminLinks = [{ href: '/admin', label: 'Usuarios', icon: Users }];
