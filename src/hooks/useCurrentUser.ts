@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api from '@/lib/api';
 import type { CurrentUser } from '@/types';
 
@@ -13,25 +13,21 @@ export function useCurrentUser() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const { data } = await api.get('/auth/me');
-        if (!cancelled) setUser(data);
-      } catch {
-        // Sin sesión válida: el middleware ya se encarga de redirigir.
-        if (!cancelled) setUser(null);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+  const fetchUser = useCallback(async () => {
+    try {
+      const { data } = await api.get('/auth/me');
+      setUser(data);
+    } catch {
+      // Sin sesión válida: el middleware ya se encarga de redirigir.
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { user, loading, isAdmin: user?.role === 'admin' };
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
+
+  return { user, loading, isAdmin: user?.role === 'admin', refresh: fetchUser };
 }

@@ -8,6 +8,7 @@ import { useLiabilitiesSummary } from '@/hooks/useLiabilitiesSummary';
 import { useNetWorthSummary } from '@/hooks/useNetWorthSummary';
 import { useCashFlowSummary } from '@/hooks/useCashFlowSummary';
 import { useBudgets } from '@/hooks/useBudgets';
+import { useNetWorthConsolidated } from '@/hooks/useNetWorthConsolidated';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +51,8 @@ const SummaryPage: FC = () => {
     filters.dateRange.to,
   );
   const { items: budgets, loading: lB } = useBudgets();
+  const { data: consolidated, loading: lConsolidated } = useNetWorthConsolidated();
+  const [showConsolidatedBreakdown, setShowConsolidatedBreakdown] = useState(false);
 
   const hour = today.getHours();
   const greeting =
@@ -126,9 +129,9 @@ const SummaryPage: FC = () => {
       {isBusy && !error && <SummarySkeleton />}
 
       {/* === CONTENT === */}
-      {/* 1) Hero: las 2 cifras que de verdad importan de un vistazo */}
+      {/* 1) Hero: las 3 cifras que de verdad importan de un vistazo */}
       {!isBusy && s && assets && liabilities && netWorth && (
-        <section className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+        <section className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
           {[
             {
               label: 'Patrimonio neto',
@@ -153,7 +156,92 @@ const SummaryPage: FC = () => {
               </CardContent>
             </Card>
           ))}
+
+          <Card
+            variant='kpi-blue'
+            interactive
+            onClick={() => setShowConsolidatedBreakdown((v) => !v)}
+            className='cursor-pointer'
+          >
+            <CardContent className='py-6 px-7'>
+              <p className='text-sm text-slate-700'>
+                Patrimonio neto consolidado
+                {consolidated && consolidated.breakdown.length > 1 && (
+                  <span className='ml-1 text-xs text-slate-500'>
+                    ({showConsolidatedBreakdown ? 'ocultar' : 'ver'} desglose)
+                  </span>
+                )}
+              </p>
+              {lConsolidated ? (
+                <div className='mt-2 h-8 w-32 animate-pulse rounded bg-slate-900/10' />
+              ) : consolidated ? (
+                <>
+                  <p className='mt-1 text-3xl font-semibold tracking-tight'>
+                    {formatCurrency(consolidated.net_worth, consolidated.report_currency)}
+                  </p>
+                  {consolidated.degraded && (
+                    <p className='mt-1 text-xs text-amber-700'>
+                      No se pudo obtener la tasa de cambio para alguna moneda; el total es
+                      parcial.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className='mt-1 text-sm text-slate-500'>No disponible</p>
+              )}
+            </CardContent>
+          </Card>
         </section>
+      )}
+
+      {/* Desglose del patrimonio consolidado, por moneda */}
+      {!isBusy && showConsolidatedBreakdown && consolidated && (
+        <Card variant='surface'>
+          <CardContent className='p-4 space-y-2'>
+            <h3 className='text-sm font-medium text-muted-foreground'>
+              Desglose por moneda (convertido a {consolidated.report_currency})
+            </h3>
+            <div className='overflow-x-auto'>
+              <table className='text-sm w-full'>
+                <thead>
+                  <tr className='text-left text-muted-foreground'>
+                    <th className='px-2 py-1'>Moneda</th>
+                    <th className='px-2 py-1'>Activos originales</th>
+                    <th className='px-2 py-1'>Pasivos originales</th>
+                    <th className='px-2 py-1'>Tasa usada</th>
+                    <th className='px-2 py-1'>Neto convertido</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {consolidated.breakdown.map((row) => (
+                    <tr key={row.currency} className='border-t'>
+                      <td className='px-2 py-1 font-medium'>{row.currency}</td>
+                      <td className='px-2 py-1 tabular-nums'>
+                        {formatCurrency(row.original_assets, row.currency)}
+                      </td>
+                      <td className='px-2 py-1 tabular-nums'>
+                        {formatCurrency(row.original_liabilities, row.currency)}
+                      </td>
+                      <td className='px-2 py-1 tabular-nums'>
+                        {row.rate_used !== null ? row.rate_used.toLocaleString('es-CO') : (
+                          <span className='text-amber-700'>No disponible</span>
+                        )}
+                      </td>
+                      <td className='px-2 py-1 tabular-nums'>
+                        {row.converted_assets !== null && row.converted_liabilities !== null
+                          ? formatCurrency(
+                              row.converted_assets - row.converted_liabilities,
+                              consolidated.report_currency,
+                            )
+                          : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* 2) Secundarios: mismo dato, menor peso visual -- no compiten con el hero */}

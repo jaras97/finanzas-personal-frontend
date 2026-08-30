@@ -8,17 +8,45 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import InfoHint from '@/components/ui/info-hint';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import axios from 'axios';
 import { extractErrorMessage } from '@/lib/extractErrorMessage';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { Eye, EyeOff, Lock } from 'lucide-react';
+import { useCurrencies } from '@/hooks/useCurrencies';
+import { Eye, EyeOff, Lock, Globe } from 'lucide-react';
 
 const MIN_PASSWORD_LENGTH = 8;
 
 export default function AccountPage() {
-  const { user, loading } = useCurrentUser();
+  const { user, loading, refresh: refreshUser } = useCurrentUser();
+  const { currencies } = useCurrencies();
+
+  const [savingCurrency, setSavingCurrency] = useState(false);
+
+  const handleReportCurrencyChange = async (value: string) => {
+    setSavingCurrency(true);
+    try {
+      await api.patch('/account/preferences', { report_currency: value });
+      toast.success('Moneda de reporte actualizada');
+      await refreshUser();
+    } catch (error) {
+      toast.error(
+        axios.isAxiosError(error)
+          ? extractErrorMessage(error)
+          : 'No se pudo actualizar la moneda de reporte.',
+      );
+    } finally {
+      setSavingCurrency(false);
+    }
+  };
 
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
@@ -93,6 +121,44 @@ export default function AccountPage() {
               </div>
             </>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Preferencias */}
+      <Card variant='white'>
+        <CardContent className='p-5'>
+          <div className='flex items-center gap-2 mb-4'>
+            <Globe className='h-4 w-4' />
+            <h2 className='font-medium'>Preferencias</h2>
+            <InfoHint side='top'>
+              Moneda en la que se muestra tu patrimonio neto consolidado en Resumen,
+              convirtiendo el resto de tus monedas con la tasa de cambio de hoy. No hace
+              falta que tengas cuentas en esta moneda.
+            </InfoHint>
+          </div>
+          <div className='space-y-1 max-w-xs'>
+            <label className='text-sm font-medium'>Moneda de reporte</label>
+            {loading ? (
+              <Skeleton className='h-9 w-full' />
+            ) : (
+              <Select
+                value={user?.report_currency}
+                onValueChange={handleReportCurrencyChange}
+                disabled={savingCurrency}
+              >
+                <SelectTrigger className='bg-white'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className='select-solid z-[140]'>
+                  {currencies.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.code} — {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
         </CardContent>
       </Card>
 

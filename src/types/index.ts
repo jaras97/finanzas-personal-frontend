@@ -221,6 +221,25 @@ export type CurrentUser = {
   user_id: string;
   email: string;
   role: 'user' | 'admin';
+  report_currency: currencyType;
+};
+
+export type NetWorthConsolidatedBreakdownRow = {
+  currency: currencyType;
+  original_assets: number;
+  original_liabilities: number;
+  converted_assets: number | null;
+  converted_liabilities: number | null;
+  rate_used: number | null;
+};
+
+export type NetWorthConsolidated = {
+  report_currency: currencyType;
+  total_assets: number;
+  total_liabilities: number;
+  net_worth: number;
+  degraded: boolean;
+  breakdown: NetWorthConsolidatedBreakdownRow[];
 };
 
 export type AdminSubscriptionStatus = 'none' | 'active' | 'expired' | 'inactive';
