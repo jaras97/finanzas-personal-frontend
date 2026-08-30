@@ -16,6 +16,7 @@ import api from '@/lib/api';
 import { PageHeader } from '@/components/ui/page-header';
 import TransactionsTabs from '@/components/layout/TransactionsTabs';
 import EditTransactionModal from '@/components/forms/EditTransactionModal';
+import RuleModal from '@/components/forms/RuleModal';
 import { currencyType, TransactionWithCategoryRead } from '@/types';
 import { reverseTransaction } from '@/utils/reverseTransaction';
 import { Pagination } from '@/components/ui/pagination';
@@ -133,6 +134,10 @@ export default function TransactionsPage() {
   const [noteTx, setNoteTx] = useState<TransactionWithCategoryRead | null>(
     null,
   );
+  const [ruleModalOpen, setRuleModalOpen] = useState(false);
+  const [ruleInitial, setRuleInitial] = useState<
+    { matchText?: string; categoryId?: number } | undefined
+  >(undefined);
 
   /* ===== Repetir última transacción ===== */
   // Dos instancias de NewTransactionModal (desktop/mobile) comparten los
@@ -204,6 +209,10 @@ export default function TransactionsPage() {
         onShowNote: (tx) => {
           setNoteTx(tx);
           setNoteOpen(true);
+        },
+        onCreateRule: (tx) => {
+          setRuleInitial({ matchText: tx.description ?? '', categoryId: tx.category?.id });
+          setRuleModalOpen(true);
         },
       }).map((c, i) => ({
         ...c,
@@ -732,6 +741,16 @@ export default function TransactionsPage() {
       )}
 
       {/* Modales / Diálogos */}
+      <RuleModal
+        open={ruleModalOpen}
+        onOpenChange={(o) => {
+          setRuleModalOpen(o);
+          if (!o) setRuleInitial(undefined);
+        }}
+        initial={ruleInitial}
+        onSaved={() => {}}
+      />
+
       {editTx && (
         <EditTransactionModal
           open={!!editTx}

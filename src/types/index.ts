@@ -208,6 +208,15 @@ export type ImportConfirmResult = {
   skipped: number;
 };
 
+export type CategoryRule = {
+  id: number;
+  category_id: number;
+  category_name: string;
+  match_text: string;
+  priority: number;
+  is_active: boolean;
+};
+
 export type CurrentUser = {
   user_id: string;
   email: string;

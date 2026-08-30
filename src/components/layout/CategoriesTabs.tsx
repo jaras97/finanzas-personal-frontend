@@ -7,11 +7,13 @@ import { cn } from '@/lib/utils';
 const tabs = [
   { href: '/categories', label: 'Categorías' },
   { href: '/budgets', label: 'Presupuestos' },
+  { href: '/rules', label: 'Reglas' },
 ];
 
 /**
- * Igual patrón que TransactionsTabs: Presupuestos no tiene su propio ítem en
- * el sidebar, vive como pestaña dentro de Categorías (roadmap Fase 2).
+ * Igual patrón que TransactionsTabs: Presupuestos y Reglas no tienen su
+ * propio ítem en el sidebar, viven como pestañas dentro de Categorías
+ * (roadmap Fases 2 y 5).
  */
 export default function CategoriesTabs() {
   const pathname = usePathname();

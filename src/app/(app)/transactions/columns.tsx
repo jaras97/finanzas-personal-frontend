@@ -4,7 +4,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import DateTimeDisplay from '@/components/ui/DateTimeDisplay';
 import { Button } from '@/components/ui/button';
-import { StickyNote } from 'lucide-react';
+import { StickyNote, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TransactionWithCategoryRead } from '@/types';
 import {
@@ -23,8 +23,9 @@ export function buildTransactionColumns(opts: {
   onEdit: (tx: TransactionWithCategoryRead) => void;
   onReverse: (tx: TransactionWithCategoryRead) => void;
   onShowNote: (tx: TransactionWithCategoryRead) => void;
+  onCreateRule: (tx: TransactionWithCategoryRead) => void;
 }): ColumnDef<DisplayTransaction, unknown>[] {
-  const { onEdit, onReverse, onShowNote } = opts;
+  const { onEdit, onReverse, onShowNote, onCreateRule } = opts;
 
   return [
     {
@@ -179,6 +180,17 @@ export function buildTransactionColumns(opts: {
 
         return (
           <div className='flex justify-end gap-2'>
+            {isEditable && tx.category && (
+              <Button
+                size='sm'
+                variant='soft-slate'
+                className='px-2'
+                onClick={() => onCreateRule(tx)}
+                title='Crear regla desde esta transacción'
+              >
+                <Tag className='w-4 h-4' />
+              </Button>
+            )}
             {isEditable && (
               <Button size='sm' variant='soft-sky' onClick={() => onEdit(tx)}>
                 Editar
