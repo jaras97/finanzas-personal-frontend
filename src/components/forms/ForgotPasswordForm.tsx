@@ -17,25 +17,16 @@ export default function ForgotPasswordForm() {
     e.preventDefault();
     setLoading(true);
     try {
-      // 🔧 requiere endpoint en backend
       await api.post('/auth/forgot-password', { email });
       toast.success(
         'Si el correo existe, te enviamos instrucciones para recuperar tu contraseña.',
       );
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
-        const msg =
+        toast.error(
           (error.response?.data as { detail?: string })?.detail ||
-          'No se pudo enviar el correo de recuperación.';
-        // Si no existe el endpoint aún:
-        if (status === 404 || status === 405) {
-          toast.error(
-            'Funcionalidad no disponible todavía. Debes habilitar /auth/forgot-password en el backend.',
-          );
-        } else {
-          toast.error(msg);
-        }
+            'No se pudo enviar el correo de recuperación.',
+        );
       } else {
         toast.error('Error inesperado. Intenta de nuevo.');
       }
