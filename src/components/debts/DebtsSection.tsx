@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/format';
+import { buttonColorRole } from '@/lib/colorRoles';
 import type { Debt } from '@/types';
 import { format } from 'date-fns';
 
@@ -149,19 +150,19 @@ export default function DebtsSection({
                 </div>
 
                 <div className='flex flex-wrap gap-2 mt-2'>
-                  {/* comunes */}
+                  {/* comunes -- el color es por acción (info/neutro/positivo),
+                      no por si la deuda es préstamo o tarjeta: "Pagar" debe
+                      leerse igual sin importar el tipo. */}
                   <Button
                     size='sm'
-                    variant='outline'
-                    className={t.outline}
+                    variant={buttonColorRole.info}
                     onClick={() => onViewTx(debt)}
                   >
                     Ver movimientos
                   </Button>
                   <Button
                     size='sm'
-                    variant='outline'
-                    className={t.outline}
+                    variant={buttonColorRole.neutral}
                     onClick={() => onEdit(debt)}
                   >
                     Editar
@@ -172,7 +173,7 @@ export default function DebtsSection({
                       {canReopen && onReopen && (
                         <Button
                           size='sm'
-                          className={t.solid}
+                          variant={buttonColorRole.neutral}
                           onClick={() => onReopen(debt)}
                         >
                           Reabrir
@@ -192,7 +193,7 @@ export default function DebtsSection({
                     <>
                       <Button
                         size='sm'
-                        className={t.solid}
+                        variant={buttonColorRole.positive}
                         onClick={() => onPay(debt)}
                       >
                         Pagar

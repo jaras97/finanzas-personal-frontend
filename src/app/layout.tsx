@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Finanzas Personales',
+  title: 'Balanced Cent',
   description: 'Gestiona tus cuentas, deudas y finanzas de forma organizada.',
 };
 

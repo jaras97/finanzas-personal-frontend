@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { FormModal } from '@/components/ui/form-modal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -13,7 +13,6 @@ import { toIsoAtLocalNoon } from '@/utils/dates';
 import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
 import { DatePicker } from '@/components/ui/date-picker';
-import { cn } from '@/lib/utils';
 import { useCurrencies } from '@/hooks/useCurrencies';
 
 interface Props {
@@ -97,37 +96,18 @@ export default function AddChargeToDebtModal({
     }
   };
 
-  // 🎨 Tintes del panel
-  const panelTint = 'bg-[hsl(var(--accent))]';
-  const headerTint = 'bg-[hsl(var(--muted))]';
-
   // IDs (para labels)
   const idAmount = 'add-charge-amount';
   const idDesc = 'add-charge-desc';
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
-      <DialogContent
-        size='xl'
-        className={cn(
-          'grid grid-rows-[auto,1fr] max-h-[92dvh]',
-          'w-[min(100vw-1rem,520px)] rounded-2xl overflow-hidden',
-          panelTint,
-        )}
-      >
-        {/* HEADER */}
-        <header className={cn('border-b px-4 py-3', headerTint)}>
-          <DialogTitle className='text-base sm:text-lg font-semibold'>
-            Agregar cargo a {debt.name}
-          </DialogTitle>
-        </header>
-
-        {/* BODY (scroll) */}
-        <section
-          className='overflow-y-auto overscroll-contain px-4 py-4'
-          aria-busy={saving}
-        >
-          <div className='space-y-4'>
+    <FormModal
+      open={open}
+      onOpenChange={(o) => !saving && onOpenChange(o)}
+      className='w-[min(100vw-1rem,520px)]'
+      title={`Agregar cargo a ${debt.name}`}
+    >
+      <div className='space-y-4' aria-busy={saving}>
             <div className='text-xs text-muted-foreground'>
               Saldo actual:{' '}
               <b>
@@ -215,10 +195,8 @@ export default function AddChargeToDebtModal({
             >
               {saving ? 'Agregando…' : 'Agregar Cargo'}
             </Button>
-          </div>
-        </section>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormModal>
   );
 }
 

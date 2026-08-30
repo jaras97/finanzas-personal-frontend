@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSavingAccounts } from '@/hooks/useSavingAccounts';
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { currencyType, SavingAccount } from '@/types';
 
@@ -191,30 +192,28 @@ export default function SavingAccountsPage() {
 
   return (
     <div className='space-y-6'>
-      {/* Header acciones */}
-      <div className='flex justify-between items-center flex-wrap gap-2'>
-        <div className='min-w-0'>
-          <h1 className='text-2xl font-semibold'>Cuentas</h1>
-          <p className='text-sm text-muted-foreground'>
-            Administra tus cuentas y movimientos.
-          </p>
-        </div>
-        {loading ? (
-          <SavingAccountsHeaderButtonsSkeleton />
-        ) : (
-          <div className='flex gap-2 flex-wrap'>
-            <Button
-              onClick={() => setTransferOpen(true)}
-              variant={'soft-emerald'}
-            >
-              Transferir entre cuentas
-            </Button>
-            <Button onClick={() => setCreateOpen(true)} variant={'soft-sky'}>
-              + Nueva Cuenta
-            </Button>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        align='center'
+        title='Cuentas'
+        subtitle='Administra tus cuentas y movimientos.'
+        actions={
+          loading ? (
+            <SavingAccountsHeaderButtonsSkeleton />
+          ) : (
+            <div className='flex gap-2 flex-wrap'>
+              <Button
+                onClick={() => setTransferOpen(true)}
+                variant={'soft-emerald'}
+              >
+                Transferir entre cuentas
+              </Button>
+              <Button onClick={() => setCreateOpen(true)} variant={'soft-sky'}>
+                + Nueva Cuenta
+              </Button>
+            </div>
+          )
+        }
+      />
 
       {/* KPIs */}
       {loading ? (

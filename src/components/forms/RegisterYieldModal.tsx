@@ -2,12 +2,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogClose,
-} from '@/components/ui/dialog';
+import { DialogClose } from '@/components/ui/dialog';
+import { FormModal } from '@/components/ui/form-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -16,7 +12,6 @@ import { SavingAccount } from '@/types';
 import axios from 'axios';
 import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
-import { cn } from '@/lib/utils';
 import { useCurrencies } from '@/hooks/useCurrencies';
 
 interface Props {
@@ -87,39 +82,44 @@ export default function RegisterYieldModal({
   const idAmount = 'yield-amount';
   const idDesc = 'yield-desc';
 
-  // 🎨 Tinte “positivo” (ingreso)
-  const panelTint = 'bg-emerald-50';
-  const headerFooterTint = 'bg-emerald-100';
-  const ctaClass =
-    'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-300';
-
   return (
-    <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
-      <DialogContent
-        size='md'
-        className={cn(
-          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
-          'w-[min(100vw-1rem,520px)] rounded-2xl overflow-hidden',
-          panelTint,
-        )}
-      >
-        {/* HEADER */}
-        <header className={cn('border-b px-4 py-3', headerFooterTint)}>
-          <DialogTitle className='flex items-center gap-2 text-base sm:text-lg font-semibold'>
-            Registrar rendimiento en{' '}
-            <span className='font-semibold'>{account.name}</span>
-            <InfoHint side='top'>
-              Se registra como <b>ingreso</b> y aumenta el saldo de la cuenta.
-            </InfoHint>
-          </DialogTitle>
-        </header>
-
-        {/* BODY (scroll) */}
-        <section
-          className='overflow-y-auto overscroll-contain px-4 py-4'
-          aria-busy={saving}
-        >
-          <div className='space-y-4 mt-1'>
+    <FormModal
+      open={open}
+      onOpenChange={(o) => !saving && onOpenChange(o)}
+      size='md'
+      className='w-[min(100vw-1rem,520px)]'
+      tone='emerald'
+      title={
+        <>
+          Registrar rendimiento en{' '}
+          <span className='font-semibold'>{account.name}</span>
+          <InfoHint side='top'>
+            Se registra como <b>ingreso</b> y aumenta el saldo de la cuenta.
+          </InfoHint>
+        </>
+      }
+      footer={
+        <>
+          <DialogClose asChild>
+            <Button
+              className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
+              disabled={saving}
+            >
+              Cancelar
+            </Button>
+          </DialogClose>
+          <Button
+            onClick={handleRegisterYield}
+            disabled={saving}
+            aria-disabled={saving}
+            className='bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-300 sm:min-w-[200px]'
+          >
+            {saving ? 'Registrando…' : 'Registrar rendimiento'}
+          </Button>
+        </>
+      }
+    >
+      <div className='space-y-4 mt-1' aria-busy={saving}>
             {/* Monto */}
             <div className='space-y-1'>
               <div className='flex items-center gap-2'>
@@ -168,31 +168,7 @@ export default function RegisterYieldModal({
                 className='bg-white'
               />
             </div>
-          </div>
-        </section>
-
-        {/* FOOTER */}
-        <footer className={cn('border-t', headerFooterTint)}>
-          <div className='px-4 py-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
-            <DialogClose asChild>
-              <Button
-                className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
-                disabled={saving}
-              >
-                Cancelar
-              </Button>
-            </DialogClose>
-            <Button
-              onClick={handleRegisterYield}
-              disabled={saving}
-              aria-disabled={saving}
-              className={cn('sm:min-w-[200px]', ctaClass)}
-            >
-              {saving ? 'Registrando…' : 'Registrar rendimiento'}
-            </Button>
-          </div>
-        </footer>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormModal>
   );
 }

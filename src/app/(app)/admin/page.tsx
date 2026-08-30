@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { toast } from 'sonner';
@@ -107,25 +108,22 @@ export default function AdminPage() {
 
   return (
     <div className='space-y-6'>
-      <div className='flex flex-col gap-3 sm:gap-4 md:flex-row md:items-end md:justify-between'>
-        <div className='min-w-0'>
-          <h1 className='text-2xl font-semibold'>Usuarios</h1>
-          <p className='text-sm text-muted-foreground'>
-            Gestiona el acceso y las suscripciones de las personas que usan la app.
-          </p>
-        </div>
-
-        <div className='relative w-full md:w-80'>
-          <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60' />
-          <Input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder='Buscar por correo…'
-            className='pl-9'
-            aria-label='Buscar usuarios por correo'
-          />
-        </div>
-      </div>
+      <PageHeader
+        title='Usuarios'
+        subtitle='Gestiona el acceso y las suscripciones de las personas que usan la app.'
+        actions={
+          <div className='relative w-full md:w-80'>
+            <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60' />
+            <Input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder='Buscar por correo…'
+              className='pl-9'
+              aria-label='Buscar usuarios por correo'
+            />
+          </div>
+        }
+      />
 
       {data && (
         <p className='text-xs text-muted-foreground'>

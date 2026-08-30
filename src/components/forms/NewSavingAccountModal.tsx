@@ -1,13 +1,8 @@
 'use client';
 
 import { RefObject, useRef, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
+import { DialogClose } from '@/components/ui/dialog';
+import { FormModal } from '@/components/ui/form-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -22,7 +17,6 @@ import api from '@/lib/api';
 import axios from 'axios';
 import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
-import { cn } from '@/lib/utils';
 import { currencyType } from '@/types';
 import { useCurrencies } from '@/hooks/useCurrencies';
 
@@ -103,46 +97,43 @@ export default function NewSavingAccountModal({
   const idType = 'new-sa-type';
   const idCurrency = 'new-sa-currency';
 
-  // Tinte “neutral/accent” para modales no tipados
-  const panelTint = 'bg-[hsl(var(--accent))]';
-  const headerFooterTint = 'bg-[hsl(var(--muted))]';
-  const ctaClass =
-    'bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-[hsl(var(--ring))]';
-
   return (
-    <Dialog
+    <FormModal
       open={open}
       onOpenChange={(o) => !saving && onOpenChange(o)}
       initialFocus={nameRef as RefObject<HTMLElement>}
+      className='w-[min(100vw-1rem,560px)]'
+      title={
+        <>
+          Nueva cuenta
+          <InfoHint side='top'>
+            Crea una cuenta para registrar <b>depósitos</b>, <b>retiros</b> y
+            movimientos. Podrás editarla luego.
+          </InfoHint>
+        </>
+      }
+      footer={
+        <>
+          <DialogClose asChild>
+            <Button
+              className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[120px]'
+              disabled={saving}
+            >
+              Cancelar
+            </Button>
+          </DialogClose>
+          <Button
+            onClick={handleSubmit}
+            disabled={saving}
+            aria-disabled={saving}
+            className='sm:min-w-[160px]'
+          >
+            {saving ? 'Creando…' : 'Crear cuenta'}
+          </Button>
+        </>
+      }
     >
-      <DialogContent
-        className={cn(
-          // layout: header | body | footer
-          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
-          'w-[min(100vw-1rem,560px)]',
-          // esquinas perfectas sin “solapamiento”
-          'rounded-2xl overflow-hidden',
-          // tinte base
-          panelTint,
-        )}
-        // mientras guarda, evita cierres accidentales por teclado/click fuera (ya controlamos con onOpenChange)
-      >
-        {/* HEADER */}
-        <header className={cn('border-b px-4 py-3', headerFooterTint)}>
-          <DialogTitle className='flex items-center gap-2 text-base sm:text-lg font-semibold'>
-            Nueva cuenta
-            <InfoHint side='top'>
-              Crea una cuenta para registrar <b>depósitos</b>, <b>retiros</b> y
-              movimientos. Podrás editarla luego.
-            </InfoHint>
-          </DialogTitle>
-        </header>
-
-        {/* BODY (solo aquí hay scroll) */}
-        <section
-          className='overflow-y-auto overscroll-contain px-4 py-4 space-y-4'
-          aria-busy={saving}
-        >
+      <div className='space-y-4' aria-busy={saving}>
           {/* Nombre */}
           <div className='space-y-1'>
             <div className='flex items-center gap-2'>
@@ -247,28 +238,7 @@ export default function NewSavingAccountModal({
               </SelectContent>
             </Select>
           </div>
-        </section>
-
-        {/* FOOTER */}
-        <DialogFooter className={cn('border-t px-4 py-3', headerFooterTint)}>
-          <DialogClose asChild>
-            <Button
-              className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[120px]'
-              disabled={saving}
-            >
-              Cancelar
-            </Button>
-          </DialogClose>
-          <Button
-            onClick={handleSubmit}
-            disabled={saving}
-            aria-disabled={saving}
-            className={cn('sm:min-w-[160px]', ctaClass)}
-          >
-            {saving ? 'Creando…' : 'Crear cuenta'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormModal>
   );
 }

@@ -1,17 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
+import { DialogClose } from '@/components/ui/dialog';
+import { FormModal } from '@/components/ui/form-modal';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
 
 type Props = {
   open: boolean;
@@ -29,10 +22,6 @@ export default function ReverseTransactionDialog({
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Tinte destructivo (rose)
-  const panelTint = 'bg-rose-50';
-  const headerFooterTint = 'bg-rose-100';
-
   const handleConfirm = async () => {
     setLoading(true);
     try {
@@ -45,47 +34,14 @@ export default function ReverseTransactionDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !loading && onOpenChange(v)}>
-      <DialogContent
-        className={cn(
-          'w-[min(100vw-1rem,520px)]',
-          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
-          'rounded-2xl overflow-hidden', // evita solapamientos de borde
-          panelTint,
-        )}
-      >
-        {/* HEADER (tinte más oscuro) */}
-        <DialogHeader className={cn('border-b px-4 py-3', headerFooterTint)}>
-          <DialogTitle>Reversar transacción</DialogTitle>
-        </DialogHeader>
-
-        {/* BODY (scroll solo aquí) */}
-        <section
-          className='overflow-y-auto overscroll-contain px-4 py-4 space-y-4'
-          aria-busy={loading}
-        >
-          {description && (
-            <p className='text-sm text-muted-foreground'>
-              Vas a reversar: <span className='font-medium'>{description}</span>
-            </p>
-          )}
-
-          <div className='space-y-2'>
-            <label className='text-sm font-medium'>
-              Motivo / Nota (opcional)
-            </label>
-            <Textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder='Describe brevemente el motivo de la reversión...'
-              disabled={loading}
-              className='bg-white'
-            />
-          </div>
-        </section>
-
-        {/* FOOTER (tinte más oscuro) */}
-        <DialogFooter className={cn('border-t px-4 py-3', headerFooterTint)}>
+    <FormModal
+      open={open}
+      onOpenChange={(v) => !loading && onOpenChange(v)}
+      className='w-[min(100vw-1rem,520px)]'
+      tone='rose'
+      title='Reversar transacción'
+      footer={
+        <>
           <DialogClose asChild>
             <Button
               className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[120px]'
@@ -102,8 +58,29 @@ export default function ReverseTransactionDialog({
           >
             {loading ? 'Reversando…' : 'Reversar'}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      <div className='space-y-4' aria-busy={loading}>
+        {description && (
+          <p className='text-sm text-muted-foreground'>
+            Vas a reversar: <span className='font-medium'>{description}</span>
+          </p>
+        )}
+
+        <div className='space-y-2'>
+          <label className='text-sm font-medium'>
+            Motivo / Nota (opcional)
+          </label>
+          <Textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder='Describe brevemente el motivo de la reversión...'
+            disabled={loading}
+            className='bg-white'
+          />
+        </div>
+      </div>
+    </FormModal>
   );
 }

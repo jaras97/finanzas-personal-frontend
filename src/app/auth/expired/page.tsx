@@ -15,7 +15,7 @@ export default function SubscriptionExpiredPage() {
         </h1>
         <p className='text-muted-foreground mb-4'>
           Para continuar usando{' '}
-          <span className='font-semibold'>Finanzas Personales</span>, debes
+          <span className='font-semibold'>Balanced Cent</span>, debes
           renovar tu suscripción.
         </p>
         <p className='text-muted-foreground mb-4'>

@@ -27,7 +27,7 @@ export default function Header() {
         >
           <Menu className='w-5 h-5' />
         </Button>
-        <h1 className='text-lg font-semibold'>💰 Finanzas Personales</h1>
+        <h1 className='text-lg font-semibold'>Balanced Cent</h1>
       </div>
 
       <Button variant='secondary' size='sm' onClick={handleLogout}>

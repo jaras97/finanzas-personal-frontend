@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -65,12 +66,10 @@ export default function AccountPage() {
 
   return (
     <div className='space-y-6 max-w-2xl'>
-      <div>
-        <h1 className='text-2xl font-semibold'>Mi cuenta</h1>
-        <p className='text-sm text-muted-foreground'>
-          Datos de tu sesión y seguridad de acceso.
-        </p>
-      </div>
+      <PageHeader
+        title='Mi cuenta'
+        subtitle='Datos de tu sesión y seguridad de acceso.'
+      />
 
       {/* Datos de la cuenta */}
       <Card variant='white'>

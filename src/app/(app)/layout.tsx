@@ -11,6 +11,7 @@ import { Menu } from 'lucide-react';
 import { useSidebarStore } from '@/lib/store/sidebarStore';
 import { cn } from '@/lib/utils';
 import Footer from '@/components/layout/Footer';
+import QuickAddFab from '@/components/forms/QuickAddFab';
 import api from '@/lib/api';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -131,8 +132,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Menu className='h-5 w-5' />
       </button>
 
+      <QuickAddFab />
+
       <main className='md:pl-64'>
-        <div className='px-4 py-4 md:px-6 md:py-6'>{children}</div>
+        {/* pb-20 en mobile: espacio de seguridad para que el FAB de registro
+            rápido (fixed bottom-right) no tape el final del contenido justo
+            antes del footer. */}
+        <div className='px-4 pt-4 pb-20 md:px-6 md:py-6'>{children}</div>
         <Footer />
       </main>
     </div>

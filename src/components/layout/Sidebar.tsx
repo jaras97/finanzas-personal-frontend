@@ -9,7 +9,6 @@ import {
   Folder,
   Calendar,
   Users,
-  Repeat,
   UserCog,
   X,
   LogOut,
@@ -21,17 +20,33 @@ import { useSidebarStore } from '@/lib/store/sidebarStore';
 import { Button } from '@/components/ui/button';
 import { logout } from '@/lib/api';
 
-const links = [
+// Resumen y Transacciones son de uso diario, sin sección propia: van sueltos
+// arriba del todo. Recurrentes ya no vive acá -- es una pestaña dentro de
+// Transacciones (ver TransactionsTabs.tsx). El resto se agrupa por lo que
+// realmente es: patrimonio (cuentas/deudas) vs. configuración.
+const topLinks = [
   { href: '/summary', label: 'Resumen', icon: Calendar },
   { href: '/transactions', label: 'Transacciones', icon: List },
-  { href: '/recurring', label: 'Recurrentes', icon: Repeat },
-  { href: '/saving-accounts', label: 'Cuentas', icon: Banknote },
-  { href: '/debts', label: 'Deudas', icon: CreditCard },
-  { href: '/categories', label: 'Categorías', icon: Folder },
-  { href: '/account', label: 'Mi cuenta', icon: UserCog },
 ];
 
-const adminLinks = [{ href: '/admin', label: 'Usuarios', icon: Users }];
+const groups: { label: string; links: typeof topLinks }[] = [
+  {
+    label: 'PATRIMONIO',
+    links: [
+      { href: '/saving-accounts', label: 'Cuentas', icon: Banknote },
+      { href: '/debts', label: 'Deudas', icon: CreditCard },
+    ],
+  },
+  {
+    label: 'AJUSTES',
+    links: [
+      { href: '/categories', label: 'Categorías', icon: Folder },
+      { href: '/account', label: 'Mi cuenta', icon: UserCog },
+    ],
+  },
+];
+
+const adminLink = { href: '/admin', label: 'Usuarios', icon: Users };
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -43,6 +58,18 @@ export default function Sidebar() {
     await logout();
     router.push('/auth/login');
   };
+
+  const BrandMark = () => (
+    <div className='flex items-center gap-2'>
+      <div className='h-8 w-8 rounded-xl bg-[hsl(var(--sidebar-primary))] grid place-items-center text-white font-semibold'>
+        B
+      </div>
+      <div className='leading-tight'>
+        <p className='text-sm font-semibold text-white'>Balanced</p>
+        <p className='text-[11px] text-white/60'>Cent</p>
+      </div>
+    </div>
+  );
 
   const NavLink = ({
     href,
@@ -83,22 +110,26 @@ export default function Sidebar() {
 
   const Nav = ({ onItemClick }: { onItemClick?: () => void }) => (
     <nav className='mt-4 flex flex-col gap-1'>
-      {links.map((l) => (
+      {topLinks.map((l) => (
         <NavLink key={l.href} {...l} onItemClick={onItemClick} />
       ))}
 
-      {/* Solo para administradores. El backend igual rechaza a los demás con
-          403 -- esto evita mostrar un enlace que no lleva a ninguna parte. */}
-      {isAdmin && (
-        <>
+      {groups.map((group) => (
+        <div key={group.label}>
           <p className='mt-4 px-3 text-[11px] tracking-widest text-white/40'>
-            ADMINISTRACIÓN
+            {group.label}
           </p>
-          {adminLinks.map((l) => (
+          {group.links.map((l) => (
             <NavLink key={l.href} {...l} onItemClick={onItemClick} />
           ))}
-        </>
-      )}
+          {/* "Usuarios" cuelga de AJUSTES -- es config, no un dominio aparte.
+              Solo para administradores; el backend igual rechaza a los demás
+              con 403, esto evita mostrar un enlace que no lleva a ninguna parte. */}
+          {group.label === 'AJUSTES' && isAdmin && (
+            <NavLink {...adminLink} onItemClick={onItemClick} />
+          )}
+        </div>
+      ))}
     </nav>
   );
 
@@ -115,7 +146,7 @@ export default function Sidebar() {
         <LogOut className='h-4 w-4' />
         Cerrar sesión
       </Button>
-      <p className='mt-3 text-xs text-white/50'>v1.0 • Finanzas</p>
+      <p className='mt-3 text-xs text-white/50'>v1.0 • Balanced Cent</p>
     </div>
   );
 
@@ -133,7 +164,8 @@ export default function Sidebar() {
               <X className='h-5 w-5 text-white' />
             </button>
             <div className='mt-1'>
-              <p className='text-sm font-semibold tracking-wide text-white/80'>
+              <BrandMark />
+              <p className='mt-4 text-sm font-semibold tracking-wide text-white/80'>
                 MENÚ
               </p>
             </div>
@@ -156,15 +188,7 @@ export default function Sidebar() {
         )}
       >
         <div className='h-16 shrink-0 px-4 flex items-center'>
-          <div className='flex items-center gap-2'>
-            <div className='h-8 w-8 rounded-xl bg-white/10 grid place-items-center text-white font-semibold'>
-              ₿
-            </div>
-            <div className='leading-tight'>
-              <p className='text-sm font-semibold text-white'>Finanzas</p>
-              <p className='text-[11px] text-white/60'>Personal</p>
-            </div>
-          </div>
+          <BrandMark />
         </div>
 
         <div className='flex-1 overflow-y-auto px-3 pb-4'>

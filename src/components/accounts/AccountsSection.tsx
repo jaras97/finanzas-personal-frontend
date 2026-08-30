@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/format';
+import { buttonColorRole } from '@/lib/colorRoles';
 import type { SavingAccount } from '@/types';
 
 type Tone = 'cash' | 'bank' | 'investment';
@@ -124,10 +125,13 @@ export default function AccountsSection({
                 </div>
 
                 <div className='flex flex-wrap gap-2 mt-2'>
+                  {/* El color de estos botones es por acción, no por tipo de
+                      cuenta: "Ver movimientos" es siempre informativo (sky) y
+                      "Editar" siempre neutro (slate), sin importar si la
+                      cuenta es efectivo, banco o inversión. */}
                   <Button
                     size='sm'
-                    variant='outline'
-                    className={t.outline}
+                    variant={buttonColorRole.info}
                     onClick={() => onViewTx(account)}
                   >
                     Ver movimientos
@@ -143,8 +147,7 @@ export default function AccountsSection({
 
                   <Button
                     size='sm'
-                    variant='outline'
-                    className={t.outline}
+                    variant={buttonColorRole.neutral}
                     onClick={() => onEdit(account)}
                   >
                     Editar
@@ -153,7 +156,7 @@ export default function AccountsSection({
                   {showYield && (
                     <Button
                       size='sm'
-                      className={toneMap.investment.solid}
+                      variant={buttonColorRole.positive}
                       onClick={() => onYield(account)}
                     >
                       Agregar rendimiento

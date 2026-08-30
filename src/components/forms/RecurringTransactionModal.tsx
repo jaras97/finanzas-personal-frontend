@@ -1,13 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
+import { DialogClose } from '@/components/ui/dialog';
+import { FormModal } from '@/components/ui/form-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -23,7 +18,6 @@ import { NumericFormat } from 'react-number-format';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import axios from 'axios';
-import { cn } from '@/lib/utils';
 import { useCurrencies } from '@/hooks/useCurrencies';
 import { formatCurrency } from '@/lib/format';
 import type {
@@ -177,32 +171,42 @@ export default function RecurringTransactionModal({
     }
   };
 
-  const panelTint = 'bg-[hsl(var(--accent))]';
-  const headerFooterTint = 'bg-[hsl(var(--muted))]';
-
   return (
-    <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
-      <DialogContent
-        className={cn(
-          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
-          'w-[min(100vw-1rem,560px)] rounded-2xl overflow-hidden',
-          panelTint,
-        )}
-      >
-        <header className={cn('border-b px-4 py-3', headerFooterTint)}>
-          <DialogTitle className='flex items-center gap-2 text-base sm:text-lg font-semibold'>
-            {isEdit ? 'Editar movimiento recurrente' : 'Nuevo movimiento recurrente'}
-            <InfoHint side='top'>
-              Se registra automáticamente según la frecuencia que elijas. Ideal para
-              nómina, arriendo o suscripciones.
-            </InfoHint>
-          </DialogTitle>
-        </header>
-
-        <section
-          className='overflow-y-auto overscroll-contain px-4 py-4 space-y-4'
-          aria-busy={saving}
-        >
+    <FormModal
+      open={open}
+      onOpenChange={(o) => !saving && onOpenChange(o)}
+      className='w-[min(100vw-1rem,560px)]'
+      title={
+        <>
+          {isEdit ? 'Editar movimiento recurrente' : 'Nuevo movimiento recurrente'}
+          <InfoHint side='top'>
+            Se registra automáticamente según la frecuencia que elijas. Ideal para
+            nómina, arriendo o suscripciones.
+          </InfoHint>
+        </>
+      }
+      footer={
+        <>
+          <DialogClose asChild>
+            <Button
+              className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[120px]'
+              disabled={saving}
+            >
+              Cancelar
+            </Button>
+          </DialogClose>
+          <Button
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            variant='soft-emerald'
+            className='sm:min-w-[160px]'
+          >
+            {saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear recurrencia'}
+          </Button>
+        </>
+      }
+    >
+      <div className='space-y-4' aria-busy={saving}>
           {/* Tipo */}
           <div className='space-y-1'>
             <label className='text-sm font-medium'>Tipo</label>
@@ -368,27 +372,7 @@ export default function RecurringTransactionModal({
               )}
             </div>
           </div>
-        </section>
-
-        <DialogFooter className={cn('border-t px-4 py-3', headerFooterTint)}>
-          <DialogClose asChild>
-            <Button
-              className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[120px]'
-              disabled={saving}
-            >
-              Cancelar
-            </Button>
-          </DialogClose>
-          <Button
-            onClick={handleSubmit}
-            disabled={!canSubmit}
-            variant='soft-emerald'
-            className='sm:min-w-[160px]'
-          >
-            {saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear recurrencia'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormModal>
   );
 }

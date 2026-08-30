@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -196,36 +197,33 @@ export default function CategoriesPage() {
 
   return (
     <div className='space-y-6'>
-      {/* Header + filtros */}
-      <div className='flex flex-col gap-3 sm:gap-4 md:flex-row md:items-end md:justify-between'>
-        <div className='min-w-0'>
-          <h1 className='text-2xl font-semibold'>Categorías</h1>
-          <p className='text-sm text-muted-foreground'>
-            Organiza tus ingresos y gastos por categoría.
-          </p>
-        </div>
-        {loading || sLoading ? (
-          <CategoriesHeaderSkeleton />
-        ) : (
-          <div className='flex flex-col sm:flex-row gap-3 sm:items-center w-full md:w-auto'>
-            <div className='w-full sm:w-[min(420px,100%)]'>
-              <DateRangePicker
-                value={{
-                  startDate: dateRange.startDate,
-                  endDate: dateRange.endDate,
-                }}
-                onChange={setDateRange}
-                disabled={sLoading}
-              />
+      <PageHeader
+        title='Categorías'
+        subtitle='Organiza tus ingresos y gastos por categoría.'
+        actions={
+          loading || sLoading ? (
+            <CategoriesHeaderSkeleton />
+          ) : (
+            <div className='flex flex-col sm:flex-row gap-3 sm:items-center w-full md:w-auto'>
+              <div className='w-full sm:w-[min(420px,100%)]'>
+                <DateRangePicker
+                  value={{
+                    startDate: dateRange.startDate,
+                    endDate: dateRange.endDate,
+                  }}
+                  onChange={setDateRange}
+                  disabled={sLoading}
+                />
+              </div>
+              <div className='flex gap-2'>
+                <Button onClick={() => setModalOpen(true)} variant='soft-sky'>
+                  + Nueva categoría
+                </Button>
+              </div>
             </div>
-            <div className='flex gap-2'>
-              <Button onClick={() => setModalOpen(true)} variant='soft-sky'>
-                + Nueva categoría
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+          )
+        }
+      />
 
       {/* KPIs: top gasto / top ingreso, en cualquier moneda que el usuario use */}
       {sLoading ? (

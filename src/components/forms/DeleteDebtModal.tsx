@@ -1,18 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogClose,
-} from '@/components/ui/dialog';
+import { DialogClose } from '@/components/ui/dialog';
+import { FormModal } from '@/components/ui/form-modal';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { Debt } from '@/types';
 import axios from 'axios';
-import { cn } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -53,63 +48,39 @@ export default function DeleteDebtModal({
     }
   };
 
-  // 🎨 Tinte destructivo coherente con los demás modales
-  const panelTint = 'bg-rose-50';
-  const headerFooterTint = 'bg-rose-100';
-  const ctaClass =
-    'bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-300';
-
   return (
-    <Dialog open={open} onOpenChange={(o) => !deleting && onOpenChange(o)}>
-      <DialogContent
-        size='md'
-        className={cn(
-          // layout header | body | footer
-          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
-          // tamaño / borde / evitar solapamiento
-          'w-[min(100vw-1rem,520px)] rounded-2xl overflow-hidden',
-          panelTint,
-        )}
-      >
-        {/* HEADER */}
-        <header className={cn('border-b px-4 py-3', headerFooterTint)}>
-          <DialogTitle className='text-base sm:text-lg font-semibold'>
-            Eliminar Deuda
-          </DialogTitle>
-        </header>
-
-        {/* BODY (scroll) */}
-        <section className='overflow-y-auto overscroll-contain px-4 py-4'>
-          <div className='space-y-4 text-sm'>
-            <p>
-              ¿Estás seguro de que deseas eliminar <strong>{debt.name}</strong>?
-              Esta acción no se puede deshacer.
-            </p>
-          </div>
-        </section>
-
-        {/* FOOTER */}
-        <footer className={cn('border-t', headerFooterTint)}>
-          <div className='px-4 py-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
-            <DialogClose asChild>
-              <Button
-                className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[120px]'
-                disabled={deleting}
-              >
-                Cancelar
-              </Button>
-            </DialogClose>
+    <FormModal
+      open={open}
+      onOpenChange={(o) => !deleting && onOpenChange(o)}
+      size='md'
+      className='w-[min(100vw-1rem,520px)]'
+      tone='rose'
+      title='Eliminar Deuda'
+      footer={
+        <>
+          <DialogClose asChild>
             <Button
-              onClick={handleDelete}
+              className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[120px]'
               disabled={deleting}
-              aria-disabled={deleting}
-              className={cn('sm:min-w-[140px]', ctaClass)}
             >
-              {deleting ? 'Eliminando…' : 'Eliminar'}
+              Cancelar
             </Button>
-          </div>
-        </footer>
-      </DialogContent>
-    </Dialog>
+          </DialogClose>
+          <Button
+            onClick={handleDelete}
+            disabled={deleting}
+            aria-disabled={deleting}
+            className='bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-300 sm:min-w-[140px]'
+          >
+            {deleting ? 'Eliminando…' : 'Eliminar'}
+          </Button>
+        </>
+      }
+    >
+      <p className='text-sm'>
+        ¿Estás seguro de que deseas eliminar <strong>{debt.name}</strong>?
+        Esta acción no se puede deshacer.
+      </p>
+    </FormModal>
   );
 }

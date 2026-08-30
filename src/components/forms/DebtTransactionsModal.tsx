@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { FormModal } from '@/components/ui/form-modal';
 import { Debt, DebtTransaction } from '@/types';
 import api from '@/lib/api';
 import DateTimeDisplay from '../ui/DateTimeDisplay';
 import { formatCurrency } from '@/lib/format';
-import { cn } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -43,32 +42,16 @@ export default function DebtTransactionsModal({
     };
   }, [debt?.id, open]);
 
-  const headerTint = 'bg-[hsl(var(--muted))]';
-  const panelTint = 'bg-[hsl(var(--accent))]';
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        size='lg'
-        className={cn(
-          'grid grid-rows-[auto_minmax(0,1fr)] max-h-[92dvh] min-h-0',
-          'w-[min(100vw-1rem,560px)] overflow-hidden',
-          panelTint,
-        )}
-      >
-        {/* HEADER */}
-        <header className={cn('border-b px-4 py-3', headerTint)}>
-          <DialogTitle className='text-base sm:text-lg font-semibold'>
-            Movimientos de {debt.name}
-          </DialogTitle>
-        </header>
-
-        {/* BODY (scroll) */}
-        <section
-          className='min-h-0 overflow-y-auto overscroll-contain px-4 py-4'
-          aria-busy={loading}
-        >
-          {loading ? (
+    <FormModal
+      open={open}
+      onOpenChange={onOpenChange}
+      size='lg'
+      className='w-[min(100vw-1rem,560px)]'
+      title={`Movimientos de ${debt.name}`}
+    >
+      <div aria-busy={loading}>
+        {loading ? (
             <p className='text-center text-sm text-muted-foreground'>
               Cargando movimientos...
             </p>
@@ -95,8 +78,7 @@ export default function DebtTransactionsModal({
               ))}
             </div>
           )}
-        </section>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormModal>
   );
 }

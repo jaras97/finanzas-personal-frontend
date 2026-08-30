@@ -1,12 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogClose,
-} from '@/components/ui/dialog';
+import { DialogClose } from '@/components/ui/dialog';
+import { FormModal } from '@/components/ui/form-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -69,14 +65,9 @@ export default function EditTransactionModal({
 
   const typeLabel = transaction.type === 'income' ? 'Ingreso' : 'Egreso';
 
-  // Tinte según tipo (usa tailwind + tus tokens)
+  // Tinte según tipo
   const tone: 'emerald' | 'rose' =
     transaction.type === 'income' ? 'emerald' : 'rose';
-
-  const panelTint = tone === 'emerald' ? 'bg-emerald-50' : 'bg-rose-50';
-
-  const headerFooterTint =
-    tone === 'emerald' ? 'bg-emerald-100' : 'bg-rose-100';
 
   const ctaClass =
     tone === 'emerald'
@@ -140,33 +131,42 @@ export default function EditTransactionModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
-      <DialogContent
-        // Headless UI panel: nada de props de Radix aquí
-        className={cn(
-          'w-[min(100vw-1rem,560px)]',
-          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
-          'rounded-2xl overflow-hidden', // evita solapamientos de borde
-          panelTint,
-        )}
-      >
-        {/* HEADER */}
-        <header className={cn('border-b px-4 py-3', headerFooterTint)}>
-          <DialogTitle className='flex items-center gap-2 text-base sm:text-lg font-semibold'>
-            Editar Transacción
-            <InfoHint side='top'>
-              Solo puedes editar <b>descripción</b>, <b>categoría</b> y{' '}
-              <b>fecha</b>. Montos y cuentas no cambian por trazabilidad.
-            </InfoHint>
-          </DialogTitle>
-        </header>
-
-        {/* BODY (solo aquí hay scroll) */}
-        <section
-          className='overflow-y-auto overscroll-contain px-4 py-4'
-          aria-busy={saving}
-        >
-          <div className='space-y-4'>
+    <FormModal
+      open={open}
+      onOpenChange={(o) => !saving && onOpenChange(o)}
+      className='w-[min(100vw-1rem,560px)]'
+      tone={tone}
+      title={
+        <>
+          Editar Transacción
+          <InfoHint side='top'>
+            Solo puedes editar <b>descripción</b>, <b>categoría</b> y{' '}
+            <b>fecha</b>. Montos y cuentas no cambian por trazabilidad.
+          </InfoHint>
+        </>
+      }
+      footer={
+        <>
+          <DialogClose asChild>
+            <Button
+              className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
+              disabled={saving}
+            >
+              Cancelar
+            </Button>
+          </DialogClose>
+          <Button
+            onClick={handleSubmit}
+            disabled={saving}
+            aria-disabled={saving}
+            className={cn('sm:min-w-[160px]', ctaClass)}
+          >
+            {saving ? 'Guardando…' : 'Guardar cambios'}
+          </Button>
+        </>
+      }
+    >
+      <div className='space-y-4' aria-busy={saving}>
             {/* Descripción */}
             <div className='space-y-1'>
               <div className='flex items-center gap-2'>
@@ -256,31 +256,7 @@ export default function EditTransactionModal({
                 buttonClassName='bg-white h-9' // altura y contraste como input
               />
             </div>
-          </div>
-        </section>
-
-        {/* FOOTER */}
-        <footer className={cn('border-t', headerFooterTint)}>
-          <div className='px-4 py-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
-            <DialogClose asChild>
-              <Button
-                className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
-                disabled={saving}
-              >
-                Cancelar
-              </Button>
-            </DialogClose>
-            <Button
-              onClick={handleSubmit}
-              disabled={saving}
-              aria-disabled={saving}
-              className={cn('sm:min-w-[160px]', ctaClass)}
-            >
-              {saving ? 'Guardando…' : 'Guardar cambios'}
-            </Button>
-          </div>
-        </footer>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormModal>
   );
 }

@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useDebts } from '@/hooks/useDebts';
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/ui/page-header';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import axios from 'axios';
@@ -108,24 +109,22 @@ export default function DebtsPage() {
 
   return (
     <div className='space-y-6'>
-      {/* Header + CTA */}
-      <div className='flex justify-between items-center flex-wrap gap-2'>
-        <div className='min-w-0'>
-          <h1 className='text-2xl font-semibold'>Deudas</h1>
-          <p className='text-sm text-muted-foreground'>
-            Gestiona tus préstamos y tarjetas de crédito.
-          </p>
-        </div>
-        {loading ? (
-          <DebtsHeaderCtaSkeleton />
-        ) : (
-          <div className='flex gap-2 flex-wrap'>
-            <Button onClick={() => setCreateOpen(true)} variant='soft-rose'>
-              + Nueva deuda
-            </Button>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        align='center'
+        title='Deudas'
+        subtitle='Gestiona tus préstamos y tarjetas de crédito.'
+        actions={
+          loading ? (
+            <DebtsHeaderCtaSkeleton />
+          ) : (
+            <div className='flex gap-2 flex-wrap'>
+              <Button onClick={() => setCreateOpen(true)} variant='soft-rose'>
+                + Nueva deuda
+              </Button>
+            </div>
+          )
+        }
+      />
 
       {/* KPIs (mismo patrón de Savings) */}
       {loading ? (

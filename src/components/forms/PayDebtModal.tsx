@@ -1,12 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogClose,
-} from '@/components/ui/dialog';
+import { DialogClose } from '@/components/ui/dialog';
+import { FormModal } from '@/components/ui/form-modal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -25,7 +21,6 @@ import axios from 'axios';
 import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
 import { DatePicker } from '@/components/ui/date-picker';
-import { cn } from '@/lib/utils';
 import { useCurrencies } from '@/hooks/useCurrencies';
 
 interface Props {
@@ -147,35 +142,34 @@ export default function PayDebtModal({
     }
   };
 
-  // 🎨 Tintes del panel (neutro)
-  const panelTint = 'bg-[hsl(var(--accent))]';
-  const headerTint = 'bg-[hsl(var(--muted))]';
-  const ctaClass = 'bg-primary text-primary-foreground hover:bg-primary/90';
-
   return (
-    <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
-      <DialogContent
-        size='xl'
-        className={cn(
-          // layout header | body | footer
-          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
-          'w-[min(100vw-1rem,560px)] rounded-2xl overflow-hidden',
-          panelTint,
-        )}
-      >
-        {/* HEADER */}
-        <header className={cn('border-b px-4 py-3', headerTint)}>
-          <DialogTitle className='text-base sm:text-lg font-semibold'>
-            Pagar deuda: {debt.name} ({debt.currency})
-          </DialogTitle>
-        </header>
-
-        {/* BODY (scroll) */}
-        <section
-          className='overflow-y-auto overscroll-contain px-4 py-4'
-          aria-busy={saving}
-        >
-          <div className='space-y-4'>
+    <FormModal
+      open={open}
+      onOpenChange={(o) => !saving && onOpenChange(o)}
+      className='w-[min(100vw-1rem,560px)]'
+      title={`Pagar deuda: ${debt.name} (${debt.currency})`}
+      footer={
+        <>
+          <DialogClose asChild>
+            <Button
+              className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
+              disabled={saving}
+            >
+              Cancelar
+            </Button>
+          </DialogClose>
+          <Button
+            onClick={handlePay}
+            disabled={saving || eligibleAccounts.length === 0}
+            aria-disabled={saving || eligibleAccounts.length === 0}
+            className='sm:min-w-[160px]'
+          >
+            {saving ? 'Pagando…' : 'Pagar deuda'}
+          </Button>
+        </>
+      }
+    >
+      <div className='space-y-4' aria-busy={saving}>
             {/* Fecha */}
             <div className='space-y-1'>
               <div className='flex items-center justify-between gap-2'>
@@ -309,31 +303,7 @@ export default function PayDebtModal({
                 className='bg-white'
               />
             </div>
-          </div>
-        </section>
-
-        {/* FOOTER */}
-        <footer className={cn('border-t px-4 py-3', headerTint)}>
-          <div className='flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
-            <DialogClose asChild>
-              <Button
-                className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
-                disabled={saving}
-              >
-                Cancelar
-              </Button>
-            </DialogClose>
-            <Button
-              onClick={handlePay}
-              disabled={saving || eligibleAccounts.length === 0}
-              aria-disabled={saving || eligibleAccounts.length === 0}
-              className={cn('sm:min-w-[160px]', ctaClass)}
-            >
-              {saving ? 'Pagando…' : 'Pagar deuda'}
-            </Button>
-          </div>
-        </footer>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormModal>
   );
 }

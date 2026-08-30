@@ -1,13 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
+import { DialogClose } from '@/components/ui/dialog';
+import { FormModal } from '@/components/ui/form-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +10,6 @@ import InfoHint from '@/components/ui/info-hint';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import axios from 'axios';
-import { cn } from '@/lib/utils';
 import { formatDateInUserTimeZone } from '@/lib/formatDate';
 import type { AdminUser } from '@/types';
 
@@ -38,9 +32,6 @@ export default function ManageSubscriptionModal({
   const hasSubscription = user.subscription_status !== 'none';
   const monthsNum = parseInt(months, 10);
   const monthsValid = Number.isFinite(monthsNum) && monthsNum >= 1 && monthsNum <= 60;
-
-  const panelTint = 'bg-[hsl(var(--accent))]';
-  const headerFooterTint = 'bg-[hsl(var(--muted))]';
 
   const run = async (
     fn: () => Promise<unknown>,
@@ -99,24 +90,23 @@ export default function ManageSubscriptionModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !busy && onOpenChange(o)}>
-      <DialogContent
-        className={cn(
-          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
-          'w-[min(100vw-1rem,520px)] rounded-2xl overflow-hidden',
-          panelTint,
-        )}
-      >
-        <header className={cn('border-b px-4 py-3', headerFooterTint)}>
-          <DialogTitle className='text-base sm:text-lg font-semibold'>
-            Suscripción de {user.email}
-          </DialogTitle>
-        </header>
-
-        <section
-          className='overflow-y-auto overscroll-contain px-4 py-4 space-y-4'
-          aria-busy={busy}
-        >
+    <FormModal
+      open={open}
+      onOpenChange={(o) => !busy && onOpenChange(o)}
+      className='w-[min(100vw-1rem,520px)]'
+      title={`Suscripción de ${user.email}`}
+      footer={
+        <DialogClose asChild>
+          <Button
+            className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[120px]'
+            disabled={busy}
+          >
+            Cerrar
+          </Button>
+        </DialogClose>
+      }
+    >
+      <div className='space-y-4' aria-busy={busy}>
           <div className='rounded-lg bg-white p-3 space-y-1'>
             <div className='flex items-center gap-2'>
               <span className='text-sm text-muted-foreground'>Estado actual:</span>
@@ -192,19 +182,7 @@ export default function ManageSubscriptionModal({
               Eliminar suscripción
             </Button>
           </div>
-        </section>
-
-        <DialogFooter className={cn('border-t px-4 py-3', headerFooterTint)}>
-          <DialogClose asChild>
-            <Button
-              className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[120px]'
-              disabled={busy}
-            >
-              Cerrar
-            </Button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormModal>
   );
 }

@@ -1,13 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo, FormEvent } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-  DialogClose,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { DialogClose } from '@/components/ui/dialog';
+import { FormModal } from '@/components/ui/form-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -31,12 +26,32 @@ import { readTxPreferences, rememberTx } from '@/lib/txPreferences';
 
 type UiAccount = { id: string; name: string; currency?: currencyType };
 
+export type NewTransactionInitial = {
+  type: 'income' | 'expense';
+  accountId: string;
+  categoryId: string;
+  amount: number;
+  description: string;
+};
+
 interface Props {
   onCreated: () => void;
   disabled?: boolean;
+  /** Datos para precargar el formulario (ej. "repetir última transacción"). */
+  initial?: NewTransactionInitial;
+  /** Incrementar este valor fuerza la apertura del modal (usado junto a `initial`). */
+  openSignal?: number;
+  /** Oculta el botón "+ Nueva Transacción" interno; el modal solo se abre vía `openSignal`. */
+  hideTrigger?: boolean;
 }
 
-export default function NewTransactionModal({ onCreated, disabled }: Props) {
+export default function NewTransactionModal({
+  onCreated,
+  disabled,
+  initial,
+  openSignal,
+  hideTrigger,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -79,6 +94,21 @@ export default function NewTransactionModal({ onCreated, disabled }: Props) {
       0,
       0,
     ).toISOString();
+
+  useEffect(() => {
+    if (openSignal === undefined || openSignal === 0) return;
+    if (initial) {
+      setType(initial.type);
+      setAccountId(initial.accountId);
+      setCategoryId(initial.categoryId);
+      setDescription(initial.description);
+      setAmount(String(initial.amount));
+      setAmountNum(initial.amount);
+      setDate(new Date());
+    }
+    setOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openSignal]);
 
   useEffect(() => {
     if (open) {
@@ -264,24 +294,9 @@ export default function NewTransactionModal({ onCreated, disabled }: Props) {
     }
   };
 
-  // tono
-  const tone: 'accent' | 'emerald' | 'rose' =
-    type === 'expense' ? 'rose' : type === 'income' ? 'emerald' : 'accent';
-
-  const panelTint =
-    tone === 'emerald'
-      ? 'bg-emerald-50'
-      : tone === 'rose'
-      ? 'bg-rose-50'
-      : 'bg-[hsl(var(--accent))]';
-
-  // header/footer (un paso más oscuro que el content)
-  const headerFooterTint =
-    tone === 'emerald'
-      ? 'bg-emerald-100'
-      : tone === 'rose'
-      ? 'bg-rose-100'
-      : 'bg-[hsl(var(--muted))]';
+  // tono: deriva del tipo de movimiento (mismo criterio en todo FormModal)
+  const tone: 'neutral' | 'emerald' | 'rose' =
+    type === 'expense' ? 'rose' : type === 'income' ? 'emerald' : 'neutral';
 
   const ctaClass =
     type === 'income'
@@ -296,47 +311,56 @@ export default function NewTransactionModal({ onCreated, disabled }: Props) {
     idAcc = 'tx-account';
 
   return (
-    <Dialog
+    <FormModal
       open={open}
       onOpenChange={(o) => (!submitting || disabled) && setOpen(o)}
       initialFocus={descRef as any}
-    >
-      <DialogTrigger asChild>
-        <Button
-          className='bg-emerald-600 text-white hover:bg-emerald-700'
-          disabled={disabled}
-        >
-          + Nueva Transacción
-        </Button>
-      </DialogTrigger>
-
-      <DialogContent
-        size='xl'
-        className={cn(
-          // tinte base
-          panelTint,
-          // grid y altura
-          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
-          // ✅ solucion solapamiento de bordes
-          'rounded-2xl overflow-hidden',
-        )}
-      >
-        {/* HEADER */}
-        <header className={cn('border-b px-4 py-3', headerFooterTint)}>
-          <DialogTitle className='text-base sm:text-lg font-semibold'>
-            {isCreditCardPurchase
-              ? 'Nueva compra con tarjeta'
-              : 'Nueva Transacción'}
-          </DialogTitle>
-        </header>
-
-        {/* BODY (scroll) */}
-        <section className='overflow-y-auto overscroll-contain px-4 py-4'>
-          <form
-            onSubmit={handleSubmit}
-            className='space-y-5'
-            aria-busy={submitting || disabled}
+      trigger={
+        !hideTrigger ? (
+          <Button
+            className='bg-emerald-600 text-white hover:bg-emerald-700'
+            disabled={disabled}
           >
+            + Nueva Transacción
+          </Button>
+        ) : undefined
+      }
+      title={
+        isCreditCardPurchase ? 'Nueva compra con tarjeta' : 'Nueva Transacción'
+      }
+      tone={tone}
+      footer={
+        <>
+          {/* ⬅️ Cancelar con fondo para contraste */}
+          <DialogClose asChild>
+            <Button
+              className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
+              disabled={submitting}
+            >
+              Cancelar
+            </Button>
+          </DialogClose>
+          {/* CTA principal por tipo */}
+          <Button
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            aria-disabled={!canSubmit}
+            className={cn('sm:min-w-[160px]', ctaClass)}
+          >
+            {submitting
+              ? 'Creando…'
+              : isCreditCardPurchase
+              ? 'Registrar compra'
+              : 'Crear transacción'}
+          </Button>
+        </>
+      }
+    >
+      <form
+        onSubmit={handleSubmit}
+        className='space-y-5'
+        aria-busy={submitting || disabled}
+      >
             {/* Descripción */}
             <div className='space-y-1'>
               <div className='flex items-center gap-2'>
@@ -550,37 +574,7 @@ export default function NewTransactionModal({ onCreated, disabled }: Props) {
                 </Select>
               </div>
             </div>
-          </form>
-        </section>
-
-        {/* FOOTER */}
-        <footer className={cn('border-t', headerFooterTint)}>
-          <div className='px-4 py-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
-            {/* ⬅️ Cancelar con fondo para contraste */}
-            <DialogClose asChild>
-              <Button
-                className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
-                disabled={submitting}
-              >
-                Cancelar
-              </Button>
-            </DialogClose>
-            {/* CTA principal por tipo */}
-            <Button
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              aria-disabled={!canSubmit}
-              className={cn('sm:min-w-[160px]', ctaClass)}
-            >
-              {submitting
-                ? 'Creando…'
-                : isCreditCardPurchase
-                ? 'Registrar compra'
-                : 'Crear transacción'}
-            </Button>
-          </div>
-        </footer>
-      </DialogContent>
-    </Dialog>
+      </form>
+    </FormModal>
   );
 }

@@ -8,7 +8,12 @@ import TransactionFilters, {
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import NewTransactionModal from '@/components/forms/NewTransactionModal';
+import NewTransactionModal, {
+  NewTransactionInitial,
+} from '@/components/forms/NewTransactionModal';
+import api from '@/lib/api';
+import { PageHeader } from '@/components/ui/page-header';
+import TransactionsTabs from '@/components/layout/TransactionsTabs';
 import EditTransactionModal from '@/components/forms/EditTransactionModal';
 import { currencyType, TransactionWithCategoryRead } from '@/types';
 import { reverseTransaction } from '@/utils/reverseTransaction';
@@ -18,7 +23,7 @@ import ReverseTransactionDialog from '@/components/forms/ReverseTransactionDialo
 import { toast } from 'sonner';
 import { extractErrorMessage } from '@/lib/extractErrorMessage';
 import ReversalNoteDialog from '@/components/forms/ReversalNoteDialog';
-import { StickyNote, Filter, RotateCw, Search } from 'lucide-react';
+import { StickyNote, Filter, RotateCw, Search, Repeat } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
@@ -98,6 +103,51 @@ export default function TransactionsPage() {
   const [noteTx, setNoteTx] = useState<TransactionWithCategoryRead | null>(
     null,
   );
+
+  /* ===== Repetir última transacción ===== */
+  // Dos instancias de NewTransactionModal (desktop/mobile) comparten los
+  // datos a precargar, pero cada una necesita su propia señal de apertura:
+  // si compartieran la misma, ambas se abrirían a la vez (cada una en su
+  // propio portal), aunque solo una esté visible según el viewport.
+  const [repeatInitial, setRepeatInitial] = useState<
+    NewTransactionInitial | undefined
+  >(undefined);
+  const [repeatSignalDesktop, setRepeatSignalDesktop] = useState(0);
+  const [repeatSignalMobile, setRepeatSignalMobile] = useState(0);
+
+  const handleRepeatLast = async (which: 'desktop' | 'mobile') => {
+    try {
+      const { data } = await api.get('/transactions/with-category', {
+        params: { source: 'account', page: 1, page_size: 10 },
+      });
+      const items: TransactionWithCategoryRead[] = data?.items ?? [];
+      // Solo movimientos manuales (sin source_type): transferencias, pagos de
+      // deuda, compras con tarjeta, etc. no son "repetibles" con este formulario.
+      const last = items.find(
+        (t) =>
+          !t.source_type &&
+          !t.is_cancelled &&
+          (t.type === 'income' || t.type === 'expense') &&
+          !!t.saving_account_id &&
+          !!t.category,
+      );
+      if (!last) {
+        toast.error('No hay una transacción reciente para repetir');
+        return;
+      }
+      setRepeatInitial({
+        type: last.type as 'income' | 'expense',
+        accountId: String(last.saving_account_id),
+        categoryId: String(last.category!.id),
+        amount: last.amount,
+        description: last.description,
+      });
+      if (which === 'desktop') setRepeatSignalDesktop((s) => s + 1);
+      else setRepeatSignalMobile((s) => s + 1);
+    } catch {
+      toast.error('No se pudo obtener la última transacción');
+    }
+  };
 
   /* ===== helpers visuales ===== */
   const typeColor = (type: string) => {
@@ -226,15 +276,11 @@ export default function TransactionsPage() {
 
   return (
     <div className='space-y-6'>
-      {/* Header */}
-      <div className='flex items-center justify-between gap-3'>
-        <div>
-          <h1 className='text-2xl font-semibold'>Transacciones</h1>
-          <p className='text-sm text-muted-foreground'>
-            Historial y gestión de tus movimientos.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title='Transacciones'
+        subtitle='Historial y gestión de tus movimientos.'
+      />
+      <TransactionsTabs />
 
       {sumLoading && <TransactionsKpisSkeleton />}
 
@@ -351,7 +397,22 @@ export default function TransactionsPage() {
               </div>
             </div>
 
-            <NewTransactionModal onCreated={refresh} disabled={loading} />
+            <Button
+              variant='outline'
+              className='gap-2'
+              onClick={() => handleRepeatLast('desktop')}
+              disabled={loading}
+            >
+              <Repeat className='h-4 w-4' />
+              Repetir última
+            </Button>
+
+            <NewTransactionModal
+              onCreated={refresh}
+              disabled={loading}
+              initial={repeatInitial}
+              openSignal={repeatSignalDesktop}
+            />
           </div>
 
           <CardContent className='p-0'>
@@ -424,8 +485,23 @@ export default function TransactionsPage() {
               <Search className='pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60' />
             </div>
 
+            <Button
+              variant='outline'
+              size='sm'
+              className='shrink-0'
+              onClick={() => handleRepeatLast('mobile')}
+            >
+              <Repeat className='h-4 w-4' />
+              <span className='sr-only'>Repetir última</span>
+            </Button>
+
             <div className='ml-auto'>
-              <NewTransactionModal onCreated={refresh} disabled={loading} />
+              <NewTransactionModal
+                onCreated={refresh}
+                disabled={loading}
+                initial={repeatInitial}
+                openSignal={repeatSignalMobile}
+              />
             </div>
           </div>
         </div>

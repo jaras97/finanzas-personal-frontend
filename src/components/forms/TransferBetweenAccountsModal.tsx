@@ -1,12 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogClose,
-} from '@/components/ui/dialog';
+import { DialogClose } from '@/components/ui/dialog';
+import { FormModal } from '@/components/ui/form-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -23,8 +19,8 @@ import { SavingAccount } from '@/types';
 import { formatCurrency } from '@/lib/format';
 import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
-import { cn } from '@/lib/utils';
 import { useCurrencies } from '@/hooks/useCurrencies';
+import { DatePicker } from '@/components/ui/date-picker';
 
 interface Props {
   open: boolean;
@@ -49,6 +45,8 @@ export default function TransferBetweenAccountsModal({
   const [feeNum, setFeeNum] = useState<number | undefined>(undefined);
 
   const [description, setDescription] = useState('');
+
+  const [date, setDate] = useState<Date | undefined>(new Date());
 
   const [exchangeRate, setExchangeRate] = useState('');
   const [rateNum, setRateNum] = useState<number | undefined>(undefined);
@@ -83,6 +81,9 @@ export default function TransferBetweenAccountsModal({
 
   const requiresConversion =
     !!fromAccount && !!toAccount && fromAccount.currency !== toAccount.currency;
+
+  const dateToIsoAtLocalNoon = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0).toISOString();
 
   const { currencies } = useCurrencies();
   // Escalas decimales según la moneda real (COP/JPY/CLP/... sin decimales,
@@ -188,6 +189,10 @@ export default function TransferBetweenAccountsModal({
       toast.error('Ingresa una tasa de conversión válida (> 0)');
       return;
     }
+    if (!date) {
+      toast.error('Selecciona una fecha');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -198,6 +203,7 @@ export default function TransferBetweenAccountsModal({
         transaction_fee: feeVal || 0,
         description: description || undefined,
         exchange_rate: requiresConversion ? rateVal : undefined,
+        date: dateToIsoAtLocalNoon(date),
       });
       toast.success('Transferencia realizada correctamente');
       onTransferred();
@@ -213,6 +219,7 @@ export default function TransferBetweenAccountsModal({
       setDescription('');
       setExchangeRate('');
       setRateNum(undefined);
+      setDate(new Date());
     } catch (error) {
       if (axios.isAxiosError(error)) {
         toast.error(
@@ -227,11 +234,6 @@ export default function TransferBetweenAccountsModal({
   };
 
   // 🎨 Tintes y CTA
-  const panelTint = 'bg-[hsl(var(--accent))]';
-  const headerFooterTint = 'bg-[hsl(var(--muted))]';
-  const ctaClass =
-    'bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-[hsl(var(--ring))]';
-
   const idFrom = 'transfer-from';
   const idTo = 'transfer-to';
   const idAmount = 'transfer-amount';
@@ -240,32 +242,42 @@ export default function TransferBetweenAccountsModal({
   const idRate = 'transfer-rate';
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !loading && onOpenChange(o)}>
-      <DialogContent
-        className={cn(
-          'grid grid-rows-[auto_minmax(0,1fr)_auto] max-h-[92dvh]',
-          'w-[min(100vw-1rem,560px)] rounded-2xl overflow-hidden',
-          panelTint,
-        )}
-        size='lg'
-      >
-        {/* HEADER */}
-        <header className={cn('border-b px-4 py-3', headerFooterTint)}>
-          <DialogTitle className='flex items-center gap-2 text-base sm:text-lg font-semibold'>
-            Transferir entre cuentas
-            <InfoHint side='top'>
-              Si las monedas difieren, usa la tasa (unidades de <b>destino</b>{' '}
-              por 1 de <b>origen</b>).
-            </InfoHint>
-          </DialogTitle>
-        </header>
-
-        {/* BODY */}
-        <section
-          className='overflow-y-auto overscroll-contain px-4 py-4'
-          aria-busy={loading}
-        >
-          <div className='space-y-4'>
+    <FormModal
+      open={open}
+      onOpenChange={(o) => !loading && onOpenChange(o)}
+      size='lg'
+      className='w-[min(100vw-1rem,560px)]'
+      title={
+        <>
+          Transferir entre cuentas
+          <InfoHint side='top'>
+            Si las monedas difieren, usa la tasa (unidades de <b>destino</b>{' '}
+            por 1 de <b>origen</b>).
+          </InfoHint>
+        </>
+      }
+      footer={
+        <>
+          <DialogClose asChild>
+            <Button
+              className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+          </DialogClose>
+          <Button
+            onClick={handleTransfer}
+            disabled={loading}
+            aria-disabled={loading}
+            className='sm:min-w-[160px]'
+          >
+            {loading ? 'Transfiriendo…' : 'Transferir'}
+          </Button>
+        </>
+      }
+    >
+      <div className='space-y-4' aria-busy={loading}>
             {/* Origen */}
             <div className='space-y-1'>
               <div className='flex items-center gap-2'>
@@ -408,6 +420,29 @@ export default function TransferBetweenAccountsModal({
               />
             </div>
 
+            {/* Fecha */}
+            <div className='space-y-1'>
+              <div className='flex items-center justify-between gap-2'>
+                <div className='flex items-center gap-2'>
+                  <span className='text-sm font-medium'>Fecha</span>
+                  <InfoHint side='top'>
+                    Guardamos la fecha a mediodía local.
+                  </InfoHint>
+                </div>
+                <Button
+                  type='button'
+                  size='sm'
+                  variant='outline'
+                  onClick={() => setDate(new Date())}
+                  disabled={loading}
+                  className='h-8'
+                >
+                  Hoy
+                </Button>
+              </div>
+              <DatePicker value={date} onChange={setDate} disabled={loading} />
+            </div>
+
             {/* Tasa (solo si hay conversión) */}
             {requiresConversion && (
               <div className='space-y-1'>
@@ -458,31 +493,7 @@ export default function TransferBetweenAccountsModal({
                 )}
               </div>
             )}
-          </div>
-        </section>
-
-        {/* FOOTER */}
-        <footer className={cn('border-t shrink-0', headerFooterTint)}>
-          <div className='px-4 py-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
-            <DialogClose asChild>
-              <Button
-                className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
-                disabled={loading}
-              >
-                Cancelar
-              </Button>
-            </DialogClose>
-            <Button
-              onClick={handleTransfer}
-              disabled={loading}
-              aria-disabled={loading}
-              className={cn('sm:min-w-[160px]', ctaClass)}
-            >
-              {loading ? 'Transfiriendo…' : 'Transferir'}
-            </Button>
-          </div>
-        </footer>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormModal>
   );
 }

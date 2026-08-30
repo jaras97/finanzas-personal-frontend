@@ -1,12 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogClose,
-} from '@/components/ui/dialog';
+import { DialogClose } from '@/components/ui/dialog';
+import { FormModal } from '@/components/ui/form-modal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -16,7 +12,6 @@ import axios from 'axios';
 import { formatCurrency } from '@/lib/format';
 import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
-import { cn } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -72,12 +67,6 @@ export default function DepositToAccountModal({
     }
   };
 
-  // 🎨 Tinte positivo
-  const panelTint = 'bg-emerald-50';
-  const headerFooterTint = 'bg-emerald-100';
-  const ctaClass =
-    'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-300';
-
   const idAmount = 'deposit-amount';
   const idDesc = 'deposit-desc';
 
@@ -85,32 +74,43 @@ export default function DepositToAccountModal({
   const decimalScale = 2;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
-      <DialogContent
-        className={cn(
-          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
-          'w-[min(100vw-1rem,520px)] rounded-2xl overflow-hidden',
-          panelTint,
-        )}
-        size='md'
-      >
-        {/* HEADER */}
-        <header className={cn('border-b px-4 py-3', headerFooterTint)}>
-          <DialogTitle className='flex items-center gap-2 text-base sm:text-lg font-semibold'>
-            Depositar en {account.name} ({account.currency})
-            <InfoHint side='top'>
-              Este movimiento se registrará como un <b>ingreso</b> en la cuenta.
-              Si te equivocas, puedes compensarlo creando un <b>retiro</b>.
-            </InfoHint>
-          </DialogTitle>
-        </header>
-
-        {/* BODY */}
-        <section
-          className='overflow-y-auto overscroll-contain px-4 py-4'
-          aria-busy={saving}
-        >
-          <div className='space-y-4'>
+    <FormModal
+      open={open}
+      onOpenChange={(o) => !saving && onOpenChange(o)}
+      size='md'
+      className='w-[min(100vw-1rem,520px)]'
+      tone='emerald'
+      title={
+        <>
+          Depositar en {account.name} ({account.currency})
+          <InfoHint side='top'>
+            Este movimiento se registrará como un <b>ingreso</b> en la cuenta.
+            Si te equivocas, puedes compensarlo creando un <b>retiro</b>.
+          </InfoHint>
+        </>
+      }
+      footer={
+        <>
+          <DialogClose asChild>
+            <Button
+              className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
+              disabled={saving}
+            >
+              Cancelar
+            </Button>
+          </DialogClose>
+          <Button
+            onClick={handleDeposit}
+            disabled={saving}
+            aria-disabled={saving}
+            className='bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-300 sm:min-w-[160px]'
+          >
+            {saving ? 'Depositando…' : 'Depositar'}
+          </Button>
+        </>
+      }
+    >
+      <div className='space-y-4' aria-busy={saving}>
             <p className='text-xs text-muted-foreground'>
               Saldo actual:{' '}
               <b>
@@ -166,31 +166,7 @@ export default function DepositToAccountModal({
                 className='bg-white'
               />
             </div>
-          </div>
-        </section>
-
-        {/* FOOTER */}
-        <footer className={cn('border-t', headerFooterTint)}>
-          <div className='px-4 py-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
-            <DialogClose asChild>
-              <Button
-                className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
-                disabled={saving}
-              >
-                Cancelar
-              </Button>
-            </DialogClose>
-            <Button
-              onClick={handleDeposit}
-              disabled={saving}
-              aria-disabled={saving}
-              className={cn('sm:min-w-[160px]', ctaClass)}
-            >
-              {saving ? 'Depositando…' : 'Depositar'}
-            </Button>
-          </div>
-        </footer>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormModal>
   );
 }

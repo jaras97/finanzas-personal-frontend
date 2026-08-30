@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useSummary } from '@/hooks/useSummary';
 import { useAssetsSummary } from '@/hooks/useAssetsSummary';
 import { useLiabilitiesSummary } from '@/hooks/useLiabilitiesSummary';
@@ -11,6 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { AlertCircle } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { PageHeader } from '@/components/ui/page-header';
 import { formatDayLabel } from '@/lib/formatDayLabel';
 import { CurrencyToggle } from '@/components/ui/CurrencyToggle';
 import { AreaIncomeExpense } from '@/components/chart/AreaIncomeExpense';
@@ -71,15 +73,10 @@ const SummaryPage: FC = () => {
 
   return (
     <div className='space-y-6' aria-busy={isBusy}>
-      {/* Saludo + filtros */}
-      <div className='flex flex-col gap-3 sm:gap-4 md:flex-row md:items-end md:justify-between'>
-        <div className='min-w-0'>
-          <h1 className='text-2xl font-semibold'>{greeting} 👋</h1>
-          <p className='text-sm text-muted-foreground'>
-            Aquí tienes tu resumen financiero.
-          </p>
-        </div>
-
+      <PageHeader
+        title={`${greeting} 👋`}
+        subtitle='Aquí tienes tu resumen financiero.'
+        actions={
         <div className='flex flex-col sm:flex-row gap-3 sm:items-center w-full md:w-auto'>
           <div className='w-full sm:w-[min(420px,100%)]'>
             <DateRangePicker
@@ -97,7 +94,8 @@ const SummaryPage: FC = () => {
             />
           </div>
         </div>
-      </div>
+        }
+      />
 
       {/* Estado de error */}
       {error && (
@@ -111,30 +109,28 @@ const SummaryPage: FC = () => {
       {isBusy && !error && <SummarySkeleton />}
 
       {/* === CONTENT === */}
-      {/* 1) KPIs */}
-      {!isBusy && s && (
-        <section className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
+      {/* 1) Hero: las 2 cifras que de verdad importan de un vistazo */}
+      {!isBusy && s && assets && liabilities && netWorth && (
+        <section className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
           {[
+            {
+              label: 'Patrimonio neto',
+              value: formatCurrency(netWorth[currency]?.net_worth || 0, currency),
+              variant:
+                (netWorth[currency]?.net_worth || 0) >= 0
+                  ? ('kpi-income' as const)
+                  : ('kpi-expense' as const),
+            },
             {
               label: 'Balance del período',
               value: formatCurrency(s.balance, currency),
               variant: 'kpi-balance' as const,
             },
-            {
-              label: 'Ingresos',
-              value: formatCurrency(s.total_income, currency),
-              variant: 'kpi-balance' as const,
-            },
-            {
-              label: 'Gastos',
-              value: formatCurrency(s.total_expense, currency),
-              variant: 'kpi-balance' as const,
-            },
           ].map(({ label, value, variant }) => (
             <Card key={label} variant={variant} interactive>
-              <CardContent className='py-5 px-6'>
+              <CardContent className='py-6 px-7'>
                 <p className='text-sm text-slate-700'>{label}</p>
-                <p className='mt-1 text-xl font-semibold tracking-tight'>
+                <p className='mt-1 text-3xl font-semibold tracking-tight'>
                   {value}
                 </p>
               </CardContent>
@@ -143,82 +139,74 @@ const SummaryPage: FC = () => {
         </section>
       )}
 
-      {/* 2) Totales (superficie blanca) */}
-      {!isBusy && assets && liabilities && netWorth && (
-        <section className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
+      {/* 2) Secundarios: mismo dato, menor peso visual -- no compiten con el hero */}
+      {!isBusy && s && assets && liabilities && cashFlow && (
+        <section className='grid grid-cols-2 sm:grid-cols-4 gap-3'>
           {[
             {
-              label: 'Total en cuentas',
-              value: formatCurrency(
-                assets.total_assets[currency] || 0,
-                currency,
-              ),
-              variant: 'kpi-income' as const,
+              l: 'Ingresos',
+              v: s.total_income,
+              tone: 'text-emerald-700' as const,
             },
             {
-              label: 'Total deudas',
-              value: formatCurrency(
-                liabilities.total_liabilities[currency] || 0,
-                currency,
-              ),
-              variant: 'kpi-income' as const,
+              l: 'Gastos',
+              v: s.total_expense,
+              tone: 'text-rose-700' as const,
             },
             {
-              label: 'Patrimonio neto',
-              value: formatCurrency(
-                netWorth[currency]?.net_worth || 0,
-                currency,
-              ),
-              variant: 'kpi-income' as const,
+              l: 'Total en cuentas',
+              v: assets.total_assets[currency] || 0,
+              tone: 'text-emerald-700' as const,
+              href: '/saving-accounts',
             },
-          ].map(({ label, value, variant }) => (
-            <Card key={label} variant={variant}>
-              <CardContent className='p-5'>
-                <p className='text-sm text-muted-foreground'>{label}</p>
-                <p className='text-xl font-semibold'>{value}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </section>
-      )}
-
-      {/* 3) Flujo de caja */}
-      {!isBusy && cashFlow && (
-        <section className='grid grid-cols-1 sm:grid-cols-4 gap-4'>
-          {[
+            {
+              l: 'Total deudas',
+              v: liabilities.total_liabilities[currency] || 0,
+              tone: 'text-rose-700' as const,
+              href: '/debts',
+            },
             {
               l: 'Ingresos de caja',
               v: cashFlow[currency]?.total_income || 0,
-              variant: 'panel-warning' as const,
+              tone: 'text-emerald-700' as const,
             },
             {
               l: 'Egresos de caja',
               v: cashFlow[currency]?.total_expense || 0,
-              variant: 'panel-warning' as const,
+              tone: 'text-rose-700' as const,
             },
             {
               l: 'Pagos de deudas',
               v: cashFlow[currency]?.total_debt_payments || 0,
-              variant: 'panel-warning' as const,
+              tone: 'text-amber-700' as const,
             },
             {
               l: 'Flujo neto',
               v: cashFlow[currency]?.net_cash_flow || 0,
-              variant:
+              tone:
                 (cashFlow[currency]?.net_cash_flow || 0) >= 0
-                  ? ('panel-positive' as const)
-                  : ('panel-negative' as const),
+                  ? ('text-emerald-700' as const)
+                  : ('text-rose-700' as const),
             },
-          ].map(({ l, v, variant }) => (
-            <Card key={l} variant={variant}>
-              <CardContent className='p-5'>
-                <p className='text-sm text-slate-700'>{l}</p>
-                <p className='text-xl font-semibold'>
-                  {formatCurrency(v, currency)}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+          ].map(({ l, v, tone, href }) => {
+            const card = (
+              <Card variant='surface' interactive={!!href}>
+                <CardContent className='p-4'>
+                  <p className='text-xs text-muted-foreground'>{l}</p>
+                  <p className={`mt-0.5 text-base font-semibold ${tone}`}>
+                    {formatCurrency(v, currency)}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+            return href ? (
+              <Link key={l} href={href} className='block'>
+                {card}
+              </Link>
+            ) : (
+              <div key={l}>{card}</div>
+            );
+          })}
         </section>
       )}
 

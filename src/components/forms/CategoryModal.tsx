@@ -1,12 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogClose,
-} from '@/components/ui/dialog';
+import { DialogClose } from '@/components/ui/dialog';
+import { FormModal } from '@/components/ui/form-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -20,7 +16,6 @@ import { toast } from 'sonner';
 import api from '@/lib/api';
 import axios from 'axios';
 import InfoHint from '@/components/ui/info-hint';
-import { cn } from '@/lib/utils';
 
 type Props = {
   open: boolean;
@@ -108,35 +103,41 @@ export default function CategoryModal({
     }
   };
 
-  // 🎨 Tintes coherentes con el sistema
-  const panelTint = 'bg-[hsl(var(--accent))]';
-  const headerFooterTint = 'bg-[hsl(var(--muted))]';
-  const ctaClass = 'bg-primary text-primary-foreground hover:bg-primary/90';
-
   return (
-    <Dialog open={open} onOpenChange={(o) => !loading && onOpenChange(o)}>
-      <DialogContent
-        size='md'
-        className={cn(
-          // layout: header | body scroll | footer
-          'grid grid-rows-[auto,1fr,auto] max-h-[92dvh]',
-          'w-[min(100vw-1rem,520px)] rounded-2xl overflow-hidden',
-          panelTint,
-        )}
-      >
-        {/* HEADER */}
-        <header className={cn('border-b px-4 py-3', headerFooterTint)}>
-          <DialogTitle className='text-base sm:text-lg font-semibold'>
-            {category ? 'Editar categoría' : 'Nueva categoría'}
-          </DialogTitle>
-        </header>
-
-        {/* BODY */}
-        <section
-          className='overflow-y-auto overscroll-contain px-4 py-4'
-          aria-busy={loading}
-        >
-          <div className='space-y-4'>
+    <FormModal
+      open={open}
+      onOpenChange={(o) => !loading && onOpenChange(o)}
+      size='md'
+      className='w-[min(100vw-1rem,520px)]'
+      title={category ? 'Editar categoría' : 'Nueva categoría'}
+      footer={
+        <>
+          <DialogClose asChild>
+            <Button
+              className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+          </DialogClose>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading}
+            aria-disabled={loading}
+            className='sm:min-w-[160px]'
+          >
+            {loading
+              ? category
+                ? 'Actualizando…'
+                : 'Creando…'
+              : category
+              ? 'Actualizar'
+              : 'Crear'}
+          </Button>
+        </>
+      }
+    >
+      <div className='space-y-4' aria-busy={loading}>
             {/* Nombre */}
             <div className='space-y-1'>
               <div className='flex items-center gap-2'>
@@ -189,37 +190,7 @@ export default function CategoryModal({
               ⚠️ Nota: No puedes cambiar el tipo si ya existen transacciones
               asociadas a esta categoría.
             </p>
-          </div>
-        </section>
-
-        {/* FOOTER */}
-        <footer className={cn('border-t px-4 py-3', headerFooterTint)}>
-          <div className='flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
-            <DialogClose asChild>
-              <Button
-                className='bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 sm:min-w-[140px]'
-                disabled={loading}
-              >
-                Cancelar
-              </Button>
-            </DialogClose>
-            <Button
-              onClick={handleSubmit}
-              disabled={loading}
-              aria-disabled={loading}
-              className={cn('sm:min-w-[160px]', ctaClass)}
-            >
-              {loading
-                ? category
-                  ? 'Actualizando…'
-                  : 'Creando…'
-                : category
-                ? 'Actualizar'
-                : 'Crear'}
-            </Button>
-          </div>
-        </footer>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormModal>
   );
 }

@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/ui/page-header';
+import TransactionsTabs from '@/components/layout/TransactionsTabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { toast } from 'sonner';
@@ -200,30 +202,28 @@ export default function RecurringPage() {
 
   return (
     <div className='space-y-6'>
-      <div className='flex flex-col gap-3 sm:gap-4 md:flex-row md:items-end md:justify-between'>
-        <div className='min-w-0'>
-          <h1 className='text-2xl font-semibold'>Movimientos recurrentes</h1>
-          <p className='text-sm text-muted-foreground'>
-            Nómina, arriendo, suscripciones: se registran solos según su frecuencia.
-          </p>
-        </div>
-
-        <div className='flex gap-2 flex-wrap'>
-          <Button variant='soft-slate' onClick={handleRun} disabled={running || loading}>
-            <Repeat className='h-4 w-4 mr-1' />
-            {running ? 'Registrando…' : 'Registrar pendientes'}
-          </Button>
-          <Button
-            variant='soft-sky'
-            onClick={() => {
-              setEditing(null);
-              setModalOpen(true);
-            }}
-          >
-            + Nueva recurrencia
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title='Movimientos recurrentes'
+        subtitle='Nómina, arriendo, suscripciones: se registran solos según su frecuencia.'
+        actions={
+          <div className='flex gap-2 flex-wrap'>
+            <Button variant='soft-slate' onClick={handleRun} disabled={running || loading}>
+              <Repeat className='h-4 w-4 mr-1' />
+              {running ? 'Registrando…' : 'Registrar pendientes'}
+            </Button>
+            <Button
+              variant='soft-sky'
+              onClick={() => {
+                setEditing(null);
+                setModalOpen(true);
+              }}
+            >
+              + Nueva recurrencia
+            </Button>
+          </div>
+        }
+      />
+      <TransactionsTabs />
 
       {loading ? (
         <div className='space-y-2'>
