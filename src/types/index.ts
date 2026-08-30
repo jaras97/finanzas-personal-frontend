@@ -73,6 +73,18 @@ export type Debt = {
   status: "active" | "closed";
   transactions_count?: number;
   kind: DebtKind;
+  credit_limit?: number | null;
+  statement_day?: number | null;
+  payment_due_days?: number | null;
+  minimum_payment_percent?: number | null;
+};
+
+export type DebtStatement = {
+  next_statement_date: string; // ISO date
+  payment_due_date: string; // ISO date
+  current_period_charges: number;
+  minimum_payment_estimate: number | null;
+  available_credit: number | null;
 };
 
 export interface DebtTransaction {

@@ -34,6 +34,10 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined); // ← ahora Date
   const [currency, setCurrency] = useState<currencyType>('COP');
   const [kind, setKind] = useState<'loan' | 'credit_card'>('loan');
+  const [creditLimit, setCreditLimit] = useState('');
+  const [statementDay, setStatementDay] = useState('');
+  const [paymentDueDays, setPaymentDueDays] = useState('');
+  const [minPaymentPercent, setMinPaymentPercent] = useState('');
   const { currencies } = useCurrencies();
   const [saving, setSaving] = useState(false);
 
@@ -57,6 +61,10 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
     setDueDate(undefined);
     setCurrency('COP');
     setKind('loan');
+    setCreditLimit('');
+    setStatementDay('');
+    setPaymentDueDays('');
+    setMinPaymentPercent('');
   };
 
   // Evita pasar objetos al toast cuando el backend responde 422
@@ -100,6 +108,14 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
       return;
     }
 
+    if (kind === 'credit_card' && statementDay) {
+      const day = parseInt(statementDay, 10);
+      if (isNaN(day) || day < 1 || day > 28) {
+        toast.error('El día de corte debe estar entre 1 y 28');
+        return;
+      }
+    }
+
     const payload = {
       name: cleanedName,
       total_amount: amount,
@@ -107,6 +123,12 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
       due_date: dueDate ? toLocalYMD(dueDate) : null, // ← string o null
       currency,
       kind,
+      ...(kind === 'credit_card' && {
+        credit_limit: creditLimit ? parseNumber(creditLimit) : null,
+        statement_day: statementDay ? parseInt(statementDay, 10) : null,
+        payment_due_days: paymentDueDays ? parseInt(paymentDueDays, 10) : null,
+        minimum_payment_percent: minPaymentPercent ? parseNumber(minPaymentPercent) : null,
+      }),
     };
 
     setSaving(true);
@@ -305,6 +327,79 @@ export default function NewDebtModal({ open, onOpenChange, onCreated }: Props) {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Ciclo de facturación (solo tarjetas) */}
+            {kind === 'credit_card' && (
+              <div className='space-y-4 rounded-lg border border-slate-200 p-3'>
+                <div className='flex items-center gap-2'>
+                  <span className='text-sm font-medium'>
+                    Ciclo de facturación (opcional)
+                  </span>
+                  <InfoHint side='top'>
+                    Completa esto para ver cupo disponible, fecha de pago y pago mínimo
+                    estimado. Puedes dejarlo en blanco y configurarlo después editando la
+                    tarjeta.
+                  </InfoHint>
+                </div>
+
+                <div className='space-y-1'>
+                  <label className='text-sm font-medium'>Cupo total</label>
+                  <NumericFormat
+                    value={creditLimit}
+                    onValueChange={({ value }) => setCreditLimit(value)}
+                    thousandSeparator='.'
+                    decimalSeparator=','
+                    allowNegative={false}
+                    decimalScale={2}
+                    inputMode='decimal'
+                    customInput={Input}
+                    disabled={saving}
+                    className='bg-white'
+                  />
+                </div>
+
+                <div className='grid grid-cols-2 gap-3'>
+                  <div className='space-y-1'>
+                    <label className='text-sm font-medium'>Día de corte (1-28)</label>
+                    <Input
+                      type='number'
+                      min={1}
+                      max={28}
+                      value={statementDay}
+                      onChange={(e) => setStatementDay(e.target.value)}
+                      disabled={saving}
+                      className='bg-white'
+                    />
+                  </div>
+                  <div className='space-y-1'>
+                    <label className='text-sm font-medium'>Días para pagar</label>
+                    <Input
+                      type='number'
+                      min={1}
+                      value={paymentDueDays}
+                      onChange={(e) => setPaymentDueDays(e.target.value)}
+                      disabled={saving}
+                      className='bg-white'
+                    />
+                  </div>
+                </div>
+
+                <div className='space-y-1'>
+                  <label className='text-sm font-medium'>Pago mínimo (% del saldo)</label>
+                  <NumericFormat
+                    value={minPaymentPercent}
+                    onValueChange={({ value }) => setMinPaymentPercent(value)}
+                    decimalSeparator=','
+                    allowNegative={false}
+                    decimalScale={2}
+                    inputMode='decimal'
+                    customInput={Input}
+                    disabled={saving}
+                    className='bg-white'
+                  />
+                </div>
+              </div>
+            )}
       </div>
     </FormModal>
   );

@@ -8,6 +8,7 @@ import { formatCurrency } from '@/lib/format';
 import { buttonColorRole } from '@/lib/colorRoles';
 import type { Debt } from '@/types';
 import { format } from 'date-fns';
+import CreditCardCycleInfo from './CreditCardCycleInfo';
 
 type Tone = 'loan' | 'credit';
 
@@ -148,6 +149,8 @@ export default function DebtsSection({
                     </p>
                   )}
                 </div>
+
+                {!closed && <CreditCardCycleInfo debt={debt} />}
 
                 <div className='flex flex-wrap gap-2 mt-2'>
                   {/* comunes -- el color es por acción (info/neutro/positivo),
