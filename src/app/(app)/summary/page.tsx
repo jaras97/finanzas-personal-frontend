@@ -7,8 +7,10 @@ import { useAssetsSummary } from '@/hooks/useAssetsSummary';
 import { useLiabilitiesSummary } from '@/hooks/useLiabilitiesSummary';
 import { useNetWorthSummary } from '@/hooks/useNetWorthSummary';
 import { useCashFlowSummary } from '@/hooks/useCashFlowSummary';
+import { useBudgets } from '@/hooks/useBudgets';
 
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { AlertCircle } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
@@ -20,6 +22,8 @@ import { DonutByCategory } from '@/components/chart/DonutByCategory';
 import type { FC } from 'react';
 import { SummarySkeleton } from '@/components/skeletons/SummarySkeleton';
 import { currencyType } from '@/types';
+import { progressTone } from '@/lib/budgetDisplay';
+import { cn } from '@/lib/utils';
 
 const SummaryPage: FC = () => {
   const today = new Date();
@@ -45,6 +49,7 @@ const SummaryPage: FC = () => {
     filters.dateRange.from,
     filters.dateRange.to,
   );
+  const { items: budgets, loading: lB } = useBudgets();
 
   const hour = today.getHours();
   const greeting =
@@ -70,6 +75,18 @@ const SummaryPage: FC = () => {
   }, [availableCurrencies, currency]);
 
   const s = summary?.[currency];
+
+  // Presupuestos son siempre del mes en curso (no del rango de fechas
+  // elegido arriba) y, como el resto de esta pantalla, se leen en la
+  // moneda seleccionada -- nunca se fusionan montos entre monedas.
+  const currencyBudgets = useMemo(
+    () => budgets.filter((b) => b.currency === currency),
+    [budgets, currency],
+  );
+  const overLimitBudgets = useMemo(
+    () => currencyBudgets.filter((b) => b.percentage >= 100),
+    [currencyBudgets],
+  );
 
   return (
     <div className='space-y-6' aria-busy={isBusy}>
@@ -207,6 +224,68 @@ const SummaryPage: FC = () => {
               <div key={l}>{card}</div>
             );
           })}
+        </section>
+      )}
+
+      {/* 3) Presupuestos del mes -- solo si el usuario tiene alguno en esta moneda */}
+      {!isBusy && !lB && currencyBudgets.length > 0 && (
+        <section className='space-y-3'>
+          {overLimitBudgets.length > 0 && (
+            <div className='p-4 rounded-xl bg-rose-50 text-rose-700 text-center font-medium'>
+              {overLimitBudgets.length === 1
+                ? `Superaste el presupuesto de ${overLimitBudgets[0].category_name} este mes (${currency}).`
+                : `Superaste el presupuesto de ${overLimitBudgets.length} categorías este mes (${currency}): ${overLimitBudgets
+                    .map((b) => b.category_name)
+                    .join(', ')}.`}
+            </div>
+          )}
+
+          <Card variant='surface'>
+            <CardContent className='p-4 space-y-4'>
+              <div className='flex items-center justify-between'>
+                <h3 className='text-sm font-medium text-muted-foreground'>
+                  Presupuestos del mes ({currency})
+                </h3>
+                <Link
+                  href='/budgets'
+                  className='text-xs font-medium text-sky-700 hover:underline'
+                >
+                  Ver todos
+                </Link>
+              </div>
+
+              <div className='space-y-3'>
+                {currencyBudgets.map((b) => {
+                  const tone = progressTone(b.percentage);
+                  const widthPct = Math.min(b.percentage, 100);
+                  return (
+                    <div key={b.id} className='space-y-1.5'>
+                      <div className='flex items-center justify-between gap-2 text-sm'>
+                        <div className='flex items-center gap-2 min-w-0'>
+                          <span className='font-medium truncate'>
+                            {b.category_name}
+                          </span>
+                          <Badge variant='outline' className={cn('w-fit', tone.badge)}>
+                            {b.percentage.toFixed(0)}%
+                          </Badge>
+                        </div>
+                        <span className='text-muted-foreground tabular-nums shrink-0'>
+                          {formatCurrency(b.spent, b.currency)} de{' '}
+                          {formatCurrency(b.amount, b.currency)}
+                        </span>
+                      </div>
+                      <div className='h-1.5 w-full rounded-full bg-muted overflow-hidden'>
+                        <div
+                          className={cn('h-full rounded-full transition-all', tone.bar)}
+                          style={{ width: `${widthPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
         </section>
       )}
 
