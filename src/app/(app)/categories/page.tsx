@@ -12,6 +12,7 @@ import CategoryModal from '@/components/forms/CategoryModal';
 import axios, { AxiosError } from 'axios';
 import { Category, currencyType } from '@/types';
 import ConfirmCategoryStatusModal from '@/components/forms/ConfirmCategoryStatusModal';
+import CategoriesTabs from '@/components/layout/CategoriesTabs';
 
 import { useSummary } from '@/hooks/useSummary';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
@@ -224,6 +225,7 @@ export default function CategoriesPage() {
           )
         }
       />
+      <CategoriesTabs />
 
       {/* KPIs: top gasto / top ingreso, en cualquier moneda que el usuario use */}
       {sLoading ? (

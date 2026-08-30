@@ -147,6 +147,18 @@ export type RecurringRunResult = {
   total_created: number;
 };
 
+export type Budget = {
+  id: number;
+  category_id: number;
+  category_name: string;
+  currency: currencyType;
+  amount: number;
+  effective_from: string; // YYYY-MM-DD
+  spent: number;
+  percentage: number;
+  created_at: string;
+};
+
 export type CurrentUser = {
   user_id: string;
   email: string;
