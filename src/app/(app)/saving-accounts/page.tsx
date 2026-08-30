@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useSavingAccounts } from '@/hooks/useSavingAccounts';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
@@ -201,6 +202,9 @@ export default function SavingAccountsPage() {
             <SavingAccountsHeaderButtonsSkeleton />
           ) : (
             <div className='flex gap-2 flex-wrap'>
+              <Button asChild variant={'soft-slate'}>
+                <Link href='/import'>Importar CSV</Link>
+              </Button>
               <Button
                 onClick={() => setTransferOpen(true)}
                 variant={'soft-emerald'}

@@ -159,6 +159,55 @@ export type Budget = {
   created_at: string;
 };
 
+export type ImportColumnMapping = {
+  date: number;
+  description: number;
+  amount: number;
+};
+
+export type ImportProfile = {
+  id: number;
+  saving_account_id: number;
+  column_mapping: ImportColumnMapping;
+  date_format: string;
+  has_header: boolean;
+};
+
+export type ImportInspectResult = {
+  mode: 'inspect';
+  sample_rows: string[][];
+  column_count: number;
+  saved_profile: ImportProfile | null;
+};
+
+export type ImportRowPreview = {
+  row_index: number;
+  date: string | null;
+  description: string;
+  amount: number | null;
+  type: 'income' | 'expense' | null;
+  category_id: number;
+  category_name: string;
+  is_duplicate: boolean;
+  include: boolean;
+  error: string | null;
+};
+
+export type ImportReviewResult = {
+  mode: 'review';
+  rows: ImportRowPreview[];
+  total_rows: number;
+  duplicate_count: number;
+  error_count: number;
+};
+
+export type ImportPreviewResult = ImportInspectResult | ImportReviewResult;
+
+export type ImportConfirmResult = {
+  created: number;
+  skipped: number;
+};
+
 export type CurrentUser = {
   user_id: string;
   email: string;

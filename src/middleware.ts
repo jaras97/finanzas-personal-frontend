@@ -18,6 +18,7 @@ export async function middleware(request: NextRequest) {
     '/debts',
     '/recurring',
     '/budgets',
+    '/import',
     '/account',
     // El middleware solo verifica que haya sesión válida; que además sea
     // admin lo valida el backend (403) y la propia página al montar.
@@ -86,6 +87,7 @@ export const config = {
     '/debts/:path*',
     '/recurring/:path*',
     '/budgets/:path*',
+    '/import/:path*',
     '/account/:path*',
     '/admin/:path*',
      '/auth/login',
