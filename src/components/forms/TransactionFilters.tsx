@@ -14,10 +14,6 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 
-interface Props {
-  onFilterChange: (filters: Filters) => void;
-}
-
 export interface Filters {
   startDate?: string; // ISO
   endDate?: string; // ISO
@@ -26,25 +22,28 @@ export interface Filters {
   source?: 'all' | 'credit_card' | 'account';
 }
 
+/** Mes actual -- mismo default que usan las tarjetas KPI de arriba, para que
+ *  "sin filtros tocados" signifique lo mismo en toda la pantalla. */
+export function defaultTransactionFilters(): Filters {
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), 1);
+  return { startDate: start.toISOString(), endDate: today.toISOString() };
+}
+
+interface Props {
+  /** Filtros realmente activos -- este componente no guarda su propio estado
+   *  "en borrador": cada cambio se aplica de inmediato. */
+  value: Filters;
+  onChange: (filters: Filters) => void;
+}
+
 type Category = {
   id: number;
   name: string;
 };
 
-export default function TransactionFilters({ onFilterChange }: Props) {
-  // Rango por defecto: mes actual → hoy
-  const [range, setRange] = useState<{ startDate: Date; endDate: Date }>(() => {
-    const today = new Date();
-    const start = new Date(today.getFullYear(), today.getMonth(), 1);
-    return { startDate: start, endDate: today };
-  });
-
-  const [type, setType] = useState<string>('');
+export default function TransactionFilters({ value, onChange }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [categoryId, setCategoryId] = useState<string>('');
-  const [source, setSource] = useState<'all' | 'credit_card' | 'account'>(
-    'all',
-  );
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -58,104 +57,98 @@ export default function TransactionFilters({ onFilterChange }: Props) {
     fetchCategories();
   }, []);
 
-  const applyFilters = () => {
-    const filters: Filters = {};
-    if (range?.startDate) filters.startDate = range.startDate.toISOString();
-    if (range?.endDate) filters.endDate = range.endDate.toISOString();
-    if (type) filters.type = type as 'income' | 'expense';
-    if (categoryId) filters.categoryId = parseInt(categoryId, 10);
-    if (source && source !== 'all') filters.source = source;
-    onFilterChange(filters);
-  };
-
-  const clearFilters = () => {
-    const today = new Date();
-    const start = new Date(today.getFullYear(), today.getMonth(), 1);
-    setRange({ startDate: start, endDate: today });
-    setType('');
-    setCategoryId('');
-    setSource('all');
-    onFilterChange({});
+  const range = {
+    startDate: value.startDate ? new Date(value.startDate) : new Date(),
+    endDate: value.endDate ? new Date(value.endDate) : new Date(),
   };
 
   return (
-    <div className='space-y-4'>
-      {/* Panel con leve realce */}
-      <div className={cn('rounded-xl border p-3', 'bg-[hsl(var(--accent))]')}>
-        <div className='grid grid-cols-1 md:grid-cols-14 gap-3 items-start'>
-          {/* Rango de fechas */}
-          <div className='min-w-0 md:col-span-5'>
-            <DateRangePicker
-              value={{ startDate: range.startDate, endDate: range.endDate }}
-              onChange={(r) => setRange(r)}
-            />
-          </div>
+    <div className={cn('rounded-xl border p-3', 'bg-[hsl(var(--accent))]')}>
+      <div className='grid grid-cols-1 md:grid-cols-14 gap-3 items-start'>
+        {/* Rango de fechas -- aplica solo (presets de un clic, o "Aplicar"
+            dentro del propio calendario para un rango personalizado) */}
+        <div className='min-w-0 md:col-span-5'>
+          <DateRangePicker
+            value={range}
+            onChange={(r) =>
+              onChange({
+                ...value,
+                startDate: r.startDate.toISOString(),
+                endDate: r.endDate.toISOString(),
+              })
+            }
+          />
+        </div>
 
-          {/* Tipo */}
-          <div className='min-w-0 md:col-span-3'>
-            <Select onValueChange={setType} value={type}>
-              <SelectTrigger className='w-full truncate'>
-                <SelectValue placeholder='Filtrar por tipo' />
-              </SelectTrigger>
-              <SelectContent className='z-[60] max-h-[50vh]'>
-                <SelectItem value='income'>Ingreso</SelectItem>
-                <SelectItem value='expense'>Egreso</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Tipo */}
+        <div className='min-w-0 md:col-span-3'>
+          <Select
+            value={value.type ?? ''}
+            onValueChange={(v) =>
+              onChange({ ...value, type: (v || undefined) as Filters['type'] })
+            }
+          >
+            <SelectTrigger className='w-full truncate'>
+              <SelectValue placeholder='Filtrar por tipo' />
+            </SelectTrigger>
+            <SelectContent className='z-[60] max-h-[50vh]'>
+              <SelectItem value='income'>Ingreso</SelectItem>
+              <SelectItem value='expense'>Egreso</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-          {/* Categoría */}
-          <div className='min-w-0 md:col-span-4'>
-            <Select onValueChange={setCategoryId} value={categoryId}>
-              <SelectTrigger className='w-full truncate'>
-                <SelectValue placeholder='Filtrar por categoría' />
-              </SelectTrigger>
-              <SelectContent className='z-[60] max-h-[50vh]'>
-                {categories.map((c) => (
-                  <SelectItem key={c.id} value={String(c.id)}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Categoría */}
+        <div className='min-w-0 md:col-span-4'>
+          <Select
+            value={value.categoryId ? String(value.categoryId) : ''}
+            onValueChange={(v) =>
+              onChange({
+                ...value,
+                categoryId: v ? parseInt(v, 10) : undefined,
+              })
+            }
+          >
+            <SelectTrigger className='w-full truncate'>
+              <SelectValue placeholder='Filtrar por categoría' />
+            </SelectTrigger>
+            <SelectContent className='z-[60] max-h-[50vh]'>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-          {/* Origen */}
-          <div className='min-w-0 md:col-span-2'>
-            <Select
-              onValueChange={(v) =>
-                setSource(v as 'all' | 'credit_card' | 'account')
-              }
-              value={source}
-            >
-              <SelectTrigger className='w-full truncate'>
-                <SelectValue placeholder='Filtrar por origen' />
-              </SelectTrigger>
-              <SelectContent className='z-[60]'>
-                <SelectItem value='all'>Todos</SelectItem>
-                <SelectItem value='account'>Cuentas</SelectItem>
-                <SelectItem value='credit_card'>Tarjetas de crédito</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Origen */}
+        <div className='min-w-0 md:col-span-2'>
+          <Select
+            value={value.source ?? 'all'}
+            onValueChange={(v) =>
+              onChange({ ...value, source: v as Filters['source'] })
+            }
+          >
+            <SelectTrigger className='w-full truncate'>
+              <SelectValue placeholder='Filtrar por origen' />
+            </SelectTrigger>
+            <SelectContent className='z-[60]'>
+              <SelectItem value='all'>Todos</SelectItem>
+              <SelectItem value='account'>Cuentas</SelectItem>
+              <SelectItem value='credit_card'>Tarjetas de crédito</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {/* Acciones */}
-      <div className='flex flex-wrap gap-2 justify-end'>
+      <div className='mt-3 flex justify-end'>
         <Button
           variant='outline'
-          onClick={clearFilters}
+          onClick={() => onChange(defaultTransactionFilters())}
           className='font-semibold'
         >
-          Limpiar
-        </Button>
-        <Button
-          variant='soft-sky'
-          onClick={applyFilters}
-          className='font-semibold'
-        >
-          Aplicar filtros
+          Limpiar filtros
         </Button>
       </div>
     </div>

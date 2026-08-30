@@ -67,6 +67,14 @@ export function DateRangePicker({
     }
   };
 
+  // Un preset es justamente eso: un atajo de un clic. Si además hubiera que
+  // confirmar con "Aplicar", dejaría de ahorrar nada.
+  const handlePreset = (range: { from: Date; to: Date }) => {
+    setTempRange(range);
+    onChange({ startDate: range.from, endDate: range.to });
+    setOpen(false);
+  };
+
   const handleClear = () => {
     const from = startOfMonth(new Date());
     const to = new Date();
@@ -127,11 +135,16 @@ export function DateRangePicker({
           'z-[140]', // 👈 por encima del modal
           'p-0 rounded-2xl shadow-2xl w-[min(92vw,720px)]',
           'bg-[hsl(var(--card))] text-[hsl(var(--card-foreground))] border-[hsl(var(--border))]',
+          // Header y footer siempre visibles; solo el medio (presets +
+          // calendario) hace scroll. Sin esto, en laptops de pantalla corta
+          // (768px de alto y menos) el calendario de 2 meses empuja el botón
+          // "Aplicar" fuera de la pantalla, sin forma de alcanzarlo.
+          'flex flex-col max-h-[var(--radix-popover-content-available-height)]',
         )}
         style={{ backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
       >
-        {/* Header */}
-        <div className='flex items-center justify-between px-4 py-3 border-b border-[hsl(var(--border))]'>
+        {/* Header (fijo) */}
+        <div className='shrink-0 flex items-center justify-between px-4 py-3 border-b border-[hsl(var(--border))]'>
           <div className='flex items-center gap-2'>
             <CalendarIcon className='h-4 w-4 opacity-70' />
             <span className='text-sm font-medium'>Rango de fechas</span>
@@ -146,40 +159,43 @@ export function DateRangePicker({
           </Button>
         </div>
 
-        {/* Presets */}
-        <div className='px-4 pt-3'>
-          <div className='flex flex-wrap gap-2'>
-            {presets.map((p) => (
-              <button
-                key={p.label}
-                type='button'
-                onClick={() => setTempRange(p.range)}
-                className={cn(
-                  'px-3 py-1.5 rounded-md text-sm',
-                  'bg-[hsl(var(--accent))] hover:bg-[hsl(var(--muted))]',
-                  'border border-[hsl(var(--border))]',
-                )}
-              >
-                {p.label}
-              </button>
-            ))}
+        {/* Medio: presets + calendario (con scroll si no caben) */}
+        <div className='min-h-0 overflow-y-auto'>
+          {/* Presets -- un clic, aplican de inmediato y cierran el popover */}
+          <div className='px-4 pt-3'>
+            <div className='flex flex-wrap gap-2'>
+              {presets.map((p) => (
+                <button
+                  key={p.label}
+                  type='button'
+                  onClick={() => handlePreset(p.range)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-md text-sm',
+                    'bg-[hsl(var(--accent))] hover:bg-[hsl(var(--muted))]',
+                    'border border-[hsl(var(--border))]',
+                  )}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Calendario (genérico en modo range) -- solo para rango personalizado */}
+          <div className='p-3'>
+            <Calendar
+              mode='range'
+              selected={tempRange}
+              onSelect={setTempRange}
+              numberOfMonths={monthsToShow}
+              initialFocus
+            />
           </div>
         </div>
 
-        {/* Calendario (genérico en modo range) */}
-        <div className='p-3'>
-          <Calendar
-            mode='range'
-            selected={tempRange}
-            onSelect={setTempRange}
-            numberOfMonths={monthsToShow}
-            initialFocus
-          />
-        </div>
-
-        {/* Footer */}
+        {/* Footer (fijo) */}
         <div
-          className='flex items-center justify-between gap-3 px-4 py-3
+          className='shrink-0 flex items-center justify-between gap-3 px-4 py-3
           border-t border-[hsl(var(--border))] bg-[hsl(var(--accent))] rounded-b-2xl'
         >
           <div className='text-xs text-muted-foreground'>

@@ -102,7 +102,8 @@ export interface TransactionWithCategoryRead {
   debt_id?: number | null;
   debt_name?: string | null;
   debt?: Debt | null;
-  source_type?: string | null; 
+  source_type?: string | null;
+  transfer_group_id?: string | null;
   reversal_note?: string | null;
 }
 

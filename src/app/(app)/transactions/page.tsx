@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTransactions } from '@/hooks/useTransactions';
 import TransactionFilters, {
   Filters,
+  defaultTransactionFilters,
 } from '@/components/forms/TransactionFilters';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +36,14 @@ import { Input } from '@/components/ui/input';
 /* Tabla reusable (headless) */
 import { DataTable } from '@/components/ui/data-table';
 import { buildTransactionColumns } from './columns';
+import {
+  mergeTransferPairs,
+  isTransferLeg,
+  transferDisplayDescription,
+  transferAmountDisplay,
+  getStatusLabel,
+  type DisplayTransaction,
+} from '@/lib/transactionDisplay';
 
 /* Summary por rango (solo fecha) para KPIs */
 import { useSummary } from '@/hooks/useSummary';
@@ -85,8 +94,29 @@ function parseMaybeDate(v: unknown): Date | undefined {
 }
 
 export default function TransactionsPage() {
-  const [filters, setFilters] = useState<Filters>({});
+  // Mismo default (mes actual) que usan las tarjetas KPI de esta misma
+  // pantalla -- antes la tabla arrancaba sin ningún límite de fecha (todo el
+  // historial) mientras las KPI ya mostraban "mes actual", una contradicción
+  // visible desde el primer render.
+  const [filters, setFilters] = useState<Filters>(defaultTransactionFilters);
   const [page, setPage] = useState(1);
+
+  const hasActiveFilters = useMemo(() => {
+    const d = defaultTransactionFilters();
+    // Comparación por día calendario, no por timestamp exacto: el default
+    // recalcula "ahora" en cada llamada, así que comparar el ISO completo
+    // (con segundos) siempre daría distinto y marcaría el filtro como
+    // "activo" aunque el usuario no haya tocado nada.
+    const sameDay =
+      dayKey(parseMaybeDate(filters.startDate)) === dayKey(parseMaybeDate(d.startDate)) &&
+      dayKey(parseMaybeDate(filters.endDate)) === dayKey(parseMaybeDate(d.endDate));
+    return (
+      !sameDay ||
+      !!filters.type ||
+      !!filters.categoryId ||
+      (!!filters.source && filters.source !== 'all')
+    );
+  }, [filters]);
 
   const { transactions, loading, refresh, totalPages } = useTransactions(
     filters,
@@ -202,6 +232,15 @@ export default function TransactionsPage() {
       return haystack.includes(q);
     });
   }, [transactions, search]);
+
+  // Una transferencia son 2 filas (pata de salida + pata de entrada) en los
+  // datos crudos, pero es UN solo movimiento para el usuario -- fusionarlas
+  // evita que se lea como "gasté Y también gané" en una lista que por lo
+  // demás es puro ingreso/gasto real.
+  const displayData = useMemo(
+    () => mergeTransferPairs(filteredData),
+    [filteredData],
+  );
 
   /* ====== KPIs por moneda con summary (SOLO cambia con RANGO DE FECHAS) ====== */
 
@@ -362,9 +401,12 @@ export default function TransactionsPage() {
             <div className='flex items-center gap-2'>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant='outline' className='gap-2'>
+                  <Button variant='outline' className='gap-2 relative'>
                     <Filter className='h-4 w-4' />
                     Filtros
+                    {hasActiveFilters && (
+                      <span className='absolute -right-1 -top-1 h-2 w-2 rounded-full bg-primary' />
+                    )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent
@@ -373,7 +415,8 @@ export default function TransactionsPage() {
                   className='p-3 w-[min(92vw,720px)]'
                 >
                   <TransactionFilters
-                    onFilterChange={(f) => {
+                    value={filters}
+                    onChange={(f) => {
                       setPage(1);
                       setFilters(f);
                     }}
@@ -419,7 +462,7 @@ export default function TransactionsPage() {
             <div className='px-4'>
               <DataTable
                 columns={allColumns as any}
-                data={filteredData}
+                data={displayData}
                 loading={loading}
                 density='normal'
                 rowSeparator='inset'
@@ -446,9 +489,12 @@ export default function TransactionsPage() {
           <div className='flex flex-wrap items-center gap-2'>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant='outline' size='sm' className='gap-2'>
+                <Button variant='outline' size='sm' className='gap-2 relative'>
                   <Filter className='h-4 w-4' />
                   Filtros
+                  {hasActiveFilters && (
+                    <span className='absolute -right-1 -top-1 h-2 w-2 rounded-full bg-primary' />
+                  )}
                 </Button>
               </PopoverTrigger>
               <PopoverContent
@@ -457,7 +503,8 @@ export default function TransactionsPage() {
                 className='p-3 w-[min(92vw,720px)]'
               >
                 <TransactionFilters
-                  onFilterChange={(f) => {
+                  value={filters}
+                  onChange={(f) => {
                     setPage(1);
                     setFilters(f);
                   }}
@@ -513,16 +560,17 @@ export default function TransactionsPage() {
         <TransactionsMobileSkeleton />
       ) : (
         <div className='md:hidden space-y-2'>
-          {filteredData.length === 0 ? (
+          {displayData.length === 0 ? (
             <Card variant='white'>
               <CardContent className='p-6 text-center text-muted-foreground'>
                 No hay transacciones con estos filtros.
               </CardContent>
             </Card>
           ) : (
-            filteredData.map((tx) => {
+            displayData.map((tx) => {
               const isCreditCardPurchase =
                 tx.source_type === 'credit_card_purchase';
+              const isTransfer = isTransferLeg(tx);
               const isEditable =
                 !tx.is_cancelled &&
                 !tx.reversed_transaction_id &&
@@ -546,11 +594,15 @@ export default function TransactionsPage() {
                             'font-medium',
                             isCreditCardPurchase
                               ? 'text-fuchsia-600'
+                              : isTransfer
+                              ? 'text-primary'
                               : typeColor(tx.type),
                           )}
                         >
                           {isCreditCardPurchase ? '💳 ' : ''}
-                          {tx.description}
+                          {isTransfer
+                            ? transferDisplayDescription(tx)
+                            : tx.description}
                         </p>
                         <p className='text-xs text-muted-foreground'>
                           <DateTimeDisplay isoDate={tx.date} />
@@ -561,12 +613,20 @@ export default function TransactionsPage() {
                           'text-right font-semibold',
                           isCreditCardPurchase
                             ? 'text-fuchsia-600'
+                            : isTransfer
+                            ? 'text-primary'
                             : typeColor(tx.type),
                         )}
                       >
-                        {tx.type === 'income' ? '+' : '-'}{' '}
-                        {tx.amount.toLocaleString()}{' '}
-                        {tx.saving_account?.currency ?? tx.debt?.currency ?? ''}
+                        {tx._pairedWith ? (
+                          transferAmountDisplay(tx, tx._pairedWith)
+                        ) : (
+                          <>
+                            {tx.type === 'income' ? '+' : '-'}{' '}
+                            {tx.amount.toLocaleString()}{' '}
+                            {tx.saving_account?.currency ?? tx.debt?.currency ?? ''}
+                          </>
+                        )}
                       </p>
                     </div>
 
@@ -687,7 +747,12 @@ export default function TransactionsPage() {
           if (!v) setTxToReverse(null);
           setReverseOpen(v);
         }}
-        description={txToReverse?.description}
+        description={
+          txToReverse &&
+          (isTransferLeg(txToReverse)
+            ? transferDisplayDescription(txToReverse)
+            : txToReverse.description)
+        }
         onConfirm={async (note) => {
           if (!txToReverse) return;
           try {

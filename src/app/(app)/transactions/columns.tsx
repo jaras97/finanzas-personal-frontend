@@ -10,16 +10,20 @@ import { TransactionWithCategoryRead } from '@/types';
 import {
   typeColor,
   isCreditCardPurchase,
+  isTransferLeg,
   getTxCurrency,
   getStatusLabel,
   categoryBadgeClasses,
+  transferDisplayDescription,
+  transferAmountDisplay,
+  type DisplayTransaction,
 } from '@/lib/transactionDisplay';
 
 export function buildTransactionColumns(opts: {
   onEdit: (tx: TransactionWithCategoryRead) => void;
   onReverse: (tx: TransactionWithCategoryRead) => void;
   onShowNote: (tx: TransactionWithCategoryRead) => void;
-}): ColumnDef<TransactionWithCategoryRead, unknown>[] {
+}): ColumnDef<DisplayTransaction, unknown>[] {
   const { onEdit, onReverse, onShowNote } = opts;
 
   return [
@@ -29,15 +33,16 @@ export function buildTransactionColumns(opts: {
       cell: ({ row }) => {
         const tx = row.original;
         const isCC = isCreditCardPurchase(tx);
+        const isTransfer = isTransferLeg(tx);
         return (
           <div
             className={cn(
               'font-medium',
-              isCC ? 'text-fuchsia-600' : typeColor(tx.type),
+              isCC ? 'text-fuchsia-600' : isTransfer ? 'text-primary' : typeColor(tx.type),
             )}
           >
             {isCC ? '💳 ' : ''}
-            {tx.description}
+            {isTransfer ? transferDisplayDescription(tx) : tx.description}
           </div>
         );
       },
@@ -123,15 +128,22 @@ export function buildTransactionColumns(opts: {
       cell: ({ row }) => {
         const tx = row.original;
         const isCC = isCreditCardPurchase(tx);
+        const isTransfer = isTransferLeg(tx);
         return (
           <div
             className={cn(
               'text-right font-semibold',
-              isCC ? 'text-fuchsia-600' : typeColor(tx.type),
+              isCC ? 'text-fuchsia-600' : isTransfer ? 'text-primary' : typeColor(tx.type),
             )}
           >
-            {tx.type === 'income' ? '+' : '-'} {tx.amount.toLocaleString()}{' '}
-            {getTxCurrency(tx)}
+            {tx._pairedWith ? (
+              transferAmountDisplay(tx, tx._pairedWith)
+            ) : (
+              <>
+                {tx.type === 'income' ? '+' : '-'} {tx.amount.toLocaleString()}{' '}
+                {getTxCurrency(tx)}
+              </>
+            )}
           </div>
         );
       },
