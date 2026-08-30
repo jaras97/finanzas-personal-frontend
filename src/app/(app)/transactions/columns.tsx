@@ -4,7 +4,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import DateTimeDisplay from '@/components/ui/DateTimeDisplay';
 import { Button } from '@/components/ui/button';
-import { StickyNote, Tag } from 'lucide-react';
+import { StickyNote, Tag, Paperclip } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TransactionWithCategoryRead } from '@/types';
 import {
@@ -24,8 +24,9 @@ export function buildTransactionColumns(opts: {
   onReverse: (tx: TransactionWithCategoryRead) => void;
   onShowNote: (tx: TransactionWithCategoryRead) => void;
   onCreateRule: (tx: TransactionWithCategoryRead) => void;
+  onAttachments: (tx: TransactionWithCategoryRead) => void;
 }): ColumnDef<DisplayTransaction, unknown>[] {
-  const { onEdit, onReverse, onShowNote, onCreateRule } = opts;
+  const { onEdit, onReverse, onShowNote, onCreateRule, onAttachments } = opts;
 
   return [
     {
@@ -178,8 +179,26 @@ export function buildTransactionColumns(opts: {
         const showNoteButton =
           tx.is_cancelled && !!(tx.reversal_note && tx.reversal_note.trim());
 
+        const attachmentCount = tx.attachments_count ?? 0;
+
         return (
           <div className='flex justify-end gap-2'>
+            <Button
+              size='sm'
+              variant={attachmentCount > 0 ? 'soft-emerald' : 'soft-slate'}
+              className='px-2'
+              onClick={() => onAttachments(tx)}
+              title={
+                attachmentCount > 0
+                  ? `${attachmentCount} comprobante${attachmentCount === 1 ? '' : 's'}`
+                  : 'Adjuntar comprobante'
+              }
+            >
+              <Paperclip className='w-4 h-4' />
+              {attachmentCount > 0 && (
+                <span className='ml-1 text-xs tabular-nums'>{attachmentCount}</span>
+              )}
+            </Button>
             {isEditable && tx.category && (
               <Button
                 size='sm'

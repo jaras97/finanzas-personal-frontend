@@ -117,6 +117,7 @@ export interface TransactionWithCategoryRead {
   source_type?: string | null;
   transfer_group_id?: string | null;
   reversal_note?: string | null;
+  attachments_count?: number;
 }
 
 export type ApiError = {
@@ -241,6 +242,16 @@ export type SavingGoal = {
   current_balance: number;
   progress_percent: number;
   monthly_savings_needed: number | null;
+};
+
+export type Attachment = {
+  id: number;
+  transaction_id: number;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  created_at: string;
+  url: string | null;
 };
 
 export type CurrentUser = {

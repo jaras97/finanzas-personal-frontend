@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTransactions } from '@/hooks/useTransactions';
+import { useSavingAccounts } from '@/hooks/useSavingAccounts';
 import TransactionFilters, {
   Filters,
   defaultTransactionFilters,
@@ -17,6 +18,8 @@ import { PageHeader } from '@/components/ui/page-header';
 import TransactionsTabs from '@/components/layout/TransactionsTabs';
 import EditTransactionModal from '@/components/forms/EditTransactionModal';
 import RuleModal from '@/components/forms/RuleModal';
+import AttachmentsModal from '@/components/forms/AttachmentsModal';
+import TransferBetweenAccountsModal from '@/components/forms/TransferBetweenAccountsModal';
 import { currencyType, TransactionWithCategoryRead } from '@/types';
 import { reverseTransaction } from '@/utils/reverseTransaction';
 import { Pagination } from '@/components/ui/pagination';
@@ -25,7 +28,14 @@ import ReverseTransactionDialog from '@/components/forms/ReverseTransactionDialo
 import { toast } from 'sonner';
 import { extractErrorMessage } from '@/lib/extractErrorMessage';
 import ReversalNoteDialog from '@/components/forms/ReversalNoteDialog';
-import { StickyNote, Filter, RotateCw, Search, Repeat } from 'lucide-react';
+import {
+  StickyNote,
+  Filter,
+  RotateCw,
+  Search,
+  Repeat,
+  ArrowLeftRight,
+} from 'lucide-react';
 import {
   Popover,
   PopoverContent,
@@ -134,6 +144,11 @@ export default function TransactionsPage() {
   const [noteTx, setNoteTx] = useState<TransactionWithCategoryRead | null>(
     null,
   );
+  const [attachmentsTx, setAttachmentsTx] =
+    useState<TransactionWithCategoryRead | null>(null);
+  const [transferOpen, setTransferOpen] = useState(false);
+  // Solo se usa para el modal de transferencia del toolbar.
+  const { accounts, refresh: refreshAccounts } = useSavingAccounts();
   const [ruleModalOpen, setRuleModalOpen] = useState(false);
   const [ruleInitial, setRuleInitial] = useState<
     { matchText?: string; categoryId?: number } | undefined
@@ -214,6 +229,7 @@ export default function TransactionsPage() {
           setRuleInitial({ matchText: tx.description ?? '', categoryId: tx.category?.id });
           setRuleModalOpen(true);
         },
+        onAttachments: (tx) => setAttachmentsTx(tx),
       }).map((c, i) => ({
         ...c,
         id: (c as any).id ?? (c as any).accessorKey ?? `col_${i}`,
@@ -457,6 +473,21 @@ export default function TransactionsPage() {
             >
               <Repeat className='h-4 w-4' />
               Repetir última
+            </Button>
+
+            {/* Una transferencia también se registra desde acá, no solo desde
+                Cuentas: el usuario que acaba de moverla en su banco viene a
+                Transacciones a anotarla, y desde que las patas se fusionan en
+                una fila, la lista ya "enseña" que las transferencias viven
+                aquí -- faltaba poder crearlas. */}
+            <Button
+              variant='soft-emerald'
+              className='gap-2'
+              onClick={() => setTransferOpen(true)}
+              disabled={loading}
+            >
+              <ArrowLeftRight className='h-4 w-4' />
+              Transferir
             </Button>
 
             <NewTransactionModal
@@ -741,6 +772,29 @@ export default function TransactionsPage() {
       )}
 
       {/* Modales / Diálogos */}
+      <TransferBetweenAccountsModal
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        accounts={accounts}
+        onTransferred={() => {
+          refresh();
+          // Los saldos cambiaron: el modal los muestra al elegir cuenta.
+          refreshAccounts();
+        }}
+      />
+
+      <AttachmentsModal
+        open={!!attachmentsTx}
+        onOpenChange={(o) => !o && setAttachmentsTx(null)}
+        transactionId={attachmentsTx?.id ?? null}
+        description={
+          attachmentsTx && isTransferLeg(attachmentsTx)
+            ? transferDisplayDescription(attachmentsTx)
+            : attachmentsTx?.description
+        }
+        onChanged={refresh}
+      />
+
       <RuleModal
         open={ruleModalOpen}
         onOpenChange={(o) => {

@@ -89,9 +89,12 @@ export default function AuthPanel() {
           <TabButton value='login'>Iniciar sesión</TabButton>
           <TabButton value='register'>Crear cuenta</TabButton>
           {/* ocupa dos columnas en >=sm para evitar apretujes */}
-          {/* <TabButton value='forgot' className='sm:col-span-2'>
+          {/* Habilitado el 2026-08-30: estaba comentado porque el backend no
+              enviaba correos. Ya envía (Resend) y el enlace aterriza en
+              /auth/reset-password. */}
+          <TabButton value='forgot' className='sm:col-span-2'>
             ¿Olvidaste contraseña?
-          </TabButton> */}
+          </TabButton>
         </div>
 
         {mode === 'login' && <LoginForm />}
