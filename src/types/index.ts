@@ -229,6 +229,20 @@ export type CategoryRule = {
   is_active: boolean;
 };
 
+export type SavingGoal = {
+  id: number;
+  saving_account_id: number;
+  account_name: string;
+  currency: currencyType;
+  name: string;
+  target_amount: number;
+  target_date: string | null; // YYYY-MM-DD
+  is_active: boolean;
+  current_balance: number;
+  progress_percent: number;
+  monthly_savings_needed: number | null;
+};
+
 export type CurrentUser = {
   user_id: string;
   email: string;

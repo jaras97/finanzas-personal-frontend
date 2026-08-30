@@ -22,6 +22,7 @@ import api from '@/lib/api';
 import axios from 'axios';
 import { cn } from '@/lib/utils';
 import AccountsSection from '@/components/accounts/AccountsSection';
+import SavingGoalsSection from '@/components/accounts/SavingGoalsSection';
 import KpiTotalsCard from '@/components/kpi/KpiTotalsCard';
 import {
   AccountsSectionSkeleton,
@@ -249,6 +250,9 @@ export default function SavingAccountsPage() {
           />
         </section>
       )}
+
+      {/* Metas de ahorro */}
+      <SavingGoalsSection />
 
       {/* 2) Efectivo */}
       {loading ? (
