@@ -35,6 +35,8 @@ import {
   Search,
   Repeat,
   ArrowLeftRight,
+  Paperclip,
+  Tag,
 } from 'lucide-react';
 import {
   Popover,
@@ -582,6 +584,17 @@ export default function TransactionsPage() {
               <span className='sr-only'>Repetir última</span>
             </Button>
 
+            <Button
+              variant='soft-emerald'
+              size='sm'
+              className='shrink-0'
+              onClick={() => setTransferOpen(true)}
+              disabled={loading}
+            >
+              <ArrowLeftRight className='h-4 w-4' />
+              <span className='sr-only'>Transferir entre cuentas</span>
+            </Button>
+
             <div className='ml-auto'>
               <NewTransactionModal
                 onCreated={refresh}
@@ -717,7 +730,46 @@ export default function TransactionsPage() {
                         )}
                     </div>
 
-                    <div className='mt-3 flex gap-2 justify-end'>
+                    <div className='mt-3 flex gap-2 justify-end flex-wrap'>
+                      {/* Mismas acciones que la tabla de escritorio: al vivir
+                          en dos árboles distintos, agregar una acción allá y
+                          olvidarla acá deja la función invisible en móvil,
+                          que es justo lo que pasó con comprobantes y reglas. */}
+                      <Button
+                        size='sm'
+                        variant={
+                          (tx.attachments_count ?? 0) > 0 ? 'soft-emerald' : 'soft-slate'
+                        }
+                        onClick={() => setAttachmentsTx(tx)}
+                        aria-label={
+                          (tx.attachments_count ?? 0) > 0
+                            ? `Ver ${tx.attachments_count} comprobantes`
+                            : 'Adjuntar comprobante'
+                        }
+                      >
+                        <Paperclip className='w-4 h-4' />
+                        {(tx.attachments_count ?? 0) > 0 && (
+                          <span className='ml-1 text-xs tabular-nums'>
+                            {tx.attachments_count}
+                          </span>
+                        )}
+                      </Button>
+                      {isEditable && tx.category && (
+                        <Button
+                          size='sm'
+                          variant='soft-slate'
+                          onClick={() => {
+                            setRuleInitial({
+                              matchText: tx.description ?? '',
+                              categoryId: tx.category?.id,
+                            });
+                            setRuleModalOpen(true);
+                          }}
+                          aria-label='Crear regla desde esta transacción'
+                        >
+                          <Tag className='w-4 h-4' />
+                        </Button>
+                      )}
                       {isEditable && (
                         <Button
                           size='sm'

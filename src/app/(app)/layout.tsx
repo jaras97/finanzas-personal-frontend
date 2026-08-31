@@ -135,10 +135,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <QuickAddFab />
 
       <main className='md:pl-64'>
-        {/* pb-20 en mobile: espacio de seguridad para que el FAB de registro
+        {/* pt-16 en mobile: el botón de menú es `fixed left-3 top-3` (40px),
+            así que con el pt-4 anterior el título de cada página quedaba
+            debajo y se leía cortado. Reserva el espacio en vez de dejar que
+            se solapen.
+            pb-20 en mobile: espacio de seguridad para que el FAB de registro
             rápido (fixed bottom-right) no tape el final del contenido justo
             antes del footer. */}
-        <div className='px-4 pt-4 pb-20 md:px-6 md:py-6'>{children}</div>
+        <div className='px-4 pt-16 pb-20 md:px-6 md:py-6'>{children}</div>
         <Footer />
       </main>
     </div>
