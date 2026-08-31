@@ -20,17 +20,22 @@ describe('formatCurrency', () => {
     expect(formatCurrency(1000)).toBe(formatCurrency(1000, 'COP'));
   });
 
-  // Los decimales los dicta ISO-4217 vía Intl, no la app: COP y USD llevan 2
-  // (COP los tiene aunque en la práctica nadie use centavos de peso), JPY no.
-  it('respeta los decimales que ISO-4217 asigna a cada moneda', () => {
-    expect(conservaCentavos(formatCurrency(1234.56, 'COP'))).toBe(true);
+  // Solo se afirma sobre las monedas cuyo número de decimales es estable
+  // entre versiones de CLDR. COP se omite a propósito: Node 22 lo formatea
+  // sin decimales y Node 23 con dos, así que fijar una expectativa acá haría
+  // que el test pasara o fallara según la máquina, sin que nada esté mal.
+  it('respeta los decimales que cada moneda tiene asignados', () => {
     expect(conservaCentavos(formatCurrency(1234.56, 'USD'))).toBe(true);
     expect(conservaCentavos(formatCurrency(1234.56, 'JPY'))).toBe(false);
   });
 
+  it('el default de COP varía según el runtime, pero forzarlo siempre manda', () => {
+    expect(conservaCentavos(formatCurrency(1234.56, 'COP', 2))).toBe(true);
+    expect(conservaCentavos(formatCurrency(1234.56, 'COP', 0))).toBe(false);
+  });
+
   it('permite forzar los decimales cuando hace falta', () => {
     expect(conservaCentavos(formatCurrency(1234.56, 'USD', 0))).toBe(false);
-    expect(conservaCentavos(formatCurrency(1234.56, 'COP', 2))).toBe(true);
   });
 
   it('no lanza con un código de moneda desconocido (cae a un formato simple)', () => {

@@ -2,9 +2,15 @@ import { currencyType } from "@/types";
 
 /**
  * Formatea un monto con el símbolo y los decimales correctos de su moneda
- * (vía Intl, que ya conoce esto para cualquier código ISO-4217 -- JPY sin
- * decimales, COP/USD/EUR con 2, etc.; COP los lleva porque ISO-4217 le
- * asigna 2 decimales, aunque en la práctica nadie use centavos de peso). Antes esto era un mapa manual de solo
+ * (vía Intl, que ya conoce esto para cualquier código ISO-4217 -- USD/EUR
+ * con 2, JPY sin decimales).
+ *
+ * ⚠️ COP es un caso variable: los decimales que le asigna Intl dependen de la
+ * versión de CLDR del runtime (Node 22 lo formatea sin decimales, Node 23 con
+ * dos), así que el mismo monto puede verse con o sin centavos según el
+ * navegador del usuario. Si en algún momento se quiere una salida uniforme,
+ * hay que pasar `decimalDigits` explícitamente en vez de confiar en el
+ * default. Antes esto era un mapa manual de solo
  * dos símbolos, ambos mostrados como "$" plano y siempre sin decimales
  * (ocultaba los centavos en USD/EUR). `decimalDigits` permite forzar un
  * valor puntual si hace falta; por defecto se deja que Intl decida.
