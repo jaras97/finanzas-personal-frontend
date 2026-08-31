@@ -86,6 +86,25 @@ El patrón "fecha a mediodía local en ISO" (`dateToIsoAtLocalNoon` / `toIsoAtLo
 - **Registro rápido (quick-add)** (desde 2026-08-28): FAB verde fijo (`QuickAddFab.tsx`, bottom-right) montado en `(app)/layout.tsx` — visible en cualquier pantalla protegida, no solo `/transactions`. Reusa `NewTransactionModal` con `hideTrigger` (oculta su botón "+ Nueva Transacción" propio) y `openSignal` para abrirlo en blanco. Al crear, hace `window.location.reload()` en vez de un refresh selectivo: no hay caché de datos compartida entre features que invalidar, así que recargar es la forma simple de garantizar que la pantalla actual (resumen, cuentas, deudas...) refleje el movimiento nuevo.
 - **Administración** (`(app)/admin`, solo admins, desde 2026-08-22): lista paginada de usuarios con buscador por correo (con debounce de 350ms), mostrando rol y estado de suscripción de cada uno. Acciones: gestionar suscripción (`ManageSubscriptionModal` → crear/renovar/eliminar, contra `/subscriptions/admin/*`) y promover/degradar admins (`PATCH /admin/users/{id}/role`). El enlace en el sidebar solo aparece si `useCurrentUser().isAdmin`; el acceso real lo hace cumplir el backend (403). El backend rechaza quitar el último admin, y la UI lo muestra como error normal.
 
+## Tests (desde 2026-08-31)
+
+**Vitest + React Testing Library** (`pnpm test`, `pnpm test:watch`, `pnpm test:coverage`). Se eligió Vitest sobre Jest por la fricción de configuración de este último con Next 15 + React 19. Los tests viven junto al código (`x.test.ts` al lado de `x.ts`), no en una carpeta aparte.
+
+Detalles de configuración que no son obvios y conviene no deshacer:
+- `css: { postcss: { plugins: [] } }` en `vitest.config.mts` — sin eso Vite intenta cargar el PostCSS de Tailwind v4 y falla al parsearlo.
+- `allowBuilds: esbuild: true` en `pnpm-workspace.yaml` — Vitest necesita el binario nativo de esbuild; sin esto pnpm aborta el install (también en CI). En pnpm 11 este ajuste ya **no** se lee desde `package.json`.
+- En `middleware.test.ts` el default de `jwtVerify` es "token inválido", fijado explícitamente en `beforeEach`. `mockReset()` dejaba el mock devolviendo `undefined`, que el middleware interpreta como sesión válida — es decir, el default inseguro. Un test que olvide declarar su estado de sesión falla, no pasa por accidente.
+
+**Qué se prioriza cubrir**: la lógica pura donde una regresión sería silenciosa y cara, no cobertura por cobertura.
+- `lib/transactionDisplay.ts` — fusión de pares de transferencia y `getStatusLabel` (incluye el caso del bug real de orden de chequeos).
+- `lib/api.ts` — el interceptor de renovación, sustituyendo el *adapter* de axios. Incluye el caso de 401 concurrentes compartiendo un único refresh, que es el que motivó la deduplicación.
+- `middleware.ts` — el gating de rutas, incluida la tolerancia a access token vencido con refresh presente. Se verificó por mutación que una brecha de autenticación tumba varios tests.
+- `lib/budgetDisplay.ts`, `lib/format.ts` — cortes de color y formato multi-moneda.
+
+`format.test.ts` afirma sobre comportamiento (cuántos decimales) y no sobre la cadena exacta: el formato de `Intl` cambia entre versiones de ICU y un test pegado al literal se rompería sin que nada esté mal.
+
+**CI** (`.github/workflows/ci.yml`): typecheck → tests → build, en cada push a `main` y en cada PR. Vercel no bloquea el deploy con esto (despliega por su cuenta), así que el workflow es la señal de que algo se rompió, no un gate.
+
 ## Utils compartidos (`src/lib/`)
 
 | Archivo | Propósito |

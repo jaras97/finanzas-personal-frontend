@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  # También en PRs: así el fallo aparece antes de mergear, no después.
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Tests y typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # `tsc --noEmit` era hasta ahora la única red del frontend; se mantiene
+      # porque atrapa una clase de errores que los tests no ven (tipos rotos
+      # en componentes sin cobertura).
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
+
+      - name: Tests
+        run: pnpm test
+
+      # El build es la última verificación: detecta problemas que ni los tipos
+      # ni los tests unitarios ven (imports rotos, errores de prerender).
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_URL: https://api.balancedcent.com
+          JWT_SECRET: ci-secret-not-used-outside-tests
