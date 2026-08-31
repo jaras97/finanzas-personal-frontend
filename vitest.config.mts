@@ -9,6 +9,10 @@ export default defineConfig({
   // Los tests no renderizan estilos reales: sin este override, Vite intenta
   // cargar el PostCSS de Tailwind v4 y falla al parsearlo.
   css: { postcss: { plugins: [] } },
+  // El tsconfig usa `jsx: preserve` (lo necesita Next), lo que hace que
+  // esbuild caiga al runtime clásico de JSX y exija `React` en scope. Acá se
+  // fuerza el automático, que es el que usa la app en tiempo real.
+  esbuild: { jsx: 'automatic' },
   test: {
     environment: 'jsdom',
     globals: true,

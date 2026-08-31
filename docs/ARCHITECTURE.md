@@ -95,11 +95,15 @@ Detalles de configuración que no son obvios y conviene no deshacer:
 - `allowBuilds: esbuild: true` en `pnpm-workspace.yaml` — Vitest necesita el binario nativo de esbuild; sin esto pnpm aborta el install (también en CI). En pnpm 11 este ajuste ya **no** se lee desde `package.json`.
 - En `middleware.test.ts` el default de `jwtVerify` es "token inválido", fijado explícitamente en `beforeEach`. `mockReset()` dejaba el mock devolviendo `undefined`, que el middleware interpreta como sesión válida — es decir, el default inseguro. Un test que olvide declarar su estado de sesión falla, no pasa por accidente.
 
+Para tests de componentes hacen falta dos cosas más, ambas ya resueltas en el setup: los polyfills que Radix usa al montar (`ResizeObserver`, `hasPointerCapture`, `scrollIntoView`, `matchMedia`), y `userEvent.setup({ pointerEventsCheck: 0 })` — Radix pone `pointer-events: none` en su overlay y userEvent se niega a interactuar con eso, aunque en un navegador real funcione. También `esbuild: { jsx: 'automatic' }` en la config: el tsconfig usa `jsx: preserve` (lo necesita Next) y sin el override esbuild cae al runtime clásico y exige `React` en scope.
+
 **Qué se prioriza cubrir**: la lógica pura donde una regresión sería silenciosa y cara, no cobertura por cobertura.
 - `lib/transactionDisplay.ts` — fusión de pares de transferencia y `getStatusLabel` (incluye el caso del bug real de orden de chequeos).
 - `lib/api.ts` — el interceptor de renovación, sustituyendo el *adapter* de axios. Incluye el caso de 401 concurrentes compartiendo un único refresh, que es el que motivó la deduplicación.
 - `middleware.ts` — el gating de rutas, incluida la tolerancia a access token vencido con refresh presente. Se verificó por mutación que una brecha de autenticación tumba varios tests.
 - `lib/budgetDisplay.ts`, `lib/format.ts` — cortes de color y formato multi-moneda.
+- `(app)/import/page.tsx` — el wizard completo, recorriendo los 4 pasos. El test que más importa es que **confirmar envíe exactamente las filas marcadas**: si eso se rompe se importan movimientos que el usuario descartó, y no se nota hasta que no cuadran los saldos. Este archivo destapó un bug real (ver abajo).
+- `components/forms/AttachmentsModal.tsx` — subir, listar, borrar, tope de 5, y que la fila se liste igual cuando el almacenamiento no devolvió URL firmada.
 
 `format.test.ts` afirma sobre comportamiento (cuántos decimales) y no sobre la cadena exacta: el formato de `Intl` cambia entre versiones de ICU y un test pegado al literal se rompería sin que nada esté mal.
 

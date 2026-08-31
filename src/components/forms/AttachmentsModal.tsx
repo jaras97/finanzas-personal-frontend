@@ -173,7 +173,12 @@ export default function AttachmentsModal({
                   </div>
                   {item.url && (
                     <Button size='sm' variant='soft-slate' asChild>
-                      <a href={item.url} target='_blank' rel='noopener noreferrer'>
+                      <a
+                        href={item.url}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        aria-label={`Abrir ${item.filename}`}
+                      >
                         <ExternalLink className='h-4 w-4' />
                       </a>
                     </Button>
@@ -183,6 +188,7 @@ export default function AttachmentsModal({
                     variant='soft-rose'
                     disabled={busyId === item.id}
                     onClick={() => handleDelete(item)}
+                    aria-label={`Eliminar ${item.filename}`}
                   >
                     <Trash2 className='h-4 w-4' />
                   </Button>

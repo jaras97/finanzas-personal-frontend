@@ -198,7 +198,13 @@ export default function ImportPage() {
     setResult(null);
   };
 
-  const toggleAll = (include: boolean) => setRows((rs) => rs.map((r) => ({ ...r, include })));
+  // Las filas con error nunca se marcan, ni siquiera con "marcar todas": su
+  // casilla está deshabilitada en la UI, pero antes el estado sí se volteaba
+  // y viajaban al confirm con date/amount en null. El backend exige esos
+  // campos, así que Pydantic rechazaba la petición COMPLETA con 422 -- una
+  // sola fila ilegible impedía importar todas las demás.
+  const toggleAll = (include: boolean) =>
+    setRows((rs) => rs.map((r) => ({ ...r, include: include && !r.error })));
   const ignoreDuplicates = () =>
     setRows((rs) => rs.map((r) => (r.is_duplicate ? { ...r, include: false } : r)));
 
