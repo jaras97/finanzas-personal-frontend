@@ -334,9 +334,12 @@ const SummaryPage: FC = () => {
                 <h3 className='text-sm font-medium text-muted-foreground'>
                   Presupuestos del mes ({currency})
                 </h3>
+                {/* El padding agranda el área táctil (medía 56x16, difícil de
+                    acertar con el dedo) sin moverlo visualmente: el margen
+                    negativo compensa el padding lateral. */}
                 <Link
                   href='/budgets'
-                  className='text-xs font-medium text-sky-700 hover:underline'
+                  className='-mr-2 px-2 py-2 text-xs font-medium text-sky-700 hover:underline'
                 >
                   Ver todos
                 </Link>

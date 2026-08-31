@@ -193,7 +193,7 @@ export default function AccountPage() {
                 <button
                   type='button'
                   onClick={() => setShowCurrent((v) => !v)}
-                  className='absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-muted'
+                  className='absolute right-1 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-muted'
                   aria-label={showCurrent ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                 >
                   {showCurrent ? (
@@ -224,7 +224,7 @@ export default function AccountPage() {
                 <button
                   type='button'
                   onClick={() => setShowNext((v) => !v)}
-                  className='absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-muted'
+                  className='absolute right-1 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-muted'
                   aria-label={showNext ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                 >
                   {showNext ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}

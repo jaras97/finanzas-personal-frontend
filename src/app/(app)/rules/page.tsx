@@ -128,24 +128,28 @@ export default function RulesPage() {
               className='p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between'
             >
               <div className='flex items-center gap-3 min-w-0'>
-                <div className='flex flex-col'>
+                {/* 36x36 y separados: antes eran 24x24 con 4px entre medio, y
+                    hacen acciones OPUESTAS -- un toque errado movía la regla en
+                    la dirección contraria. `title` tampoco da nombre accesible
+                    fiable: un lector de pantalla los anunciaba sin etiqueta. */}
+                <div className='flex flex-col gap-1.5'>
                   <Button
                     size='sm'
                     variant='soft-slate'
-                    className='h-6 w-6 p-0'
+                    className='h-9 w-9 p-0'
                     disabled={i === 0 || busyId === r.id}
                     onClick={() => move(i, -1)}
-                    title='Subir'
+                    aria-label={`Subir la regla "${r.match_text}"`}
                   >
                     <ArrowUp className='h-3 w-3' />
                   </Button>
                   <Button
                     size='sm'
                     variant='soft-slate'
-                    className='h-6 w-6 p-0 mt-1'
+                    className='h-9 w-9 p-0'
                     disabled={i === rules.length - 1 || busyId === r.id}
                     onClick={() => move(i, 1)}
-                    title='Bajar'
+                    aria-label={`Bajar la regla "${r.match_text}"`}
                   >
                     <ArrowDown className='h-3 w-3' />
                   </Button>
