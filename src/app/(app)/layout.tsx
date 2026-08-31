@@ -120,29 +120,39 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className='min-h-screen'>
       <Sidebar />
 
-      {/* FAB para abrir sidebar en mobile */}
-      <button
-        onClick={toggle}
-        className={cn(
-          'md:hidden fixed left-3 top-3 z-40 inline-flex h-10 w-10 items-center justify-center rounded-full',
-          'bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))] shadow-lg active:scale-95',
-        )}
-        aria-label='Abrir menú'
-      >
-        <Menu className='h-5 w-5' />
-      </button>
-
       <QuickAddFab />
 
-      <main className='md:pl-64'>
-        {/* pt-16 en mobile: el botón de menú es `fixed left-3 top-3` (40px),
-            así que con el pt-4 anterior el título de cada página quedaba
-            debajo y se leía cortado. Reserva el espacio en vez de dejar que
-            se solapen.
-            pb-20 en mobile: espacio de seguridad para que el FAB de registro
+      {/* min-h-screen + flex-col aquí, no solo en el contenedor externo: sin
+          esto <main> medía solo lo que medía su contenido, así que en una
+          pantalla con poco que mostrar (un estado vacío, una lista de dos
+          filas) el footer quedaba a media página con hueco debajo. El bloque
+          de contenido lleva `flex-1` para crecer y empujarlo abajo. */}
+      <main className='md:pl-64 min-h-screen flex flex-col'>
+        {/* Barra superior fija en mobile, en vez de un botón flotante suelto.
+            Antes el botón era `fixed left-3 top-3` y el contenido le pasaba
+            por debajo al hacer scroll: tapaba ~52px de lo que quedara a esa
+            altura (el buscador de Transacciones, por ejemplo). Se evitaba
+            solo al cargar, reservando pt-16 de padding muerto.
+            Una barra opaca cuesta MENOS que ese padding (56px vs 64px) y
+            elimina el solapamiento de raíz: el contenido ya no puede quedar
+            debajo porque la barra ocupa su propio espacio en el flujo. */}
+        <div className='md:hidden sticky top-0 z-40 h-14 flex items-center px-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--background))]/95 backdrop-blur'>
+          <button
+            onClick={toggle}
+            className={cn(
+              'inline-flex h-11 w-11 items-center justify-center rounded-xl',
+              'text-[hsl(var(--foreground))] active:scale-95',
+            )}
+            aria-label='Abrir menú'
+          >
+            <Menu className='h-5 w-5' />
+          </button>
+        </div>
+
+        {/* pb-20 en mobile: espacio de seguridad para que el FAB de registro
             rápido (fixed bottom-right) no tape el final del contenido justo
             antes del footer. */}
-        <div className='px-4 pt-16 pb-20 md:px-6 md:py-6'>{children}</div>
+        <div className='flex-1 px-4 pt-4 pb-20 md:px-6 md:py-6'>{children}</div>
         <Footer />
       </main>
     </div>
