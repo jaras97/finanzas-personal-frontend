@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DialogClose } from '@/components/ui/dialog';
 import { FormModal } from '@/components/ui/form-modal';
 import { Button } from '@/components/ui/button';
@@ -98,11 +98,22 @@ export default function TransferBetweenAccountsModal({
       ? (amountNum as number) * (rateNum as number)
       : null;
 
-  // Prefill de tasa desde backend (solo si hay conversión y no hay valor escrito)
+  /**
+   * Sugerencia de tasa desde el backend, UNA VEZ por par de monedas.
+   *
+   * Antes la condición era `!exchangeRate` con `exchangeRate` en las
+   * dependencias: al borrar el campo el efecto se volvía a disparar y lo
+   * rellenaba solo, así que era imposible borrar el último dígito para
+   * escribir otra tasa. Ahora se recuerda el par ya sugerido, de modo que
+   * vaciar el campo es una decisión del usuario que se respeta.
+   */
+  const parSugerido = useRef<string | null>(null);
+
   useEffect(() => {
-    const shouldPrefill =
-      requiresConversion && fromAccount && toAccount && !exchangeRate;
-    if (!shouldPrefill) return;
+    if (!requiresConversion || !fromAccount || !toAccount) return;
+    const par = `${fromAccount.currency}->${toAccount.currency}`;
+    if (parSugerido.current === par) return;
+    parSugerido.current = par;
 
     const prefill = async () => {
       try {
@@ -121,14 +132,9 @@ export default function TransferBetweenAccountsModal({
       }
     };
     prefill();
-  }, [
-    requiresConversion,
-    fromAccount?.currency,
-    toAccount?.currency,
-    exchangeRate,
-    fromAccount,
-    toAccount,
-  ]);
+    // `exchangeRate` NO va acá a propósito: incluirlo es lo que causaba el
+    // rellenado automático al borrar el campo.
+  }, [requiresConversion, fromAccount?.currency, toAccount?.currency, fromAccount, toAccount]);
 
   const handleRefreshRate = async () => {
     if (!fromAccount || !toAccount) return;
@@ -220,6 +226,9 @@ export default function TransferBetweenAccountsModal({
       setExchangeRate('');
       setRateNum(undefined);
       setDate(new Date());
+      // Se olvida el par ya sugerido para que la próxima transferencia
+      // vuelva a proponer una tasa fresca.
+      parSugerido.current = null;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         toast.error(

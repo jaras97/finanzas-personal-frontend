@@ -5,10 +5,15 @@ import api from "@/lib/api";
 import { toast } from "sonner";
 import { SavingAccount } from "@/types";
 import axios from "axios";
+import { useDataVersion } from '@/lib/dataRefresh';
 
 export const useSavingAccounts = () => {
   const [accounts, setAccounts] = useState<SavingAccount[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Al crear una transacción desde el botón flotante, esto hace que
+  // la pantalla activa vuelva a pedir sus datos sin recargar la página.
+  const dataVersion = useDataVersion();
 
   const fetchAccounts = async () => {
     setLoading(true);
@@ -26,7 +31,7 @@ export const useSavingAccounts = () => {
 
   useEffect(() => {
     fetchAccounts();
-  }, []);
+  }, [dataVersion]);
 
   return {
     accounts,

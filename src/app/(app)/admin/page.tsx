@@ -15,8 +15,11 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { formatDateInUserTimeZone } from '@/lib/formatDate';
 import ManageSubscriptionModal from '@/components/forms/ManageSubscriptionModal';
+import UserRecordModal from '@/components/forms/UserRecordModal';
+import { useUserTags } from '@/hooks/useUserTags';
 import type { AdminSubscriptionStatus, AdminUser } from '@/types';
-import { Search, ShieldCheck, ShieldOff } from 'lucide-react';
+import { Search, ShieldCheck, ShieldOff, FileText, SlidersHorizontal } from 'lucide-react';
+import Link from 'next/link';
 import api from '@/lib/api';
 import axios from 'axios';
 
@@ -45,6 +48,8 @@ export default function AdminPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [managing, setManaging] = useState<AdminUser | null>(null);
+  const [viewing, setViewing] = useState<AdminUser | null>(null);
+  const { tags } = useUserTags();
   const [roleBusyId, setRoleBusyId] = useState<string | null>(null);
 
   const { data, loading, refresh } = useAdminUsers(search, page);
@@ -112,15 +117,22 @@ export default function AdminPage() {
         title='Usuarios'
         subtitle='Gestiona el acceso y las suscripciones de las personas que usan la app.'
         actions={
-          <div className='relative w-full md:w-80'>
-            <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60' />
-            <Input
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder='Buscar por correo…'
-              className='pl-9'
-              aria-label='Buscar usuarios por correo'
-            />
+          <div className='flex gap-2 w-full md:w-auto flex-wrap md:flex-nowrap items-center'>
+            <div className='relative flex-1 md:w-80'>
+              <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60' />
+              <Input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder='Buscar por correo…'
+                className='pl-9'
+                aria-label='Buscar usuarios por correo'
+              />
+            </div>
+            <Button variant='soft-slate' asChild>
+              <Link href='/admin/parametricas'>
+                <SlidersHorizontal className='h-4 w-4 mr-1' /> Paramétricas
+              </Link>
+            </Button>
           </div>
         }
       />
@@ -194,6 +206,13 @@ export default function AdminPage() {
                 <div className='flex gap-2 flex-wrap shrink-0'>
                   <Button
                     size='sm'
+                    variant='soft-slate'
+                    onClick={() => setViewing(u)}
+                  >
+                    <FileText className='h-4 w-4 mr-1' /> Ficha
+                  </Button>
+                  <Button
+                    size='sm'
                     variant='soft-sky'
                     onClick={() => setManaging(u)}
                   >
@@ -262,6 +281,16 @@ export default function AdminPage() {
             setManaging(null);
             refresh();
           }}
+        />
+      )}
+
+      {viewing && (
+        <UserRecordModal
+          open={!!viewing}
+          onOpenChange={(o) => !o && setViewing(null)}
+          user={viewing}
+          tags={tags}
+          onChanged={refresh}
         />
       )}
     </div>
