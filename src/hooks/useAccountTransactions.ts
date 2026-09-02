@@ -3,10 +3,15 @@ import api from "@/lib/api";
 import { TransactionWithCategoryRead } from "@/types";
 import { toast } from "sonner";
 import axios from "axios";
+import { useDataVersion } from '@/lib/dataRefresh';
 
 export function useAccountTransactions(accountId: number) {
   const [transactions, setTransactions] = useState<TransactionWithCategoryRead[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Al crear una transacción desde el botón flotante, esto hace que
+  // la pantalla activa vuelva a pedir sus datos sin recargar la página.
+  const dataVersion = useDataVersion();
 
   useEffect(() => {
     if (!accountId) return;
@@ -26,7 +31,7 @@ export function useAccountTransactions(accountId: number) {
     };
 
     fetchTransactions();
-  }, [accountId]);
+  }, [accountId, dataVersion]);
 
   return { transactions, loading };
 }

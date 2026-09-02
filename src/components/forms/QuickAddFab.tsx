@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NewTransactionModal from './NewTransactionModal';
+import { notificarCambioDeDatos } from '@/lib/dataRefresh';
 
 /**
  * Registro rápido flotante: visible en cualquier pantalla de (app), no solo
@@ -11,10 +12,11 @@ import NewTransactionModal from './NewTransactionModal';
  * (oculto su trigger interno) en vez de duplicar la creación de transacciones.
  *
  * No hay caché de datos compartida entre features (cada hook hace su propio
- * fetch), así que tras crear desde acá recargamos la página: es la única
- * forma de garantizar que la pantalla en la que estés (resumen, cuentas,
- * deudas...) refleje el nuevo movimiento sin construir un bus de eventos
- * global para un botón de conveniencia.
+ * fetch), así que tras crear desde acá avisamos por `notificarCambioDeDatos`:
+ * los hooks de datos llevan el contador de versión en sus dependencias y
+ * vuelven a pedir lo suyo. Antes esto era un window.location.reload(), que
+ * funcionaba pero tiraba el scroll, los filtros de la pantalla y el estado de
+ * cualquier otro formulario abierto.
  */
 export default function QuickAddFab() {
   const [openSignal, setOpenSignal] = useState(0);
@@ -35,7 +37,7 @@ export default function QuickAddFab() {
       </button>
 
       <NewTransactionModal
-        onCreated={() => window.location.reload()}
+        onCreated={notificarCambioDeDatos}
         hideTrigger
         openSignal={openSignal}
       />

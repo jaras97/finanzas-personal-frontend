@@ -6,6 +6,7 @@ import { TransactionWithCategoryRead } from "@/types";
 import { toast } from "sonner";
 import axios from "axios";
 import { toUtcDayBoundsFromISOStrings } from "@/lib/dateParams";
+import { useDataVersion } from "@/lib/dataRefresh";
 
 interface UseTransactionsOptions {
   startDate?: string;
@@ -29,6 +30,10 @@ export const useTransactions = (options?: UseTransactionsOptions, page = 1) => {
   const [transactions, setTransactions] = useState<TransactionWithCategoryRead[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Al crear una transacción desde el botón flotante, esto hace que
+  // la pantalla activa vuelva a pedir sus datos sin recargar la página.
+  const dataVersion = useDataVersion();
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
@@ -63,6 +68,7 @@ export const useTransactions = (options?: UseTransactionsOptions, page = 1) => {
     options?.type,
     options?.source,
     page,
+    dataVersion,
   ]);
 
   useEffect(() => {

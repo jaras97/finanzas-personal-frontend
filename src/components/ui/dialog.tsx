@@ -122,13 +122,51 @@ export function DialogContent({
 }) {
   const { open, setOpen, initialFocus } = useDlg();
 
+  // Radix (los Select, Popover, etc.) pone `pointer-events: none` en el <body>
+  // mientras su lista está abierta, para bloquear lo que hay detrás. El efecto
+  // colateral es que un toque sobre el PROPIO trigger ya no llega al trigger:
+  // el hit-test cae hasta el <html>, que está fuera del panel, y Headless UI lo
+  // lee como "clic afuera" y cierra el modal entero. Se notaba en mobile al
+  // tocar dos veces seguidas el mismo select.
+  // Detectamos esa firma exacta -- objetivo <html>/<body> Y body inerte -- y
+  // solo en ese caso ignoramos el cierre. Un clic real en el overlay tiene como
+  // objetivo el overlay, así que sigue cerrando; Escape y la X, también.
+  const ignorarCierre = React.useRef(false);
+  React.useEffect(() => {
+    if (!open) return;
+    const alTocar = (e: Event) => {
+      const t = e.target as Node | null;
+      ignorarCierre.current =
+        (t === document.documentElement || t === document.body) &&
+        getComputedStyle(document.body).pointerEvents === 'none';
+    };
+    // Escape no pasa por pointerdown: sin esto heredaría el último valor.
+    const alTeclear = () => {
+      ignorarCierre.current = false;
+    };
+    document.addEventListener('pointerdown', alTocar, true);
+    document.addEventListener('keydown', alTeclear, true);
+    return () => {
+      document.removeEventListener('pointerdown', alTocar, true);
+      document.removeEventListener('keydown', alTeclear, true);
+    };
+  }, [open]);
+
+  const cerrar = () => {
+    if (ignorarCierre.current) {
+      ignorarCierre.current = false;
+      return;
+    }
+    setOpen(false);
+  };
+
   return (
     <Transition show={open} as={Fragment} appear>
       {/* Stacking context alto para que el panel NUNCA se oscurezca */}
       <HDialog
         as='div'
         className='fixed inset-0 z-[100]'
-        onClose={setOpen}
+        onClose={cerrar}
         initialFocus={initialFocus?.current as any}
       >
         {/* Overlay debajo del panel */}

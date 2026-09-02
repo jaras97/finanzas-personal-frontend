@@ -308,3 +308,84 @@ export interface SubscriptionStatusRead {
 }
 
 export type TotalesPorMoneda = Record<currencyType, number>;
+// --- Panel de administración: historial y paramétricas ---------------------
+
+export type SubscriptionPlan = {
+  id: number;
+  name: string;
+  duration_months: number;
+  price: number;
+  currency: string;
+  is_active: boolean;
+};
+
+export type UserTag = {
+  id: number;
+  name: string;
+  color: string;
+};
+
+export type SubscriptionPeriod = {
+  id: number;
+  start_date: string;
+  end_date: string;
+  price: number;
+  currency: string;
+  origin: string;
+  note: string | null;
+  plan_name: string | null;
+  created_at: string;
+  created_by_email: string | null;
+};
+
+export type SubscriptionEvent = {
+  id: number;
+  action: 'activate' | 'renew' | 'delete' | 'payment' | string;
+  end_date_before: string | null;
+  end_date_after: string | null;
+  months: number | null;
+  detail: string | null;
+  created_at: string;
+  performed_by_email: string | null;
+};
+
+export type AdminPayment = {
+  id: number;
+  amount: number;
+  currency: string;
+  method: string;
+  reference: string | null;
+  note: string | null;
+  paid_at: string;
+  created_at: string;
+  created_by_email: string | null;
+};
+
+export type AdminUserMetrics = {
+  last_login_at: string | null;
+  transactions: number;
+  accounts: number;
+  debts: number;
+  days_since_last_login: number | null;
+  has_ever_logged_in: boolean;
+};
+
+export type AdminUserDetail = {
+  id: string;
+  email: string;
+  role: 'user' | 'admin';
+  created_at: string;
+  subscription_status: AdminSubscriptionStatus;
+  subscription_start: string | null;
+  subscription_end: string | null;
+  full_name: string | null;
+  phone: string | null;
+  notes: string | null;
+  tags: UserTag[];
+  metrics: AdminUserMetrics;
+  periods: SubscriptionPeriod[];
+  events: SubscriptionEvent[];
+  payments: AdminPayment[];
+  total_paid: number;
+  first_subscribed_at: string | null;
+};

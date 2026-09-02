@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { buildDateParams } from "@/lib/dateParams";
 import { extractErrorMessage } from "@/lib/extractErrorMessage";
+import { useDataVersion } from '@/lib/dataRefresh';
 
 interface CashFlowSummary {
   total_income: number;
@@ -14,6 +15,10 @@ export function useCashFlowSummary(startDate?: Date, endDate?: Date) {
   const [data, setData] = useState<Record<string, CashFlowSummary> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Al crear una transacción desde el botón flotante, esto hace que
+  // la pantalla activa vuelva a pedir sus datos sin recargar la página.
+  const dataVersion = useDataVersion();
 
   useEffect(() => {
     async function fetchCashFlow() {
@@ -33,7 +38,7 @@ export function useCashFlowSummary(startDate?: Date, endDate?: Date) {
     }
 
     fetchCashFlow();
-  }, [startDate, endDate]);
+  }, [startDate, endDate, dataVersion]);
 
   return { data, loading, error };
 }

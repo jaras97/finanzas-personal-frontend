@@ -4,11 +4,16 @@ import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import axios from 'axios';
 import type { NetWorthConsolidated } from '@/types';
+import { useDataVersion } from '@/lib/dataRefresh';
 
 export function useNetWorthConsolidated() {
   const [data, setData] = useState<NetWorthConsolidated | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Al crear una transacción desde el botón flotante, esto hace que
+  // la pantalla activa vuelva a pedir sus datos sin recargar la página.
+  const dataVersion = useDataVersion();
 
   useEffect(() => {
     let cancelled = false;
@@ -28,7 +33,7 @@ export function useNetWorthConsolidated() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [dataVersion]);
 
   return { data, loading, error };
 }

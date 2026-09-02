@@ -4,6 +4,7 @@ import { DateRange } from "react-day-picker";
 import { extractErrorMessage } from "@/lib/extractErrorMessage";
 import { buildDateParamsFromRange } from "@/lib/dateParams";
 import { currencyType } from "@/types";
+import { useDataVersion } from '@/lib/dataRefresh';
 
 interface CategorySummary { category_id: number; category_name: string; total: number; percentage: number; }
 interface DailyEvolution { date: string; total_income: number; total_expense: number; }
@@ -23,6 +24,10 @@ export function useSummary(filters: {
   const [data, setData] = useState<Record<currencyType, SummaryData> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Al crear una transacción desde el botón flotante, esto hace que
+  // la pantalla activa vuelva a pedir sus datos sin recargar la página.
+  const dataVersion = useDataVersion();
 
   useEffect(() => {
     async function fetchSummary() {
@@ -48,7 +53,7 @@ export function useSummary(filters: {
     }
 
     fetchSummary();
-  }, [filters]);
+  }, [filters, dataVersion]);
 
   return { data, loading, error };
 }

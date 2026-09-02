@@ -5,10 +5,15 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import axios from 'axios';
 import type { SavingGoal } from '@/types';
+import { useDataVersion } from '@/lib/dataRefresh';
 
 export function useSavingGoals() {
   const [goals, setGoals] = useState<SavingGoal[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Al crear una transacción desde el botón flotante, esto hace que
+  // la pantalla activa vuelva a pedir sus datos sin recargar la página.
+  const dataVersion = useDataVersion();
 
   const fetchGoals = useCallback(async () => {
     setLoading(true);
@@ -22,7 +27,7 @@ export function useSavingGoals() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dataVersion]);
 
   useEffect(() => {
     fetchGoals();

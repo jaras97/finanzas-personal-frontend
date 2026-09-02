@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import type { DebtStatement } from '@/types';
+import { useDataVersion } from '@/lib/dataRefresh';
 
 /**
  * Ciclo de facturación de una tarjeta (GET /debts/{id}/statement). Devuelve
@@ -13,6 +14,10 @@ import type { DebtStatement } from '@/types';
 export function useDebtStatement(debtId: number, kind: 'loan' | 'credit_card') {
   const [data, setData] = useState<DebtStatement | null>(null);
   const [loading, setLoading] = useState(kind === 'credit_card');
+
+  // Al crear una transacción desde el botón flotante, esto hace que
+  // la pantalla activa vuelva a pedir sus datos sin recargar la página.
+  const dataVersion = useDataVersion();
 
   useEffect(() => {
     if (kind !== 'credit_card') {
@@ -34,7 +39,7 @@ export function useDebtStatement(debtId: number, kind: 'loan' | 'credit_card') {
     return () => {
       cancelled = true;
     };
-  }, [debtId, kind]);
+  }, [debtId, kind, dataVersion]);
 
   return { data, loading };
 }
