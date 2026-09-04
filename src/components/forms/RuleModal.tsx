@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import api from '@/lib/api';
 import axios from 'axios';
 import type { Category, CategoryRule } from '@/types';
+import { categoryLabel } from '@/lib/categoryTree';
 
 interface Props {
   open: boolean;
@@ -149,7 +150,7 @@ export default function RuleModal({ open, onOpenChange, editing, initial, onSave
             <SelectContent className='select-solid z-[140]'>
               {categories.map((c) => (
                 <SelectItem key={c.id} value={String(c.id)}>
-                  {c.name}
+                  {categoryLabel(c)}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -19,6 +19,7 @@ import axios from 'axios';
 import { cn } from '@/lib/utils';
 import InfoHint from '@/components/ui/info-hint';
 import { DatePicker } from '@/components/ui/date-picker';
+import { categoryLabel } from '@/lib/categoryTree';
 
 type Category = {
   id: number;
@@ -213,7 +214,7 @@ export default function EditTransactionModal({
                 <SelectContent className='select-solid z-[140]'>
                   {categories.map((c) => (
                     <SelectItem key={c.id} value={c.id.toString()}>
-                      {c.name}
+                      {categoryLabel(c)}
                     </SelectItem>
                   ))}
                 </SelectContent>

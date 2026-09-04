@@ -19,15 +19,17 @@ import InfoHint from '@/components/ui/info-hint';
 import { PALETTE_KEYS, categoryColor, type PaletteKey } from '@/lib/categoryStyle';
 import { cn } from '@/lib/utils';
 import type { Category } from '@/types';
+import { ICON_NAMES, categoryIcon } from '@/lib/categoryIcon';
+import { possibleParents } from '@/lib/categoryTree';
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: () => void;
-  // Antes era un tipo inline con solo id/name/type, así que al agregar color
-  // e icono el modal no los veía. Usar `Category` mantiene esto en un solo sitio.
-  category?: Pick<Category, 'id' | 'name' | 'type'> &
-    Partial<Pick<Category, 'color' | 'icon'>>;
+  // Antes era un tipo inline con solo id/name/type, así que cada campo nuevo
+  // (color, icono, padre) quedaba invisible para el modal. Se usa `Category`
+  // completo para que eso no vuelva a pasar.
+  category?: Category;
 };
 
 export default function CategoryModal({
@@ -41,6 +43,11 @@ export default function CategoryModal({
   // null = "sin color": el gráfico deriva uno estable del nombre, así que
   // nunca queda una categoría gris ni con color saltarín.
   const [color, setColor] = useState<PaletteKey | null>(null);
+  const [icon, setIcon] = useState<string | null>(null);
+  const [parentId, setParentId] = useState<string>('');
+  // Se piden todas (incluidas inactivas) porque el padre podría estar
+  // desactivado y hay que seguir mostrándolo como el padre actual.
+  const [todas, setTodas] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
 
   // IDs accesibles
@@ -56,12 +63,26 @@ export default function CategoryModal({
           ? (category.color as PaletteKey)
           : null,
       );
+      setIcon(category.icon ?? null);
+      setParentId(category.parent_id ? String(category.parent_id) : '');
     } else {
       setName('');
       setType('');
       setColor(null);
+      setIcon(null);
+      setParentId('');
     }
   }, [category]);
+
+  useEffect(() => {
+    if (!open) return;
+    api
+      .get<Category[]>('/categories?status=all')
+      .then(({ data }) => setTodas(data))
+      // Silencioso: sin la lista solo se pierde el selector de padre, el resto
+      // del formulario sigue funcionando.
+      .catch(() => setTodas([]));
+  }, [open]);
 
   // Manejo de errores (evita pasar objetos al toast)
   const extractApiError = (err: unknown) => {
@@ -97,7 +118,8 @@ export default function CategoryModal({
           name: name.trim(),
           type,
           color,
-          icon: category.icon ?? null,
+          icon,
+          parent_id: parentId ? Number(parentId) : null,
         });
         toast.success('Categoría actualizada correctamente');
       } else {
@@ -105,6 +127,8 @@ export default function CategoryModal({
           name: name.trim(),
           type,
           color,
+          icon,
+          parent_id: parentId ? Number(parentId) : null,
         });
         toast.success('Categoría creada correctamente');
       }
@@ -200,6 +224,39 @@ export default function CategoryModal({
               </Select>
             </div>
 
+            {/* Categoría padre */}
+            {!category?.is_system && (
+              <div className='space-y-1'>
+                <div className='flex items-center gap-2'>
+                  <label htmlFor='cat-parent' className='text-sm font-medium'>
+                    Categoría padre
+                  </label>
+                  <InfoHint side='top'>
+                    Opcional. Una subcategoría suma a su padre en el resumen y en
+                    los presupuestos, así que el dashboard sigue mostrando pocas
+                    categorías reconocibles. Solo hay dos niveles.
+                  </InfoHint>
+                </div>
+                <select
+                  id='cat-parent'
+                  value={parentId}
+                  onChange={(e) => setParentId(e.target.value)}
+                  disabled={loading || !type}
+                  className='h-9 w-full rounded-md border border-slate-200 bg-white px-2 text-sm disabled:opacity-50'
+                >
+                  <option value=''>Ninguna (categoría principal)</option>
+                  {possibleParents(todas, type, category?.id).map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                {!type && (
+                  <p className='text-xs text-muted-foreground'>
+                    Elige primero el tipo para ver los padres compatibles.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Color */}
             <div className='space-y-1'>
               <div className='flex items-center gap-2'>
@@ -240,6 +297,50 @@ export default function CategoryModal({
                     style={{ background: categoryColor({ name: '', color: k }) }}
                   />
                 ))}
+              </div>
+            </div>
+
+            {/* Icono */}
+            <div className='space-y-1'>
+              <span className='text-sm font-medium'>Icono</span>
+              <div className='flex flex-wrap gap-1.5' role='group' aria-label='Icono de la categoría'>
+                <button
+                  type='button'
+                  onClick={() => setIcon(null)}
+                  disabled={loading}
+                  aria-pressed={icon === null}
+                  aria-label='Sin icono'
+                  className={cn(
+                    'inline-flex h-8 w-8 items-center justify-center rounded-md border',
+                    icon === null
+                      ? 'border-slate-800 bg-slate-100 text-slate-900'
+                      : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50',
+                  )}
+                >
+                  {(() => { const I = categoryIcon(null); return <I className='h-4 w-4' />; })()}
+                </button>
+                {ICON_NAMES.map((n) => {
+                  const I = categoryIcon(n);
+                  const activo = icon === n;
+                  return (
+                    <button
+                      key={n}
+                      type='button'
+                      onClick={() => setIcon(n)}
+                      disabled={loading}
+                      aria-pressed={activo}
+                      aria-label={`Icono ${n}`}
+                      className={cn(
+                        'inline-flex h-8 w-8 items-center justify-center rounded-md border',
+                        activo
+                          ? 'border-slate-800 bg-slate-100 text-slate-900'
+                          : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50',
+                      )}
+                    >
+                      <I className='h-4 w-4' />
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

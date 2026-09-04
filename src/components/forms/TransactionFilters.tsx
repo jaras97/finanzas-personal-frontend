@@ -13,6 +13,7 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { categoryLabel } from '@/lib/categoryTree';
 
 export interface Filters {
   startDate?: string; // ISO
@@ -37,10 +38,10 @@ interface Props {
   onChange: (filters: Filters) => void;
 }
 
-type Category = {
-  id: number;
-  name: string;
-};
+// Se usa el tipo compartido en vez de uno local con solo id/name: ese patrón
+// ya hizo invisible cada campo nuevo (color, icono, padre) en otros
+// formularios.
+import type { Category } from '@/types';
 
 export default function TransactionFilters({ value, onChange }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -115,7 +116,7 @@ export default function TransactionFilters({ value, onChange }: Props) {
             <SelectContent className='z-[60] max-h-[50vh]'>
               {categories.map((c) => (
                 <SelectItem key={c.id} value={String(c.id)}>
-                  {c.name}
+                  {categoryLabel(c)}
                 </SelectItem>
               ))}
             </SelectContent>
