@@ -15,6 +15,7 @@ import ConfirmCategoryStatusModal from '@/components/forms/ConfirmCategoryStatus
 import CategoriesTabs from '@/components/layout/CategoriesTabs';
 import { Sparkles } from 'lucide-react';
 import { categoryColor } from '@/lib/categoryStyle';
+import { categoryIcon } from '@/lib/categoryIcon';
 import type { SuggestedCategoriesResult } from '@/types';
 
 import { useSummary } from '@/hooks/useSummary';
@@ -313,19 +314,32 @@ export default function CategoriesPage() {
             {active.map((cat) => (
               <Card
                 key={cat.id}
-                className='p-4 flex flex-col md:flex-row md:justify-between md:items-center'
+                className={cn(
+                  'p-4 flex flex-col md:flex-row md:justify-between md:items-center',
+                  // Sangría e hilo a la izquierda para las subcategorías. El
+                  // backend ya devuelve cada hija justo después de su padre,
+                  // así que basta con distinguirlas visualmente.
+                  cat.parent_id && 'md:ml-8 ml-4 border-l-2 border-l-slate-200',
+                )}
                 variant='white'
               >
                 <div>
                   <p className='font-medium flex items-center gap-2'>
-                    {/* El mismo color con el que sale en los gráficos, para
-                        que se reconozca de un vistazo. Sin color asignado se
-                        deriva del nombre, así que nunca queda vacío. */}
-                    <span
-                      className='h-2.5 w-2.5 rounded-sm shrink-0'
-                      style={{ background: categoryColor(cat) }}
-                      aria-hidden='true'
-                    />
+                    {/* Icono sobre su color, el mismo con el que sale en los
+                        gráficos. Sin color asignado se deriva del nombre y sin
+                        icono cae en uno genérico, así que nunca queda vacío. */}
+                    {(() => {
+                      const Icono = categoryIcon(cat.icon);
+                      return (
+                        <span
+                          className='inline-flex h-6 w-6 items-center justify-center rounded-md shrink-0'
+                          style={{ background: `${categoryColor(cat)}22`, color: categoryColor(cat) }}
+                          aria-hidden='true'
+                        >
+                          <Icono className='h-3.5 w-3.5' />
+                        </span>
+                      );
+                    })()}
                     {cat.name}
                   </p>
                   <div className='flex gap-2 mt-1'>

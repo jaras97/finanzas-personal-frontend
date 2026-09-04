@@ -23,6 +23,9 @@ export type Category = {
   color?: string | null;
   /** Nombre de un icono de lucide ("Home", "Car"...) */
   icon?: string | null;
+  /** Nulo = categoría de primer nivel. La jerarquía es de dos niveles. */
+  parent_id?: number | null;
+  parent_name?: string | null;
 };
 
 export type SuggestedCategoriesResult = {

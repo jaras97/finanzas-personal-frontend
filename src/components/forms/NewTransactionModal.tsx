@@ -23,6 +23,7 @@ import { NumericFormat } from 'react-number-format';
 import InfoHint from '@/components/ui/info-hint';
 import { DatePicker } from '@/components/ui/date-picker';
 import { readTxPreferences, rememberTx } from '@/lib/txPreferences';
+import { categoryLabel } from '@/lib/categoryTree';
 
 type UiAccount = { id: string; name: string; currency?: currencyType };
 
@@ -524,7 +525,7 @@ export default function NewTransactionModal({
                   <SelectContent className='z-[130] select-solid max-h-[50vh] min-w-[--radix-select-trigger-width]'>
                     {categories.map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>
-                        {c.name}
+                        {categoryLabel(c)}
                       </SelectItem>
                     ))}
                   </SelectContent>
