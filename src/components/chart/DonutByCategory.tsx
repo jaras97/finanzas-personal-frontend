@@ -9,18 +9,16 @@ import {
   Label,
 } from 'recharts';
 import { EmptyState } from '../ui/EmptyState';
+import { categoryColor } from '@/lib/categoryStyle';
 
 type Datum = { name: string; value: number };
 
-// Paleta desde tus tokens (cicla cuando hay muchas categorías)
-const TOKEN_COLORS = [
-  'hsl(var(--color-chart-1))',
-  'hsl(var(--color-chart-2))',
-  'hsl(var(--color-chart-3))',
-  'hsl(var(--color-chart-4))',
-  'hsl(var(--color-chart-5))',
-];
-const colorAt = (i: number) => TOKEN_COLORS[i % TOKEN_COLORS.length];
+// El color sale del NOMBRE de la categoría, no de su posición en la lista.
+// Antes era `TOKEN_COLORS[i % 5]`: como el orden depende del gasto de cada
+// período, "Transporte" podía ser azul en enero y ámbar en febrero, y comparar
+// dos meses de un vistazo engañaba. Además solo había 5 tonos para cualquier
+// número de categorías. Ver lib/categoryStyle.ts.
+const colorDe = (nombre: string) => categoryColor({ name: nombre });
 
 // Tooltip custom con tokens
 function ChartTooltip({
@@ -197,7 +195,7 @@ export function DonutByCategory({
                 {currentData.map((entry, i) => (
                   <Cell
                     key={entry.name + i}
-                    fill={colorAt(i)}
+                    fill={colorDe(entry.name)}
                     stroke='transparent'
                     opacity={
                       activeIndex === null || activeIndex === i ? 1 : 0.45
@@ -283,7 +281,7 @@ export function DonutByCategory({
             >
               <span
                 className='h-2.5 w-2.5 rounded-sm shrink-0'
-                style={{ background: colorAt(i) }}
+                style={{ background: colorDe(d.name) }}
               />
               <span className='text-xs text-[hsl(var(--foreground))]'>
                 {d.name}

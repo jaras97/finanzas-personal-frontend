@@ -19,6 +19,15 @@ export type Category = {
   is_active: boolean;
   is_system: boolean;
   system_key?: string | null;
+  /** Clave de paleta ("sky", "emerald"...), no un hex. Ver lib/categoryStyle.ts */
+  color?: string | null;
+  /** Nombre de un icono de lucide ("Home", "Car"...) */
+  icon?: string | null;
+};
+
+export type SuggestedCategoriesResult = {
+  created: Category[];
+  skipped_existing: number;
 };
 
 // 🧾 Transaction

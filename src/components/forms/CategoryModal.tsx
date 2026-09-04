@@ -16,16 +16,18 @@ import { toast } from 'sonner';
 import api from '@/lib/api';
 import axios from 'axios';
 import InfoHint from '@/components/ui/info-hint';
+import { PALETTE_KEYS, categoryColor, type PaletteKey } from '@/lib/categoryStyle';
+import { cn } from '@/lib/utils';
+import type { Category } from '@/types';
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: () => void;
-  category?: {
-    id: number;
-    name: string;
-    type: 'income' | 'expense' | 'both';
-  };
+  // Antes era un tipo inline con solo id/name/type, así que al agregar color
+  // e icono el modal no los veía. Usar `Category` mantiene esto en un solo sitio.
+  category?: Pick<Category, 'id' | 'name' | 'type'> &
+    Partial<Pick<Category, 'color' | 'icon'>>;
 };
 
 export default function CategoryModal({
@@ -36,6 +38,9 @@ export default function CategoryModal({
 }: Props) {
   const [name, setName] = useState('');
   const [type, setType] = useState<'income' | 'expense' | 'both' | ''>('');
+  // null = "sin color": el gráfico deriva uno estable del nombre, así que
+  // nunca queda una categoría gris ni con color saltarín.
+  const [color, setColor] = useState<PaletteKey | null>(null);
   const [loading, setLoading] = useState(false);
 
   // IDs accesibles
@@ -46,9 +51,15 @@ export default function CategoryModal({
     if (category) {
       setName(category.name);
       setType(category.type);
+      setColor(
+        PALETTE_KEYS.includes(category.color as PaletteKey)
+          ? (category.color as PaletteKey)
+          : null,
+      );
     } else {
       setName('');
       setType('');
+      setColor(null);
     }
   }, [category]);
 
@@ -85,12 +96,15 @@ export default function CategoryModal({
         await api.put(`/categories/${category.id}`, {
           name: name.trim(),
           type,
+          color,
+          icon: category.icon ?? null,
         });
         toast.success('Categoría actualizada correctamente');
       } else {
         await api.post('/categories', {
           name: name.trim(),
           type,
+          color,
         });
         toast.success('Categoría creada correctamente');
       }
@@ -184,6 +198,49 @@ export default function CategoryModal({
                   <SelectItem value='both'>Ambos</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Color */}
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <span className='text-sm font-medium'>Color</span>
+                <InfoHint side='top'>
+                  Es el color con el que aparece en los gráficos. Si no eliges
+                  ninguno, se le asigna uno fijo a partir del nombre.
+                </InfoHint>
+              </div>
+              <div className='flex flex-wrap gap-1.5' role='group' aria-label='Color de la categoría'>
+                <button
+                  type='button'
+                  onClick={() => setColor(null)}
+                  disabled={loading}
+                  aria-pressed={color === null}
+                  title='Automático, a partir del nombre'
+                  className={cn(
+                    'h-8 px-2.5 rounded-md border text-xs',
+                    color === null
+                      ? 'border-slate-800 bg-slate-100 text-slate-900'
+                      : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50',
+                  )}
+                >
+                  Automático
+                </button>
+                {PALETTE_KEYS.map((k) => (
+                  <button
+                    key={k}
+                    type='button'
+                    onClick={() => setColor(k)}
+                    disabled={loading}
+                    aria-pressed={color === k}
+                    aria-label={`Color ${k}`}
+                    className={cn(
+                      'h-8 w-8 rounded-md border-2 transition-transform',
+                      color === k ? 'border-slate-800 scale-105' : 'border-transparent',
+                    )}
+                    style={{ background: categoryColor({ name: '', color: k }) }}
+                  />
+                ))}
+              </div>
             </div>
 
             <p className='text-xs text-muted-foreground'>

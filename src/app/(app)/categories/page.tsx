@@ -13,6 +13,9 @@ import axios, { AxiosError } from 'axios';
 import { Category, currencyType } from '@/types';
 import ConfirmCategoryStatusModal from '@/components/forms/ConfirmCategoryStatusModal';
 import CategoriesTabs from '@/components/layout/CategoriesTabs';
+import { Sparkles } from 'lucide-react';
+import { categoryColor } from '@/lib/categoryStyle';
+import type { SuggestedCategoriesResult } from '@/types';
 
 import { useSummary } from '@/hooks/useSummary';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
@@ -111,6 +114,40 @@ export default function CategoriesPage() {
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // Añade solo las categorías sugeridas que le falten al usuario. El backend
+  // compara ignorando tildes y mayúsculas y nunca renombra ni borra nada, así
+  // que es seguro pulsarlo en una cuenta con años de categorías propias.
+  const [addingSuggested, setAddingSuggested] = useState(false);
+  const handleAddSuggested = async () => {
+    if (addingSuggested) return;
+    setAddingSuggested(true);
+    try {
+      const { data } = await api.post<SuggestedCategoriesResult>('/categories/suggested');
+      const n = data.created.length;
+      if (n === 0) {
+        toast.success('Ya tenías todas las categorías sugeridas.');
+      } else {
+        // Decir explícitamente cuántas se omitieron importa: el usuario
+        // necesita saber que NO se le duplicó lo que ya tenía.
+        toast.success(
+          `Se ${n === 1 ? 'añadió 1 categoría' : `añadieron ${n} categorías`}.` +
+            (data.skipped_existing > 0
+              ? ` Las ${data.skipped_existing} que ya tenías quedaron intactas.`
+              : ''),
+        );
+      }
+      await fetchCategories();
+    } catch (error) {
+      toast.error(
+        axios.isAxiosError(error)
+          ? error?.response?.data?.detail || 'No se pudieron añadir las categorías.'
+          : 'No se pudieron añadir las categorías.',
+      );
+    } finally {
+      setAddingSuggested(false);
+    }
+  };
 
   const performStatusChange = async (
     action: 'deactivate' | 'reactivate',
@@ -216,7 +253,16 @@ export default function CategoriesPage() {
                   disabled={sLoading}
                 />
               </div>
-              <div className='flex gap-2'>
+              <div className='flex gap-2 flex-wrap'>
+                <Button
+                  onClick={handleAddSuggested}
+                  variant='soft-slate'
+                  disabled={addingSuggested}
+                  title='Añade las categorías sugeridas que te falten. No modifica ni borra las tuyas.'
+                >
+                  <Sparkles className='h-4 w-4 mr-1' />
+                  {addingSuggested ? 'Añadiendo…' : 'Categorías sugeridas'}
+                </Button>
                 <Button onClick={() => setModalOpen(true)} variant='soft-sky'>
                   + Nueva categoría
                 </Button>
@@ -271,7 +317,17 @@ export default function CategoriesPage() {
                 variant='white'
               >
                 <div>
-                  <p className='font-medium'>{cat.name}</p>
+                  <p className='font-medium flex items-center gap-2'>
+                    {/* El mismo color con el que sale en los gráficos, para
+                        que se reconozca de un vistazo. Sin color asignado se
+                        deriva del nombre, así que nunca queda vacío. */}
+                    <span
+                      className='h-2.5 w-2.5 rounded-sm shrink-0'
+                      style={{ background: categoryColor(cat) }}
+                      aria-hidden='true'
+                    />
+                    {cat.name}
+                  </p>
                   <div className='flex gap-2 mt-1'>
                     <Badge
                       variant='outline'
