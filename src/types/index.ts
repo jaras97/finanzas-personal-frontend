@@ -401,3 +401,31 @@ export type AdminUserDetail = {
   total_paid: number;
   first_subscribed_at: string | null;
 };
+
+// --- Selector de taxonomía de categorías -----------------------------------
+
+export type TaxonomyItem = {
+  key: string;
+  name: string;
+  type: 'income' | 'expense' | 'both';
+  color?: string | null;
+  icon?: string | null;
+  core: boolean;
+  /** present = la tienes activa · inactive = desactivada · absent = no la tienes */
+  state: 'present' | 'inactive' | 'absent';
+  category_id?: number | null;
+  transactions: number;
+  locked: boolean;
+  locked_reason?: string | null;
+  children: TaxonomyItem[];
+};
+
+export type TaxonomyBlock = { id: string; label: string; items: TaxonomyItem[] };
+export type TaxonomyRead = { blocks: TaxonomyBlock[] };
+
+export type TaxonomyApplyResult = {
+  created: number;
+  reactivated: number;
+  deactivated: number;
+  skipped: string[];
+};
