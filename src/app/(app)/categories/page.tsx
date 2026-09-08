@@ -16,7 +16,7 @@ import CategoriesTabs from '@/components/layout/CategoriesTabs';
 import { Sparkles } from 'lucide-react';
 import { categoryColor } from '@/lib/categoryStyle';
 import { categoryIcon } from '@/lib/categoryIcon';
-import type { SuggestedCategoriesResult } from '@/types';
+import CategoryTaxonomyModal from '@/components/forms/CategoryTaxonomyModal';
 
 import { useSummary } from '@/hooks/useSummary';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
@@ -116,37 +116,25 @@ export default function CategoriesPage() {
     fetchCategories();
   }, []);
 
-  // Añade solo las categorías sugeridas que le falten al usuario. El backend
-  // compara ignorando tildes y mayúsculas y nunca renombra ni borra nada, así
-  // que es seguro pulsarlo en una cuenta con años de categorías propias.
-  const [addingSuggested, setAddingSuggested] = useState(false);
-  const handleAddSuggested = async () => {
-    if (addingSuggested) return;
-    setAddingSuggested(true);
+  const [taxonomyOpen, setTaxonomyOpen] = useState(false);
+  // Se muestra una sola vez por navegador: es una invitación, no un peaje.
+  // El usuario nuevo ya llega con las 13 del núcleo sembradas y puede
+  // registrar un gasto sin pasar por acá.
+  const [invitacionVista, setInvitacionVista] = useState(true);
+  useEffect(() => {
     try {
-      const { data } = await api.post<SuggestedCategoriesResult>('/categories/suggested');
-      const n = data.created.length;
-      if (n === 0) {
-        toast.success('Ya tenías todas las categorías sugeridas.');
-      } else {
-        // Decir explícitamente cuántas se omitieron importa: el usuario
-        // necesita saber que NO se le duplicó lo que ya tenía.
-        toast.success(
-          `Se ${n === 1 ? 'añadió 1 categoría' : `añadieron ${n} categorías`}.` +
-            (data.skipped_existing > 0
-              ? ` Las ${data.skipped_existing} que ya tenías quedaron intactas.`
-              : ''),
-        );
-      }
-      await fetchCategories();
-    } catch (error) {
-      toast.error(
-        axios.isAxiosError(error)
-          ? error?.response?.data?.detail || 'No se pudieron añadir las categorías.'
-          : 'No se pudieron añadir las categorías.',
-      );
-    } finally {
-      setAddingSuggested(false);
+      setInvitacionVista(localStorage.getItem('bc-taxonomia-vista') === '1');
+    } catch {
+      // Modo privado: se asume vista para no insistir en cada carga.
+      setInvitacionVista(true);
+    }
+  }, []);
+  const ocultarInvitacion = () => {
+    setInvitacionVista(true);
+    try {
+      localStorage.setItem('bc-taxonomia-vista', '1');
+    } catch {
+      /* la invitación simplemente vuelve a salir; no es un error */
     }
   };
 
@@ -256,13 +244,12 @@ export default function CategoriesPage() {
               </div>
               <div className='flex gap-2 flex-wrap'>
                 <Button
-                  onClick={handleAddSuggested}
+                  onClick={() => setTaxonomyOpen(true)}
                   variant='soft-slate'
-                  disabled={addingSuggested}
-                  title='Añade las categorías sugeridas que te falten. No modifica ni borra las tuyas.'
+                  title='Elige qué categorías recomendadas quieres usar. Nada se guarda hasta que confirmes.'
                 >
                   <Sparkles className='h-4 w-4 mr-1' />
-                  {addingSuggested ? 'Añadiendo…' : 'Categorías sugeridas'}
+                  Configurar categorías
                 </Button>
                 <Button onClick={() => setModalOpen(true)} variant='soft-sky'>
                   + Nueva categoría
@@ -273,6 +260,39 @@ export default function CategoriesPage() {
         }
       />
       <CategoriesTabs />
+
+      {!invitacionVista && !loading && (
+        <Card variant='white' className='p-4 flex flex-col sm:flex-row sm:items-center gap-3'>
+          <div className='flex-1 min-w-0'>
+            <p className='font-medium text-sm'>Ajusta tus categorías a tu forma de gastar</p>
+            <p className='text-xs text-muted-foreground mt-0.5'>
+              Empezaste con las más comunes. Puedes añadir otras, quitar las que
+              no uses y abrir subcategorías como «Transporte › Gasolina».
+            </p>
+          </div>
+          <div className='flex gap-2 shrink-0'>
+            <Button variant='soft-slate' size='sm' onClick={ocultarInvitacion}>
+              Ahora no
+            </Button>
+            <Button
+              variant='soft-emerald'
+              size='sm'
+              onClick={() => {
+                ocultarInvitacion();
+                setTaxonomyOpen(true);
+              }}
+            >
+              Configurar
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      <CategoryTaxonomyModal
+        open={taxonomyOpen}
+        onOpenChange={setTaxonomyOpen}
+        onApplied={fetchCategories}
+      />
 
       {/* KPIs: top gasto / top ingreso, en cualquier moneda que el usuario use */}
       {sLoading ? (
