@@ -19,7 +19,8 @@ import { PageHeader } from '@/components/ui/page-header';
 import { formatDayLabel } from '@/lib/formatDayLabel';
 import { CurrencyToggle } from '@/components/ui/CurrencyToggle';
 import { AreaIncomeExpense } from '@/components/chart/AreaIncomeExpense';
-import { DonutByCategory } from '@/components/chart/DonutByCategory';
+import { CategoryBreakdown } from '@/components/chart/CategoryBreakdown';
+import { useRouter } from 'next/navigation';
 import type { FC } from 'react';
 import { SummarySkeleton } from '@/components/skeletons/SummarySkeleton';
 import { currencyType } from '@/types';
@@ -27,6 +28,7 @@ import { progressTone } from '@/lib/budgetDisplay';
 import { cn } from '@/lib/utils';
 
 const SummaryPage: FC = () => {
+  const router = useRouter();
   const today = new Date();
   const [dateRange, setDateRange] = useState({
     startDate: new Date(today.getFullYear(), today.getMonth(), 1),
@@ -395,31 +397,19 @@ const SummaryPage: FC = () => {
             </CardContent>
           </Card>
 
-          <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
-            <Card variant='surface'>
-              <CardContent className='p-4'>
-                <DonutByCategory
-                  title={`Gastos por categoría (${currency})`}
-                  data={(s.expense_by_category || []).map((i) => ({
-                    name: i.category_name,
-                    value: i.total,
-                  }))}
-                />
-              </CardContent>
-            </Card>
-
-            <Card variant='surface'>
-              <CardContent className='p-4'>
-                <DonutByCategory
-                  title={`Ingresos por categoría (${currency})`}
-                  data={(s.income_by_category || []).map((i) => ({
-                    name: i.category_name,
-                    value: i.total,
-                  }))}
-                />
-              </CardContent>
-            </Card>
-          </div>
+          {/* Un solo bloque con conmutador, en vez de los dos donuts que
+              había lado a lado: a media pantalla no se comparaban entre sí, y
+              los ingresos son tres categorías contra veinticinco de gasto. */}
+          <Card variant='surface'>
+            <CardContent className='p-4'>
+              <CategoryBreakdown
+                expense={s.expense_by_category || []}
+                income={s.income_by_category || []}
+                currency={currency}
+                onFixUncategorized={() => router.push('/transactions')}
+              />
+            </CardContent>
+          </Card>
 
           {s.overspending_alert && (
             <div className='p-4 rounded-xl bg-rose-50 text-rose-700 text-center font-medium'>
