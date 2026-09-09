@@ -44,7 +44,8 @@ export function categoryDisplayName<
 >(c: T, todas: T[]): string {
   if (!c.parent_id) return c.name;
   const hermanas = todas.filter((x) => x.parent_id === c.parent_id && x.is_active !== false);
-  if (hermanas.length <= 1) return c.parent_name ?? c.name;
+  // Igual que en la lista: solo se funde con el grupo la hoja sintética.
+  if (hermanas.length <= 1 && esHojaSintetica(c)) return c.parent_name ?? c.name;
   return categoryLabel(c);
 }
 
@@ -94,4 +95,63 @@ export function possibleParents(
     if (tipo && c.type !== 'both' && tipo !== 'both' && c.type !== tipo) return false;
     return true;
   });
+}
+
+/**
+ * Filas que se pintan en la lista de categorías.
+ *
+ * El modelo tiene dos niveles siempre, pero mostrarlos siempre sería ruido:
+ * quien creó «Mascotas» y nunca la desglosó vería «Mascotas» y debajo
+ * «General», que no significa nada para él.
+ *
+ * - Grupo con UNA hoja  → una sola fila (`collapsed`). Las acciones son del
+ *   grupo, que es lo que el usuario cree que está manipulando.
+ * - Grupo con VARIAS    → fila del grupo (`group`) + una por hoja (`leaf`).
+ *
+ * Una hoja nunca aparece suelta: siempre bajo su grupo o fundida con él.
+ */
+/** Nombre de la hoja que el backend crea sola para que un grupo sea usable. */
+export const HOJA_SINTETICA = 'General';
+
+/**
+ * ¿Esta hoja la puso el sistema o la puso el usuario?
+ *
+ * Solo se colapsa la sintética. Si alguien crea «Transporte › Gasolina» y esa
+ * queda como única hoja, la lista DEBE mostrarla: colapsarla haría desaparecer
+ * lo que el usuario acaba de crear. (Detectado en navegador, no por los tests.)
+ *
+ * Se reconoce por el nombre, que es como la crea el backend. Si alguien
+ * bautiza una hoja «General» a propósito, se colapsa — lo cual es justo lo
+ * que querría de todos modos.
+ */
+export function esHojaSintetica(c: { name: string }): boolean {
+  return c.name === HOJA_SINTETICA;
+}
+
+export type CategoryRow =
+  | { kind: 'collapsed'; group: Category; leaf: Category }
+  | { kind: 'group'; group: Category; leafCount: number }
+  | { kind: 'leaf'; group: Category; leaf: Category };
+
+export function categoryRows(categories: Category[]): CategoryRow[] {
+  const grupos = categories.filter((c) => !c.parent_id);
+  const hojasPor = new Map<number, Category[]>();
+  for (const c of categories) {
+    if (!c.parent_id) continue;
+    const lista = hojasPor.get(c.parent_id) ?? [];
+    lista.push(c);
+    hojasPor.set(c.parent_id, lista);
+  }
+
+  const filas: CategoryRow[] = [];
+  for (const group of grupos) {
+    const hojas = hojasPor.get(group.id) ?? [];
+    if (hojas.length === 1 && esHojaSintetica(hojas[0])) {
+      filas.push({ kind: 'collapsed', group, leaf: hojas[0] });
+    } else {
+      filas.push({ kind: 'group', group, leafCount: hojas.length });
+      for (const leaf of hojas) filas.push({ kind: 'leaf', group, leaf });
+    }
+  }
+  return filas;
 }

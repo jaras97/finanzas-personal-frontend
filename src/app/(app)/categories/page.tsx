@@ -16,6 +16,7 @@ import CategoriesTabs from '@/components/layout/CategoriesTabs';
 import { Sparkles } from 'lucide-react';
 import { categoryColor } from '@/lib/categoryStyle';
 import { categoryIcon } from '@/lib/categoryIcon';
+import { categoryRows } from '@/lib/categoryTree';
 import CategoryTaxonomyModal from '@/components/forms/CategoryTaxonomyModal';
 
 import { useSummary } from '@/hooks/useSummary';
@@ -117,6 +118,8 @@ export default function CategoriesPage() {
   }, []);
 
   const [taxonomyOpen, setTaxonomyOpen] = useState(false);
+  // Grupo al que se le va a añadir una subcategoría desde la lista.
+  const [desglosando, setDesglosando] = useState<number | null>(null);
   // Se muestra una sola vez por navegador: es una invitación, no un peaje.
   // El usuario nuevo ya llega con las 13 del núcleo sembradas y puede
   // registrar un gasto sin pasar por acá.
@@ -217,6 +220,9 @@ export default function CategoriesPage() {
     () => categories.filter((c) => c.is_active),
     [categories],
   );
+  // La lista NO muestra el árbol crudo: un grupo con una sola hoja se pinta
+  // como una línea, porque «Mascotas › General» no le dice nada a nadie.
+  const filasActivas = useMemo(() => categoryRows(active), [active]);
   const inactive = useMemo(
     () => categories.filter((c) => !c.is_active),
     [categories],
@@ -329,94 +335,103 @@ export default function CategoriesPage() {
 
         {loading ? (
           <CategoriesListSkeleton items={6} />
-        ) : active.length ? (
+        ) : filasActivas.length ? (
           <div className='space-y-2'>
-            {active.map((cat) => (
-              <Card
-                key={cat.id}
-                className={cn(
-                  'p-4 flex flex-col md:flex-row md:justify-between md:items-center',
-                  // Sangría e hilo a la izquierda para las subcategorías. El
-                  // backend ya devuelve cada hija justo después de su padre,
-                  // así que basta con distinguirlas visualmente.
-                  cat.parent_id && 'md:ml-8 ml-4 border-l-2 border-l-slate-200',
-                )}
-                variant='white'
-              >
-                <div>
-                  <p className='font-medium flex items-center gap-2'>
-                    {/* Icono sobre su color, el mismo con el que sale en los
-                        gráficos. Sin color asignado se deriva del nombre y sin
-                        icono cae en uno genérico, así que nunca queda vacío. */}
-                    {(() => {
-                      const Icono = categoryIcon(cat.icon);
-                      return (
+            {filasActivas.map((fila) => {
+              // `collapsed` = grupo de una hoja: se manipula el GRUPO, que es
+              // lo que el usuario cree que está tocando.
+              const objetivo = fila.kind === 'leaf' ? fila.leaf : fila.group;
+              const esHoja = fila.kind === 'leaf';
+              const Icono = categoryIcon(fila.group.icon);
+              const tono = categoryColor(fila.group);
+              return (
+                <Card
+                  key={`${fila.kind}-${objetivo.id}`}
+                  className={cn(
+                    'p-4 flex flex-col md:flex-row md:justify-between md:items-center',
+                    esHoja && 'md:ml-8 ml-4 border-l-2 border-l-slate-200',
+                  )}
+                  variant='white'
+                >
+                  <div>
+                    <p className='font-medium flex items-center gap-2 flex-wrap'>
+                      {!esHoja && (
                         <span
                           className='inline-flex h-6 w-6 items-center justify-center rounded-md shrink-0'
-                          style={{ background: `${categoryColor(cat)}22`, color: categoryColor(cat) }}
+                          style={{ background: `${tono}22`, color: tono }}
                           aria-hidden='true'
                         >
                           <Icono className='h-3.5 w-3.5' />
                         </span>
-                      );
-                    })()}
-                    {cat.name}
-                  </p>
-                  <div className='flex gap-2 mt-1'>
-                    <Badge
-                      variant='outline'
-                      className={cn(
-                        'capitalize w-fit',
-                        typeBadgeTone[cat.type],
                       )}
-                    >
-                      {cat.type === 'income'
-                        ? 'Ingreso'
-                        : cat.type === 'expense'
-                        ? 'Egreso'
-                        : 'Ambos'}
-                    </Badge>
-                    <Badge variant='default' className='w-fit'>
-                      Activa
-                    </Badge>
-                    {cat.is_system && (
-                      <Badge variant='secondary' className='w-fit'>
-                        Sistema
+                      {objetivo.name}
+                      {fila.kind === 'group' && (
+                        <span className='text-xs font-normal text-muted-foreground'>
+                          {fila.leafCount}{' '}
+                          {fila.leafCount === 1 ? 'subcategoría' : 'subcategorías'}
+                        </span>
+                      )}
+                    </p>
+                    <div className='flex gap-2 mt-1 flex-wrap'>
+                      <Badge
+                        variant='outline'
+                        className={cn('capitalize w-fit', typeBadgeTone[objetivo.type])}
+                      >
+                        {objetivo.type === 'income'
+                          ? 'Ingreso'
+                          : objetivo.type === 'expense'
+                          ? 'Egreso'
+                          : 'Ambos'}
                       </Badge>
-                    )}
+                      {objetivo.is_system && (
+                        <Badge variant='secondary' className='w-fit'>
+                          Sistema
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                <div className='mt-2 md:mt-0 flex gap-2 flex-wrap'>
-                  <Button
-                    size='sm'
-                    variant='soft-slate'
-                    disabled={processingId === cat.id || cat.is_system}
-                    onClick={() => {
-                      if (!cat.is_system) setEditCategory(cat);
-                    }}
-                    title={
-                      cat.is_system
-                        ? 'Categoría del sistema: No puedes editarla'
-                        : 'Editar categoría'
-                    }
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    size='sm'
-                    variant='destructive'
-                    disabled={processingId === cat.id || cat.is_system}
-                    onClick={() => {
-                      if (cat.is_system) return;
-                      setConfirm({ action: 'deactivate', category: cat });
-                    }}
-                  >
-                    {processingId === cat.id ? 'Procesando…' : 'Desactivar'}
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                  <div className='mt-2 md:mt-0 flex gap-2 flex-wrap'>
+                    {fila.kind !== 'leaf' && !objetivo.is_system && (
+                      <Button
+                        size='sm'
+                        variant='soft-sky'
+                        onClick={() => setDesglosando(fila.group.id)}
+                        title={`Añadir una subcategoría dentro de ${fila.group.name}`}
+                      >
+                        + Subcategoría
+                      </Button>
+                    )}
+                    <Button
+                      size='sm'
+                      variant='soft-slate'
+                      disabled={processingId === objetivo.id || objetivo.is_system}
+                      onClick={() => {
+                        if (!objetivo.is_system) setEditCategory(objetivo);
+                      }}
+                      title={
+                        objetivo.is_system
+                          ? 'Categoría del sistema: No puedes editarla'
+                          : 'Editar categoría'
+                      }
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      size='sm'
+                      variant='destructive'
+                      disabled={processingId === objetivo.id || objetivo.is_system}
+                      onClick={() => {
+                        if (objetivo.is_system) return;
+                        setConfirm({ action: 'deactivate', category: objetivo });
+                      }}
+                    >
+                      {processingId === objetivo.id ? 'Procesando…' : 'Desactivar'}
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         ) : (
           <p className='text-center p-4 text-muted-foreground'>
@@ -528,6 +543,14 @@ export default function CategoriesPage() {
           open={!!editCategory}
           onOpenChange={(open) => !open && setEditCategory(null)}
           category={editCategory}
+          onCreated={fetchCategories}
+        />
+      )}
+      {desglosando !== null && (
+        <CategoryModal
+          open={desglosando !== null}
+          onOpenChange={(open) => !open && setDesglosando(null)}
+          defaultParentId={desglosando}
           onCreated={fetchCategories}
         />
       )}
