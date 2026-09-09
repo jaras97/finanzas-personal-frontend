@@ -182,7 +182,27 @@ export type Budget = {
   spent: number;
   percentage: number;
   created_at: string;
+  /** Grupo al que pertenece esta hoja. Los presupuestos van siempre en hojas. */
+  parent_id?: number | null;
+  parent_name?: string | null;
 };
+
+/**
+ * Total de un grupo: la suma de los presupuestos de sus hojas.
+ * Es DERIVADO — no existe una fila de presupuesto para el grupo, y por eso la
+ * interfaz lo muestra sin campo editable.
+ */
+export type BudgetGroup = {
+  category_id: number;
+  category_name: string;
+  currency: currencyType;
+  amount: number;
+  spent: number;
+  percentage: number;
+  leaf_count: number;
+};
+
+export type BudgetsResponse = { groups: BudgetGroup[]; items: Budget[] };
 
 export type ImportColumnMapping = {
   date: number;

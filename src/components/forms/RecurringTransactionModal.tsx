@@ -20,7 +20,7 @@ import api from '@/lib/api';
 import axios from 'axios';
 import { useCurrencies } from '@/hooks/useCurrencies';
 import { formatCurrency } from '@/lib/format';
-import { categoryLabel } from '@/lib/categoryTree';
+import { categoryDisplayName, postableCategories } from '@/lib/categoryTree';
 import type {
   Category,
   RecurrenceFrequency,
@@ -279,9 +279,9 @@ export default function RecurringTransactionModal({
                 <SelectValue placeholder='Selecciona la categoría' />
               </SelectTrigger>
               <SelectContent className='select-solid z-[140]'>
-                {categories.map((c) => (
+                {postableCategories(categories).map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>
-                    {categoryLabel(c)}
+                    {categoryDisplayName(c, categories)}
                   </SelectItem>
                 ))}
               </SelectContent>

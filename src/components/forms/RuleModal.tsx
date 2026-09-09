@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import api from '@/lib/api';
 import axios from 'axios';
 import type { Category, CategoryRule } from '@/types';
-import { categoryLabel } from '@/lib/categoryTree';
+import { categoryDisplayName, postableCategories } from '@/lib/categoryTree';
 
 interface Props {
   open: boolean;
@@ -148,9 +148,9 @@ export default function RuleModal({ open, onOpenChange, editing, initial, onSave
               <SelectValue placeholder='Selecciona la categoría' />
             </SelectTrigger>
             <SelectContent className='select-solid z-[140]'>
-              {categories.map((c) => (
+              {postableCategories(categories).map((c) => (
                 <SelectItem key={c.id} value={String(c.id)}>
-                  {categoryLabel(c)}
+                  {categoryDisplayName(c, categories)}
                 </SelectItem>
               ))}
             </SelectContent>

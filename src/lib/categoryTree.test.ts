@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { categoryLabel, groupCategories, possibleParents } from './categoryTree';
+import {
+  categoryLabel, categoryDisplayName, groupCategories, possibleParents, postableCategories,
+} from './categoryTree';
 import type { Category } from '@/types';
 
 const cat = (o: Partial<Category> & { id: number; name: string }): Category => ({
@@ -55,5 +57,36 @@ describe('padres posibles', () => {
     const otra = cat({ id: 5, name: 'Movilidad' });
     // id 1 (Transporte) tiene a Gasolina como hija
     expect(possibleParents([...todas, otra], 'expense', 1)).toEqual([]);
+  });
+});
+
+describe('nombre visible (colapso del grupo de una hoja)', () => {
+  const general = cat({ id: 10, name: 'General', parent_id: 1, parent_name: 'Mascotas' });
+  const mascotas = cat({ id: 1, name: 'Mascotas' });
+
+  it('una hoja única se muestra con el nombre de su grupo', () => {
+    // Quien creó "Mascotas" y nunca la desglosó no tiene por qué ver "General"
+    expect(categoryDisplayName(general, [mascotas, general])).toBe('Mascotas');
+  });
+
+  it('con hermanas sí se distingue', () => {
+    const vet = cat({ id: 11, name: 'Veterinario', parent_id: 1, parent_name: 'Mascotas' });
+    expect(categoryDisplayName(general, [mascotas, general, vet])).toBe('Mascotas › General');
+    expect(categoryDisplayName(vet, [mascotas, general, vet])).toBe('Mascotas › Veterinario');
+  });
+
+  it('un grupo se muestra con su propio nombre', () => {
+    expect(categoryDisplayName(mascotas, [mascotas, general])).toBe('Mascotas');
+  });
+});
+
+describe('solo las hojas reciben movimientos', () => {
+  it('los grupos quedan fuera del selector', () => {
+    // Ofrecer un grupo haría que el usuario descubriera el problema al guardar
+    const lista = [
+      cat({ id: 1, name: 'Mascotas' }),
+      cat({ id: 10, name: 'General', parent_id: 1, parent_name: 'Mascotas' }),
+    ];
+    expect(postableCategories(lista).map((c) => c.id)).toEqual([10]);
   });
 });
