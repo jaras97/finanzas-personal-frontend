@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  categoryLabel, categoryDisplayName, groupCategories, possibleParents, postableCategories,
+  categoryLabel, categoryDisplayName, categoryRows, groupCategories, possibleParents, postableCategories,
 } from './categoryTree';
 import type { Category } from '@/types';
 
@@ -88,5 +88,72 @@ describe('solo las hojas reciben movimientos', () => {
       cat({ id: 10, name: 'General', parent_id: 1, parent_name: 'Mascotas' }),
     ];
     expect(postableCategories(lista).map((c) => c.id)).toEqual([10]);
+  });
+});
+
+describe('filas de la lista de categorías', () => {
+  const mascotas = cat({ id: 1, name: 'Mascotas' });
+  const general = cat({ id: 10, name: 'General', parent_id: 1, parent_name: 'Mascotas' });
+  const transporte = cat({ id: 2, name: 'Transporte' });
+  const gasolina = cat({ id: 20, name: 'Gasolina', parent_id: 2, parent_name: 'Transporte' });
+  const peajes = cat({ id: 21, name: 'Peajes', parent_id: 2, parent_name: 'Transporte' });
+
+  it('un grupo de una sola hoja es UNA fila', () => {
+    // Es lo que hace invisible el segundo nivel para quien no lo pidió
+    const filas = categoryRows([mascotas, general]);
+    expect(filas).toHaveLength(1);
+    expect(filas[0].kind).toBe('collapsed');
+  });
+
+  it('un grupo con varias hojas se despliega', () => {
+    const filas = categoryRows([transporte, gasolina, peajes]);
+    expect(filas.map((f) => f.kind)).toEqual(['group', 'leaf', 'leaf']);
+  });
+
+  it('«General» nunca aparece como fila suelta', () => {
+    const filas = categoryRows([mascotas, general, transporte, gasolina, peajes]);
+    const sueltas = filas.filter((f) => f.kind === 'leaf' && f.leaf.name === 'General');
+    expect(sueltas).toEqual([]);
+  });
+
+  it('no pierde ninguna categoría', () => {
+    const todas = [mascotas, general, transporte, gasolina, peajes];
+    const filas = categoryRows(todas);
+    const vistos = new Set<number>();
+    for (const f of filas) {
+      vistos.add(f.group.id);
+      if (f.kind !== 'group') vistos.add(f.leaf.id);
+    }
+    expect(vistos.size).toBe(todas.length);
+  });
+
+  it('un grupo sin hojas no revienta', () => {
+    // No debería ocurrir (I3), pero la lista no puede romperse por eso
+    const filas = categoryRows([mascotas]);
+    expect(filas.map((f) => f.kind)).toEqual(['group']);
+  });
+});
+
+
+describe('el colapso solo esconde la hoja sintética', () => {
+  const transporte = cat({ id: 2, name: 'Transporte' });
+  // El usuario creó UNA subcategoría con nombre propio
+  const gasolina = cat({ id: 20, name: 'Gasolina', parent_id: 2, parent_name: 'Transporte' });
+
+  it('una hoja con nombre propio NO se colapsa aunque esté sola', () => {
+    // Colapsarla haría desaparecer lo que el usuario acaba de crear
+    const filas = categoryRows([transporte, gasolina]);
+    expect(filas.map((f) => f.kind)).toEqual(['group', 'leaf']);
+  });
+
+  it('y en los selectores se muestra con su grupo', () => {
+    expect(categoryDisplayName(gasolina, [transporte, gasolina])).toBe('Transporte › Gasolina');
+  });
+
+  it('la sintética sí se sigue colapsando', () => {
+    const mascotas = cat({ id: 1, name: 'Mascotas' });
+    const general = cat({ id: 10, name: 'General', parent_id: 1, parent_name: 'Mascotas' });
+    expect(categoryRows([mascotas, general]).map((f) => f.kind)).toEqual(['collapsed']);
+    expect(categoryDisplayName(general, [mascotas, general])).toBe('Mascotas');
   });
 });

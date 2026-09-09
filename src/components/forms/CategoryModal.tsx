@@ -30,6 +30,9 @@ type Props = {
   // (color, icono, padre) quedaba invisible para el modal. Se usa `Category`
   // completo para que eso no vuelva a pasar.
   category?: Category;
+  /** Al crear, deja el grupo preseleccionado. Lo usa el botón «Desglosar»
+   *  de la lista: el usuario ya dijo de qué categoría quiere una subcategoría. */
+  defaultParentId?: number | null;
 };
 
 export default function CategoryModal({
@@ -37,6 +40,7 @@ export default function CategoryModal({
   onOpenChange,
   onCreated,
   category,
+  defaultParentId,
 }: Props) {
   const [name, setName] = useState('');
   const [type, setType] = useState<'income' | 'expense' | 'both' | ''>('');
@@ -70,9 +74,9 @@ export default function CategoryModal({
       setType('');
       setColor(null);
       setIcon(null);
-      setParentId('');
+      setParentId(defaultParentId ? String(defaultParentId) : '');
     }
-  }, [category]);
+  }, [category, defaultParentId]);
 
   useEffect(() => {
     if (!open) return;
