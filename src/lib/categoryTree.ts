@@ -19,6 +19,35 @@ export function categoryLabel(c: { name: string; parent_name?: string | null }):
   return c.parent_name ? `${c.parent_name} › ${c.name}` : c.name;
 }
 
+/**
+ * Solo las HOJAS reciben movimientos: los grupos agrupan.
+ *
+ * Filtrar acá y no en cada formulario evita que un selector ofrezca un grupo
+ * y el usuario descubra el problema recién al guardar, con un 400.
+ */
+export function postableCategories<T extends { parent_id?: number | null }>(
+  categories: T[],
+): T[] {
+  return categories.filter((c) => !!c.parent_id);
+}
+
+/**
+ * Cómo se llama una categoría de cara al usuario.
+ *
+ * Una hoja que es la ÚNICA de su grupo se muestra con el nombre del grupo:
+ * quien creó «Mascotas» y nunca la desglosó no tiene por qué ver «General».
+ * Ese colapso es lo que hace que el segundo nivel sea invisible para quien no
+ * lo pidió. Con varias hojas sí se distingue: «Transporte › Gasolina».
+ */
+export function categoryDisplayName<
+  T extends { name: string; parent_id?: number | null; parent_name?: string | null; is_active?: boolean },
+>(c: T, todas: T[]): string {
+  if (!c.parent_id) return c.name;
+  const hermanas = todas.filter((x) => x.parent_id === c.parent_id && x.is_active !== false);
+  if (hermanas.length <= 1) return c.parent_name ?? c.name;
+  return categoryLabel(c);
+}
+
 export type CategoryGroup = { parent: Category; children: Category[] };
 
 /**

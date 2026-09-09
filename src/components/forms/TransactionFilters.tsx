@@ -13,7 +13,7 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
-import { categoryLabel } from '@/lib/categoryTree';
+import { categoryDisplayName, postableCategories } from '@/lib/categoryTree';
 
 export interface Filters {
   startDate?: string; // ISO
@@ -114,9 +114,9 @@ export default function TransactionFilters({ value, onChange }: Props) {
               <SelectValue placeholder='Filtrar por categoría' />
             </SelectTrigger>
             <SelectContent className='z-[60] max-h-[50vh]'>
-              {categories.map((c) => (
+              {postableCategories(categories).map((c) => (
                 <SelectItem key={c.id} value={String(c.id)}>
-                  {categoryLabel(c)}
+                  {categoryDisplayName(c, categories)}
                 </SelectItem>
               ))}
             </SelectContent>

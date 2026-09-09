@@ -19,13 +19,18 @@ import axios from 'axios';
 import { cn } from '@/lib/utils';
 import InfoHint from '@/components/ui/info-hint';
 import { DatePicker } from '@/components/ui/date-picker';
-import { categoryLabel } from '@/lib/categoryTree';
+import { categoryDisplayName, postableCategories } from '@/lib/categoryTree';
 
+// Tipo local reducido. `parent_id`/`parent_name` son necesarios desde el
+// modelo grupo/hoja: sin ellos el selector ofrecería grupos, que no reciben
+// movimientos, y el guardado fallaría con un 400.
 type Category = {
   id: number;
   name: string;
   type: 'income' | 'expense' | 'both';
   is_system?: boolean;
+  parent_id?: number | null;
+  parent_name?: string | null;
 };
 
 interface Props {
@@ -212,9 +217,9 @@ export default function EditTransactionModal({
                 </SelectTrigger>
                 {/* z alto para ir sobre el modal (Dialog panel ~ z-[110]) */}
                 <SelectContent className='select-solid z-[140]'>
-                  {categories.map((c) => (
+                  {postableCategories(categories).map((c) => (
                     <SelectItem key={c.id} value={c.id.toString()}>
-                      {categoryLabel(c)}
+                      {categoryDisplayName(c, categories)}
                     </SelectItem>
                   ))}
                 </SelectContent>
