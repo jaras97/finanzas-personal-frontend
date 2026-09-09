@@ -6,7 +6,23 @@ import { buildDateParamsFromRange } from "@/lib/dateParams";
 import { currencyType } from "@/types";
 import { useDataVersion } from '@/lib/dataRefresh';
 
-interface CategorySummary { category_id: number; category_name: string; total: number; percentage: number; }
+export interface CategorySummary {
+  category_id: number;
+  category_name: string;
+  total: number;
+  percentage: number;
+  /** Clave de paleta del grupo; evita cruzar con /categories para pintar. */
+  color?: string | null;
+  icon?: string | null;
+  previous_total: number;
+  /** null = no hay base de comparación. Un "+∞%" no informa. */
+  delta_percentage: number | null;
+  /** Las hojas del grupo. Viajan acá para que el drill-down no pida nada. */
+  children: CategorySummary[];
+}
+
+/** Id sintético de la línea «Sin categorizar» (ver SIN_CATEGORIA_ID en el backend). */
+export const SIN_CATEGORIA_ID = 0;
 interface DailyEvolution { date: string; total_income: number; total_expense: number; }
 interface DaySummary { date: string; total_income: number; total_expense: number; }
 interface SummaryData {
