@@ -24,6 +24,7 @@ import InfoHint from '@/components/ui/info-hint';
 import { DatePicker } from '@/components/ui/date-picker';
 import { readTxPreferences, rememberTx } from '@/lib/txPreferences';
 import { categoryDisplayName, postableCategories } from '@/lib/categoryTree';
+import { CategoryPicker } from './CategoryPicker';
 
 type UiAccount = { id: string; name: string; currency?: currencyType };
 
@@ -499,37 +500,23 @@ export default function NewTransactionModal({
                     Solo categorías activas del tipo seleccionado.
                   </InfoHint>
                 </div>
-                <Select
+                <CategoryPicker
+                  categories={categories}
                   value={categoryId}
-                  onValueChange={setCategoryId}
-                  disabled={
-                    submitting ||
+                  onChange={setCategoryId}
+                  disabled={submitting ||
                     !type ||
                     loadingCategories ||
-                    categories.length === 0
-                  }
-                >
-                  <SelectTrigger id={idCat} className='truncate bg-white'>
-                    <SelectValue
-                      placeholder={
-                        !type
+                    categories.length === 0}
+                  id={idCat}
+                  placeholder={!type
                           ? 'Selecciona primero el tipo'
                           : loadingCategories
                           ? 'Cargando…'
                           : categories.length
                           ? 'Seleccionar categoría'
-                          : 'No hay categorías disponibles'
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent className='z-[130] select-solid max-h-[50vh] min-w-[--radix-select-trigger-width]'>
-                    {postableCategories(categories).map((c) => (
-                      <SelectItem key={c.id} value={String(c.id)}>
-                        {categoryDisplayName(c, categories)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                          : 'No hay categorías disponibles'}
+                />
               </div>
 
               {/* Cuenta o tarjeta */}

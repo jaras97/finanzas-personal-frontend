@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   categoryLabel, categoryDisplayName, categoryRows, groupCategories, possibleParents, postableCategories,
+  buildPickerSections, flattenSections,
 } from './categoryTree';
 import type { Category } from '@/types';
 
@@ -155,5 +156,53 @@ describe('el colapso solo esconde la hoja sintética', () => {
     const general = cat({ id: 10, name: 'General', parent_id: 1, parent_name: 'Mascotas' });
     expect(categoryRows([mascotas, general]).map((f) => f.kind)).toEqual(['collapsed']);
     expect(categoryDisplayName(general, [mascotas, general])).toBe('Mascotas');
+  });
+});
+
+describe('secciones del selector', () => {
+  const transporte = cat({ id: 1, name: 'Transporte' });
+  const gasolina = cat({ id: 10, name: 'Gasolina', parent_id: 1, parent_name: 'Transporte', transactions_count: 40 });
+  const peajes = cat({ id: 11, name: 'Peajes', parent_id: 1, parent_name: 'Transporte', transactions_count: 2 });
+  const ocio = cat({ id: 2, name: 'Ocio' });
+  const salidas = cat({ id: 20, name: 'Salidas', parent_id: 2, parent_name: 'Ocio', transactions_count: 90 });
+  const todas = [transporte, gasolina, peajes, ocio, salidas];
+
+  it('pone las más usadas arriba', () => {
+    // Tres de cada cuatro registros se resuelven sin buscar nada
+    const s = buildPickerSections(todas, '');
+    expect(s[0].label).toBe('Frecuentes');
+    expect(s[0].options.map((o) => o.name)).toEqual(['Salidas', 'Gasolina', 'Peajes']);
+  });
+
+  it('nunca ofrece un grupo: solo reciben las hojas', () => {
+    const s = buildPickerSections(todas, '');
+    const ofrecidas = flattenSections(s).map((o) => o.id);
+    expect(ofrecidas).not.toContain(transporte.id);
+    expect(ofrecidas).not.toContain(ocio.id);
+  });
+
+  it('buscar por el nombre del GRUPO encuentra sus hojas', () => {
+    // El usuario piensa en «transporte», no en «gasolina»
+    const s = buildPickerSections(todas, 'transporte');
+    expect(flattenSections(s).map((o) => o.name).sort()).toEqual(['Gasolina', 'Peajes']);
+  });
+
+  it('la búsqueda ignora tildes y mayúsculas', () => {
+    const conTilde = cat({ id: 30, name: 'Educación', parent_id: 2, parent_name: 'Ocio' });
+    const s = buildPickerSections([...todas, conTilde], 'EDUCACION');
+    expect(flattenSections(s).map((o) => o.name)).toEqual(['Educación']);
+  });
+
+  it('al buscar no se muestran «Frecuentes»', () => {
+    // Con una búsqueda activa el usuario ya dijo qué quiere: repetir las
+    // frecuentes arriba solo añadiría ruido y duplicados.
+    const s = buildPickerSections(todas, 'gas');
+    expect(s.every((x) => x.label !== 'Frecuentes')).toBe(true);
+  });
+
+  it('las inactivas no se ofrecen', () => {
+    const vieja = cat({ id: 40, name: 'Vieja', parent_id: 1, parent_name: 'Transporte', is_active: false });
+    const s = buildPickerSections([...todas, vieja], '');
+    expect(flattenSections(s).map((o) => o.name)).not.toContain('Vieja');
   });
 });

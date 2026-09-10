@@ -21,6 +21,7 @@ import axios from 'axios';
 import { useCurrencies } from '@/hooks/useCurrencies';
 import { formatCurrency } from '@/lib/format';
 import { categoryDisplayName, postableCategories } from '@/lib/categoryTree';
+import { CategoryPicker } from './CategoryPicker';
 import type {
   Category,
   RecurrenceFrequency,
@@ -274,18 +275,13 @@ export default function RecurringTransactionModal({
           {/* Categoría */}
           <div className='space-y-1'>
             <label className='text-sm font-medium'>Categoría</label>
-            <Select value={categoryId} onValueChange={setCategoryId} disabled={saving}>
-              <SelectTrigger className='bg-white'>
-                <SelectValue placeholder='Selecciona la categoría' />
-              </SelectTrigger>
-              <SelectContent className='select-solid z-[140]'>
-                {postableCategories(categories).map((c) => (
-                  <SelectItem key={c.id} value={String(c.id)}>
-                    {categoryDisplayName(c, categories)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CategoryPicker
+                  categories={categories}
+                  value={categoryId}
+                  onChange={setCategoryId}
+                  disabled={saving}
+                  placeholder='Selecciona la categoría'
+                />
             {categories.length === 0 && (
               <p className='text-xs text-muted-foreground'>
                 No tienes categorías de {type === 'income' ? 'ingreso' : 'egreso'}. Crea

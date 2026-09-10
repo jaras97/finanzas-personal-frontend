@@ -18,6 +18,7 @@ import api from '@/lib/api';
 import axios from 'axios';
 import type { Category, CategoryRule } from '@/types';
 import { categoryDisplayName, postableCategories } from '@/lib/categoryTree';
+import { CategoryPicker } from './CategoryPicker';
 
 interface Props {
   open: boolean;
@@ -143,18 +144,13 @@ export default function RuleModal({ open, onOpenChange, editing, initial, onSave
 
         <div className='space-y-1'>
           <label className='text-sm font-medium'>…sugerir esta categoría</label>
-          <Select value={categoryId} onValueChange={setCategoryId} disabled={saving}>
-            <SelectTrigger className='bg-white'>
-              <SelectValue placeholder='Selecciona la categoría' />
-            </SelectTrigger>
-            <SelectContent className='select-solid z-[140]'>
-              {postableCategories(categories).map((c) => (
-                <SelectItem key={c.id} value={String(c.id)}>
-                  {categoryDisplayName(c, categories)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <CategoryPicker
+                  categories={categories}
+                  value={categoryId}
+                  onChange={setCategoryId}
+                  disabled={saving}
+                  placeholder='Selecciona la categoría'
+                />
         </div>
       </div>
     </FormModal>
