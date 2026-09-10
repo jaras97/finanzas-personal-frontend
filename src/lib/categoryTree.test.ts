@@ -159,6 +159,31 @@ describe('el colapso solo esconde la hoja sintética', () => {
   });
 });
 
+describe('nombre visible sin parent_name', () => {
+  it('resuelve el grupo por parent_id cuando no viene denormalizado', () => {
+    // Es el caso de la categoría embebida en una transacción: el backend solo
+    // rellena `parent_name` en GET /categories. Sin esto, la lista de
+    // movimientos mostraba «General» en todas las filas.
+    const mascotas = cat({ id: 1, name: 'Mascotas' });
+    const generalSinPadre = cat({ id: 10, name: 'General', parent_id: 1 });
+    expect(categoryDisplayName(generalSinPadre, [mascotas, generalSinPadre]))
+      .toBe('Mascotas');
+  });
+
+  it('también compone «Grupo › Hoja» sin parent_name', () => {
+    const transporte = cat({ id: 1, name: 'Transporte' });
+    const gas = cat({ id: 10, name: 'Gasolina', parent_id: 1 });
+    const peajes = cat({ id: 11, name: 'Peajes', parent_id: 1 });
+    expect(categoryDisplayName(gas, [transporte, gas, peajes]))
+      .toBe('Transporte › Gasolina');
+  });
+
+  it('si el grupo no está en la lista, cae a parent_name', () => {
+    const huerfana = cat({ id: 10, name: 'Gasolina', parent_id: 99, parent_name: 'Transporte' });
+    expect(categoryDisplayName(huerfana, [huerfana])).toBe('Transporte › Gasolina');
+  });
+});
+
 describe('secciones del selector', () => {
   const transporte = cat({ id: 1, name: 'Transporte' });
   const gasolina = cat({ id: 10, name: 'Gasolina', parent_id: 1, parent_name: 'Transporte', transactions_count: 40 });
@@ -191,6 +216,47 @@ describe('secciones del selector', () => {
     const conTilde = cat({ id: 30, name: 'Educación', parent_id: 2, parent_name: 'Ocio' });
     const s = buildPickerSections([...todas, conTilde], 'EDUCACION');
     expect(flattenSections(s).map((o) => o.name)).toEqual(['Educación']);
+  });
+
+  it('un grupo sin desglosar se ofrece como UNA opción con su nombre', () => {
+    // El caso de una cuenta recién creada: cada grupo tiene solo la hoja
+    // «General» que crea el backend. Sin colapsar, el selector abría con
+    // trece cabeceras y trece opciones llamadas todas «General».
+    const mascotas = cat({ id: 3, name: 'Mascotas' });
+    const generalM = cat({ id: 30, name: 'General', parent_id: 3, parent_name: 'Mascotas' });
+    const s = buildPickerSections([mascotas, generalM], '');
+
+    expect(s).toHaveLength(1);
+    expect(s[0].collapsed).toBe(true);
+    expect(s[0].label).toBe('Mascotas');
+    // La opción sigue siendo la HOJA: es la que recibe el movimiento.
+    expect(s[0].options.map((o) => o.id)).toEqual([generalM.id]);
+  });
+
+  it('un grupo con hojas propias NO se colapsa', () => {
+    const s = buildPickerSections(todas, '');
+    const seccionTransporte = s.find((x) => x.group?.id === transporte.id);
+    expect(seccionTransporte?.collapsed).toBe(false);
+  });
+
+  it('una hoja creada por el usuario, aunque sea la única, no se colapsa', () => {
+    // Si alguien crea «Transporte › Gasolina» y esa queda como única hoja,
+    // colapsarla haría desaparecer lo que acaba de crear.
+    const t = cat({ id: 4, name: 'Transporte' });
+    const g = cat({ id: 40, name: 'Gasolina', parent_id: 4, parent_name: 'Transporte' });
+    const s = buildPickerSections([t, g], '');
+    expect(s[0].collapsed).toBe(false);
+    expect(s[0].label).toBe('Transporte');
+  });
+
+  it('filtrar hasta dejar una hoja no convierte el grupo en colapsado', () => {
+    // Buscar «gasolina» deja una sola hoja visible de Transporte. Si eso
+    // contara como colapsado, la opción se pintaría «Transporte» y el usuario
+    // creería estar eligiendo el grupo entero.
+    const s = buildPickerSections(todas, 'gasolina');
+    const seccion = s.find((x) => x.group?.id === transporte.id);
+    expect(seccion?.collapsed).toBe(false);
+    expect(seccion?.options.map((o) => o.name)).toEqual(['Gasolina']);
   });
 
   it('al buscar no se muestran «Frecuentes»', () => {

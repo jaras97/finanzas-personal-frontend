@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useSavingAccounts } from '@/hooks/useSavingAccounts';
+import { useCategories } from '@/hooks/useCategories';
+import UncategorizedBanner from '@/components/transactions/UncategorizedBanner';
+import CategoryChipEditor from '@/components/transactions/CategoryChipEditor';
 import TransactionFilters, {
   Filters,
   defaultTransactionFilters,
@@ -54,8 +57,6 @@ import {
   isTransferLeg,
   transferDisplayDescription,
   transferAmountDisplay,
-  getStatusLabel,
-  type DisplayTransaction,
 } from '@/lib/transactionDisplay';
 
 /* Summary por rango (solo fecha) para KPIs */
@@ -65,32 +66,6 @@ import {
   TransactionsKpisSkeleton,
   TransactionsMobileSkeleton,
 } from '@/components/skeletons/TransactionsSkeleton';
-
-const SYSTEM_CATEGORY_STYLES: Record<string, string> = {
-  Transferencia: 'bg-sky-50 text-sky-700 border-sky-200',
-  'Pago de deuda': 'bg-amber-50 text-amber-700 border-amber-200',
-  Comisión: 'bg-rose-50 text-rose-700 border-rose-200',
-  Interés: 'bg-violet-50 text-violet-700 border-violet-200',
-  Ajuste: 'bg-slate-50 text-slate-700 border-slate-200',
-};
-
-function categoryBadgeClasses(tx: TransactionWithCategoryRead) {
-  const cat = tx.category;
-  if (!cat) return '';
-  const isSystem =
-    (cat as any).is_system === true || (cat as any).origin === 'system';
-  if (isSystem) {
-    const key = cat.name || '';
-    return (
-      SYSTEM_CATEGORY_STYLES[key] ??
-      'bg-slate-50 text-slate-700 border-slate-200'
-    );
-  }
-  if (tx.type === 'income')
-    return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (tx.type === 'expense') return 'bg-rose-50 text-rose-700 border-rose-200';
-  return 'bg-slate-50 text-slate-700 border-slate-200';
-}
 
 /* Helpers fechas */
 const dayKey = (d: Date | undefined) =>
@@ -151,6 +126,9 @@ export default function TransactionsPage() {
   const [transferOpen, setTransferOpen] = useState(false);
   // Solo se usa para el modal de transferencia del toolbar.
   const { accounts, refresh: refreshAccounts } = useSavingAccounts();
+  // Se cargan una vez acá y se pasan a cada fila: un fetch por fila serían
+  // veinte peticiones por página.
+  const { categories } = useCategories();
   const [ruleModalOpen, setRuleModalOpen] = useState(false);
   const [ruleInitial, setRuleInitial] = useState<
     { matchText?: string; categoryId?: number } | undefined
@@ -232,11 +210,13 @@ export default function TransactionsPage() {
           setRuleModalOpen(true);
         },
         onAttachments: (tx) => setAttachmentsTx(tx),
+        categories,
+        onCategoryChanged: refresh,
       }).map((c, i) => ({
         ...c,
         id: (c as any).id ?? (c as any).accessorKey ?? `col_${i}`,
       })),
-    [],
+    [categories, refresh],
   );
 
   /* ===== toolbar: búsqueda ===== */
@@ -347,6 +327,8 @@ export default function TransactionsPage() {
         subtitle='Historial y gestión de tus movimientos.'
       />
       <TransactionsTabs />
+
+      <UncategorizedBanner />
 
       {sumLoading && <TransactionsKpisSkeleton />}
 
@@ -684,13 +666,13 @@ export default function TransactionsPage() {
                     </div>
 
                     <div className='mt-2 flex flex-wrap gap-1'>
-                      {tx.category && (
-                        <Badge
-                          className={cn('border', categoryBadgeClasses(tx))}
-                        >
-                          {tx.category.name}
-                        </Badge>
-                      )}
+                      {/* Mismo control que en escritorio: si el chip se edita
+                          allá y acá no, la función queda invisible en móvil. */}
+                      <CategoryChipEditor
+                        tx={tx}
+                        categories={categories}
+                        onChanged={refresh}
+                      />
                       {tx.debt?.name && (
                         <Badge
                           className={cn(
