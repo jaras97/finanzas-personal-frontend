@@ -40,13 +40,28 @@ export function postableCategories<T extends { parent_id?: number | null }>(
  * lo pidió. Con varias hojas sí se distingue: «Transporte › Gasolina».
  */
 export function categoryDisplayName<
-  T extends { name: string; parent_id?: number | null; parent_name?: string | null; is_active?: boolean },
+  T extends {
+    id?: number;
+    name: string;
+    parent_id?: number | null;
+    parent_name?: string | null;
+    is_active?: boolean;
+  },
 >(c: T, todas: T[]): string {
   if (!c.parent_id) return c.name;
+
+  // El grupo se BUSCA en el árbol; `parent_name` solo se usa de respaldo.
+  // La categoría que viaja dentro de una transacción no lo trae (el backend
+  // lo denormaliza únicamente en `GET /categories`), así que confiar en él
+  // hacía que la lista de movimientos mostrara «General» en cada fila —
+  // exactamente el nombre que el colapso existe para ocultar.
+  const grupo = todas.find((x) => x.id != null && x.id === c.parent_id);
+  const nombreGrupo = grupo?.name ?? c.parent_name ?? null;
+
   const hermanas = todas.filter((x) => x.parent_id === c.parent_id && x.is_active !== false);
   // Igual que en la lista: solo se funde con el grupo la hoja sintética.
-  if (hermanas.length <= 1 && esHojaSintetica(c)) return c.parent_name ?? c.name;
-  return categoryLabel(c);
+  if (hermanas.length <= 1 && esHojaSintetica(c)) return nombreGrupo ?? c.name;
+  return nombreGrupo ? `${nombreGrupo} › ${c.name}` : c.name;
 }
 
 export type CategoryGroup = { parent: Category; children: Category[] };
@@ -171,6 +186,18 @@ export type PickerSection = {
   group: Category | null;
   label: string;
   options: Category[];
+  /**
+   * El grupo tiene una sola hoja y es la sintética: se ofrece como UNA opción
+   * con el nombre del grupo y sin cabecera propia.
+   *
+   * Sin esto, una cuenta recién creada (donde todos los grupos son así) abría
+   * el selector con trece cabeceras, cada una con una única opción llamada
+   * «General» — trece opciones indistinguibles para elegir entre trece
+   * categorías distintas. Es el mismo colapso que hace `categoryRows` en la
+   * lista de Categorías, y tiene que coincidir con ella o la app se
+   * contradice a sí misma.
+   */
+  collapsed?: boolean;
 };
 
 function normaliza(s: string): string {
@@ -221,7 +248,19 @@ export function buildPickerSections(
   for (const [gid, opciones] of porGrupo) {
     const grupo = grupos.get(gid);
     if (!grupo) continue;
-    secciones.push({ group: grupo, label: grupo.name, options: opciones });
+    // Ojo: se mira cuántas hojas tiene el GRUPO, no cuántas sobrevivieron al
+    // filtro de búsqueda. Si no, buscar «gasolina» en un Transporte con dos
+    // hojas dejaría una sola visible y la pintaría como si fuera el grupo
+    // entero — el usuario elegiría «Transporte» creyendo que eligió la hoja.
+    const todasSusHojas = hojas.filter((h) => h.parent_id === gid);
+    const collapsed =
+      todasSusHojas.length === 1 && esHojaSintetica(todasSusHojas[0]);
+    secciones.push({
+      group: grupo,
+      label: grupo.name,
+      options: opciones,
+      collapsed,
+    });
   }
 
   return secciones;

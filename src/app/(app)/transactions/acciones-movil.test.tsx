@@ -71,6 +71,15 @@ describe('paridad de acciones entre escritorio y móvil', () => {
     expect(screen.getAllByRole('button', { name: /^reversar$/i })).toHaveLength(2);
   });
 
+  it('el chip de categoría se puede editar en ambas vistas', async () => {
+    render(<TransactionsPage />);
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole('button', { name: /categoría: mercado\. pulsa para cambiarla/i }),
+      ).toHaveLength(2),
+    );
+  });
+
   it('el contador de comprobantes se muestra en ambas vistas cuando hay adjuntos', async () => {
     get.mockImplementation((url: string) =>
       url.includes('/transactions/with-category')

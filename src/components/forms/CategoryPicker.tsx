@@ -38,6 +38,12 @@ type Props = {
   placeholder?: string;
   /** Si se pasa, ofrece crear una categoría con lo escrito cuando no hay match. */
   onCreate?: (nombre: string) => void;
+  /**
+   * Disparador propio, para cuando el selector no vive en un formulario.
+   * En la lista de movimientos el disparador es el chip de la categoría: un
+   * campo de formulario de 36px de alto ahí dentro rompería la fila.
+   */
+  trigger?: React.ReactNode;
 };
 
 export function CategoryPicker({
@@ -48,6 +54,7 @@ export function CategoryPicker({
   disabled,
   placeholder = 'Seleccionar categoría',
   onCreate,
+  trigger,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -108,11 +115,15 @@ export function CategoryPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
+        {trigger ?? (
         <button
           id={id}
           type='button'
           role='combobox'
           aria-expanded={open}
+          // `combobox` no toma su nombre del contenido, así que sin esto un
+          // lector de pantalla anuncia "cuadro combinado" y nada más.
+          aria-label={placeholder}
           disabled={disabled}
           className={cn(
             'flex h-9 w-full items-center justify-between gap-2 rounded-md border',
@@ -145,6 +156,7 @@ export function CategoryPicker({
           )}
           <ChevronsUpDown className='h-4 w-4 opacity-50 shrink-0' />
         </button>
+        )}
       </PopoverTrigger>
 
       <PopoverContent
@@ -191,6 +203,10 @@ export function CategoryPicker({
           ) : (
             secciones.map((sec) => (
               <div key={sec.group ? `g-${sec.group.id}` : 'frecuentes'}>
+                {/* Un grupo colapsado NO lleva cabecera: su única opción ya
+                    lleva el nombre del grupo, y repetirlo arriba sería el
+                    mismo texto dos veces, uno pulsable y otro no. */}
+                {!sec.collapsed && (
                 <p
                   className={cn(
                     'px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide',
@@ -206,6 +222,7 @@ export function CategoryPicker({
                   )}
                   {sec.label}
                 </p>
+                )}
                 {sec.options.map((c) => {
                   indice += 1;
                   const i = indice;
@@ -225,8 +242,19 @@ export function CategoryPicker({
                         esActiva && 'bg-[hsl(var(--muted))]',
                       )}
                     >
+                      {sec.collapsed && sec.group && (
+                        <span
+                          className='inline-block h-2 w-2 shrink-0 rounded-sm'
+                          style={{ background: categoryColor(sec.group) }}
+                          aria-hidden='true'
+                        />
+                      )}
                       <span className='flex-1 truncate'>
-                        {sec.group ? c.name : categoryDisplayName(c, categories)}
+                        {sec.collapsed && sec.group
+                          ? sec.group.name
+                          : sec.group
+                          ? c.name
+                          : categoryDisplayName(c, categories)}
                       </span>
                       {elegida && (
                         <Check className='h-4 w-4 text-[hsl(var(--primary))] shrink-0' />

@@ -406,7 +406,7 @@ const SummaryPage: FC = () => {
                 expense={s.expense_by_category || []}
                 income={s.income_by_category || []}
                 currency={currency}
-                onFixUncategorized={() => router.push('/transactions')}
+                onFixUncategorized={() => router.push('/transactions/pendientes')}
               />
             </CardContent>
           </Card>

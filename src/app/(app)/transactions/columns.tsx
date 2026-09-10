@@ -6,14 +6,14 @@ import DateTimeDisplay from '@/components/ui/DateTimeDisplay';
 import { Button } from '@/components/ui/button';
 import { StickyNote, Tag, Paperclip } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { TransactionWithCategoryRead } from '@/types';
+import { Category, TransactionWithCategoryRead } from '@/types';
+import CategoryChipEditor from '@/components/transactions/CategoryChipEditor';
 import {
   typeColor,
   isCreditCardPurchase,
   isTransferLeg,
   getTxCurrency,
   getStatusLabel,
-  categoryBadgeClasses,
   transferDisplayDescription,
   transferAmountDisplay,
   type DisplayTransaction,
@@ -25,8 +25,20 @@ export function buildTransactionColumns(opts: {
   onShowNote: (tx: TransactionWithCategoryRead) => void;
   onCreateRule: (tx: TransactionWithCategoryRead) => void;
   onAttachments: (tx: TransactionWithCategoryRead) => void;
+  /** Árbol completo, para el selector inline de la columna Categoría. */
+  categories: Category[];
+  /** Tras cambiar la categoría desde la lista. */
+  onCategoryChanged: () => void;
 }): ColumnDef<DisplayTransaction, unknown>[] {
-  const { onEdit, onReverse, onShowNote, onCreateRule, onAttachments } = opts;
+  const {
+    onEdit,
+    onReverse,
+    onShowNote,
+    onCreateRule,
+    onAttachments,
+    categories,
+    onCategoryChanged,
+  } = opts;
 
   return [
     {
@@ -67,11 +79,13 @@ export function buildTransactionColumns(opts: {
         const tx = row.original;
         return (
           <div className='flex gap-1 flex-wrap'>
-            {tx.category && (
-              <Badge className={cn('border', categoryBadgeClasses(tx))}>
-                {tx.category.name}
-              </Badge>
-            )}
+            {/* El chip es el control: cambiar de categoría no debería exigir
+                abrir el modal de edición completo. */}
+            <CategoryChipEditor
+              tx={tx}
+              categories={categories}
+              onChanged={onCategoryChanged}
+            />
             {tx.debt?.name && (
               <Badge
                 className={cn(
