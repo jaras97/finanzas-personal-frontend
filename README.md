@@ -50,23 +50,29 @@ Ver [`.env.example`](.env.example). Resumen:
 - `pnpm build` — build de producción
 - `pnpm start` — sirve el build de producción
 - `pnpm lint` — ESLint
+- `pnpm test` / `pnpm test:watch` / `pnpm test:coverage` — Vitest + Testing Library (152 tests al 2026-09-10)
+
+CI en `.github/workflows/ci.yml`: typecheck → tests → build, en cada push a `main` y en cada PR. Vercel despliega por su cuenta, así que el workflow es la señal de que algo se rompió, no un gate.
 
 ## Estructura del proyecto
 
 ```
 src/
   app/
-    (app)/              # rutas protegidas: summary, transactions, recurring, saving-accounts, debts, categories, admin
+    (app)/              # rutas protegidas: summary, transactions, transactions/pendientes,
+                        # recurring, saving-accounts, debts, categories, budgets, import, rules, admin
     auth/                # login, expired, inactive, no-subscription
     layout.tsx           # layout raíz (fuentes, Toaster)
     middleware.ts         # protección de rutas por JWT (ver docs/ARCHITECTURE.md)
   components/
-    auth/, forms/, chart/, kpi/, layout/, skeletons/, ui/
+    auth/, forms/, chart/, kpi/, layout/, skeletons/, transactions/, ui/
   hooks/                 # un hook de datos por feature (useSummary, useTransactions, useDebts, ...)
   lib/
     api.ts               # cliente axios compartido + logout()
     store/sidebarStore.ts  # store de Zustand (sidebar móvil)
     format.ts, formatDate.ts, formatDayLabel.ts, date.ts, dateParams.ts  # utils de fecha/moneda
+    categoryTree.ts      # árbol de categorías de dos niveles (grupo/hoja) — ver nota abajo
+    categoryStyle.ts, categoryIcon.tsx  # color estable por nombre e iconos de lucide
   types/index.ts          # tipos TypeScript de todo el dominio
 ```
 
@@ -77,3 +83,5 @@ No hay página en `src/app/page.tsx` — la ruta `/` la resuelve enteramente `mi
 - La sesión vive en una cookie httpOnly que fija el backend (`/auth/login`) — el frontend nunca lee ni guarda el JWT (ni `localStorage` ni `document.cookie`). Para cerrar sesión siempre hay que llamar a `logout()` de `src/lib/api.ts` (hace `POST /auth/logout`), nunca manipular cookies/storage a mano.
 - Si un usuario que ya tenía sesión antes del 2026-08-22 ve "Suscripción pendiente" sin razón aparente, es la cookie vieja (no-httpOnly) quedando huérfana — un logout+login lo resuelve. Ver [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) para el detalle completo.
 - Los formularios usan `useState` manual por campo; `react-hook-form` + `zod` están instalados y hay un primitivo `form.tsx` de shadcn, pero **no se usan en ningún formulario actual** — están disponibles pero no adoptados.
+- **Las categorías son un árbol de dos niveles y el primer nivel no recibe dinero.** Un selector de categoría solo debe ofrecer **hojas** (`postableCategories`, `lib/categoryTree.ts`); ofrecer un grupo es ofrecer un error que el backend rechaza al guardar. Para mostrar el nombre de una categoría usar siempre `categoryDisplayName(c, todasLasCategorias)`, nunca `c.name`: la hoja que crea el backend se llama «General» y el usuario nunca debe verla. Detalle en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) y, para el porqué, en `backend/docs/PLAN_CATEGORIAS_V2.md`.
+- ⚠️ **Las acciones de una transacción viven en DOS árboles**: la tabla de escritorio (`(app)/transactions/columns.tsx`) y las cards de móvil (`(app)/transactions/page.tsx`, bloque `md:hidden`). Agregar una en uno y olvidarla en el otro la deja invisible en ese viewport **sin ningún error**. Ya pasó con el botón de comprobantes y con el atajo de reglas. `acciones-movil.test.tsx` lo previene.
