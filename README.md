@@ -50,7 +50,7 @@ Ver [`.env.example`](.env.example). Resumen:
 - `pnpm build` — build de producción
 - `pnpm start` — sirve el build de producción
 - `pnpm lint` — ESLint
-- `pnpm test` / `pnpm test:watch` / `pnpm test:coverage` — Vitest + Testing Library (152 tests al 2026-09-10)
+- `pnpm test` / `pnpm test:watch` / `pnpm test:coverage` — Vitest + Testing Library (157 tests al 2026-09-10)
 
 CI en `.github/workflows/ci.yml`: typecheck → tests → build, en cada push a `main` y en cada PR. Vercel despliega por su cuenta, así que el workflow es la señal de que algo se rompió, no un gate.
 

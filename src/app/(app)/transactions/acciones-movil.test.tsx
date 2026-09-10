@@ -80,6 +80,20 @@ describe('paridad de acciones entre escritorio y móvil', () => {
     );
   });
 
+  it('el estado vacío es el MISMO en ambas vistas', async () => {
+    // El vacío de la lista también vive en los dos árboles. Que cada uno
+    // dijera algo distinto es cómo se termina arreglando solo uno.
+    get.mockImplementation((url: string) => {
+      if (url.includes('/transactions/with-category'))
+        return Promise.resolve({ data: { items: [], total: 0, page: 1, totalPages: 1 } });
+      return Promise.resolve({ data: [] });
+    });
+    render(<TransactionsPage />);
+    await waitFor(() =>
+      expect(screen.getAllByText(/todavía no hay movimientos/i)).toHaveLength(2),
+    );
+  });
+
   it('el contador de comprobantes se muestra en ambas vistas cuando hay adjuntos', async () => {
     get.mockImplementation((url: string) =>
       url.includes('/transactions/with-category')

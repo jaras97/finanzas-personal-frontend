@@ -8,7 +8,7 @@ import { categoryIcon } from '@/lib/categoryIcon';
 import { formatCurrency } from '@/lib/format';
 import type { CategorySummary } from '@/hooks/useSummary';
 import { SIN_CATEGORIA_ID } from '@/hooks/useSummary';
-import { ChevronRight, Lock } from 'lucide-react';
+import { ChevronRight, Lock, SearchX } from 'lucide-react';
 import { HOJA_SINTETICA } from '@/lib/categoryTree';
 
 const esHojaSintetica = (nombre: string) => nombre === HOJA_SINTETICA;
@@ -95,6 +95,7 @@ export function CategoryBreakdown({
   const [grupoId, setGrupoId] = useState<number | null>(null);
 
   const base = tipo === 'expense' ? expense : income;
+  const otroTipoTieneDatos = (tipo === 'expense' ? income : expense).length > 0;
   const grupo = grupoId !== null ? base.find((c) => c.category_id === grupoId) : undefined;
 
   // Dentro de un grupo se listan sus hojas; fuera, los grupos.
@@ -162,9 +163,35 @@ export function CategoryBreakdown({
       </div>
 
       {filas.length === 0 ? (
-        <p className='text-sm text-muted-foreground py-10 text-center'>
-          No hay movimientos en este período.
-        </p>
+        // Un vacío que dice qué hacer. El caso frecuente no es «no gastaste
+        // nada»: es que el rango elegido no alcanza los movimientos, o que
+        // se está mirando Ingresos en una cuenta que solo registra gastos.
+        <div className='py-10 text-center'>
+          <span className='mx-auto mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-[hsl(var(--muted))] text-muted-foreground'>
+            <SearchX className='h-5 w-5' />
+          </span>
+          <p className='text-sm font-medium'>
+            {tipo === 'expense'
+              ? 'Ningún gasto en este período'
+              : 'Ningún ingreso en este período'}
+          </p>
+          <p className='mx-auto mt-1 max-w-sm text-sm text-muted-foreground'>
+            {otroTipoTieneDatos
+              ? `Sí hay ${tipo === 'expense' ? 'ingresos' : 'gastos'} en este período. Míralos, o amplía el rango de fechas de arriba.`
+              : 'Amplía el rango de fechas de arriba para ver otros períodos.'}
+          </p>
+          {/* El atajo solo aparece si al otro lado hay algo: mandar a una
+              pestaña igual de vacía es un callejón sin salida. */}
+          {otroTipoTieneDatos && (
+            <button
+              type='button'
+              onClick={() => cambiarTipo(tipo === 'expense' ? 'income' : 'expense')}
+              className='mt-3 text-sm font-medium text-[hsl(var(--primary))] hover:underline'
+            >
+              {tipo === 'expense' ? 'Ver ingresos' : 'Ver gastos'}
+            </button>
+          )}
+        </div>
       ) : (
         <div className='flex flex-col lg:flex-row gap-6'>
           {/* Donut */}
@@ -231,7 +258,15 @@ export function CategoryBreakdown({
               {datos.map((c) => {
                 const navegable = !grupo && tieneDesglose(c);
                 const pendiente = c.category_id === SIN_CATEGORIA_ID;
-                const Icono = categoryIcon(c.icon);
+                // Dentro de un grupo se usa el icono del GRUPO: una hoja
+                // casi nunca tiene el suyo (la identidad visual la lleva el
+                // grupo), así que sin este respaldo todas las filas del
+                // drill-down caerían al icono genérico. Con el tono de la
+                // hoja encima, se lee «esto es una clase de Transporte».
+                const Icono = categoryIcon(c.icon ?? grupo?.icon);
+                const colorDelGlifo = grupo
+                  ? categoryColor({ name: grupo.category_name, color: grupo.color })
+                  : c.fill;
                 return (
                   <div
                     key={c.category_id}
@@ -247,15 +282,17 @@ export function CategoryBreakdown({
                     )}
                   >
                     <span className='flex items-center gap-2.5 min-w-0'>
-                      {!grupo && (
-                        <span
-                          className='inline-flex h-6 w-6 items-center justify-center rounded-md shrink-0'
-                          style={{ background: `${c.fill}22`, color: c.fill }}
-                          aria-hidden='true'
-                        >
-                          <Icono className='h-3.5 w-3.5' />
-                        </span>
-                      )}
+                      <span
+                        className='inline-flex h-6 w-6 items-center justify-center rounded-md shrink-0'
+                        // El glifo va SIEMPRE en el color saturado. Los tonos
+                        // claros del drill-down sirven para separar rebanadas
+                        // del donut, pero un icono en ese tono sobre su propio
+                        // fondo al 13% de opacidad no se ve.
+                        style={{ background: `${c.fill}22`, color: colorDelGlifo }}
+                        aria-hidden='true'
+                      >
+                        <Icono className='h-3.5 w-3.5' />
+                      </span>
                       <span className='truncate'>{c.category_name}</span>
                       {navegable && (
                         <span className='shrink-0 inline-flex items-center gap-1 text-[11px] text-muted-foreground border border-[hsl(var(--border))] rounded-full px-1.5'>

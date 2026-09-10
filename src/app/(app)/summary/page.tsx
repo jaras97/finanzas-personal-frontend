@@ -20,6 +20,7 @@ import { formatDayLabel } from '@/lib/formatDayLabel';
 import { CurrencyToggle } from '@/components/ui/CurrencyToggle';
 import { AreaIncomeExpense } from '@/components/chart/AreaIncomeExpense';
 import { CategoryBreakdown } from '@/components/chart/CategoryBreakdown';
+import WelcomeEmpty from '@/components/summary/WelcomeEmpty';
 import { useRouter } from 'next/navigation';
 import type { FC } from 'react';
 import { SummarySkeleton } from '@/components/skeletons/SummarySkeleton';
@@ -129,6 +130,10 @@ const SummaryPage: FC = () => {
 
       {/* === LOADING: Skeletons === */}
       {isBusy && !error && <SummarySkeleton />}
+
+      {/* Cuenta recién creada: sin cuentas no hay monedas, sin monedas no hay
+          resumen, y esta pantalla quedaba literalmente en blanco. */}
+      {!isBusy && !error && availableCurrencies.length === 0 && <WelcomeEmpty />}
 
       {/* === CONTENT === */}
       {/* 1) Hero: las 3 cifras que de verdad importan de un vistazo */}

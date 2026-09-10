@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -71,11 +72,20 @@ export default function BudgetsPage() {
         <EmptyState
           icon={PiggyBank}
           title='Aún no tienes presupuestos'
-          description='Crea uno para llevar el control de cuánto gastas por categoría cada mes.'
+          // Un presupuesto sin gasto registrado no mide nada, así que el
+          // vacío dice de dónde sale el número en vez de solo invitar a
+          // crear uno: quien llega acá el primer día no tiene con qué
+          // compararlo todavía.
+          description='Ponle un tope mensual a una categoría y la app te va mostrando cuánto llevas gastado de ese tope. Funciona sobre los movimientos que ya tengas registrados.'
           actions={
-            <Button variant='soft-sky' size='sm' onClick={() => setModalOpen(true)}>
-              + Nuevo presupuesto
-            </Button>
+            <div className='flex flex-wrap items-center justify-center gap-2'>
+              <Button variant='soft-sky' size='sm' onClick={() => setModalOpen(true)}>
+                + Nuevo presupuesto
+              </Button>
+              <Button variant='outline' size='sm' asChild>
+                <Link href='/categories'>Ver mis categorías</Link>
+              </Button>
+            </div>
           }
         />
       ) : (

@@ -6,6 +6,8 @@ import { useSavingAccounts } from '@/hooks/useSavingAccounts';
 import { useCategories } from '@/hooks/useCategories';
 import UncategorizedBanner from '@/components/transactions/UncategorizedBanner';
 import CategoryChipEditor from '@/components/transactions/CategoryChipEditor';
+import TransactionsEmpty from '@/components/transactions/TransactionsEmpty';
+import { useHasAnyTransactions } from '@/hooks/useHasAnyTransactions';
 import TransactionFilters, {
   Filters,
   defaultTransactionFilters,
@@ -129,6 +131,35 @@ export default function TransactionsPage() {
   // Se cargan una vez acá y se pasan a cada fila: un fetch por fila serían
   // veinte peticiones por página.
   const { categories } = useCategories();
+  // Para distinguir «cuenta nueva» de «el filtro no devuelve nada»: son dos
+  // vacíos que se ven igual y piden acciones opuestas.
+  const tieneMovimientos = useHasAnyTransactions();
+
+  const limpiarFiltros = () => {
+    setPage(1);
+    setSearch('');
+    setFilters(defaultTransactionFilters());
+  };
+
+  /** Ensancha el rango hasta cubrir cualquier historial razonable. */
+  const verTodoElHistorial = () => {
+    setPage(1);
+    setSearch('');
+    setFilters({
+      ...defaultTransactionFilters(),
+      startDate: new Date(2000, 0, 1).toISOString(),
+      endDate: new Date().toISOString(),
+    });
+  };
+
+  const vacio = (
+    <TransactionsEmpty
+      hasAnyTransaction={tieneMovimientos}
+      hasActiveFilters={hasActiveFilters}
+      onClearFilters={limpiarFiltros}
+      onShowAll={verTodoElHistorial}
+    />
+  );
   const [ruleModalOpen, setRuleModalOpen] = useState(false);
   const [ruleInitial, setRuleInitial] = useState<
     { matchText?: string; categoryId?: number } | undefined
@@ -488,6 +519,7 @@ export default function TransactionsPage() {
                 columns={allColumns as any}
                 data={displayData}
                 loading={loading}
+                emptyMessage={vacio}
                 density='normal'
                 rowSeparator='inset'
                 tableClassName='min-w-[960px] xl:min-w-0'
@@ -597,9 +629,9 @@ export default function TransactionsPage() {
         <div className='md:hidden space-y-2'>
           {displayData.length === 0 ? (
             <Card variant='white'>
-              <CardContent className='p-6 text-center text-muted-foreground'>
-                No hay transacciones con estos filtros.
-              </CardContent>
+              {/* El MISMO componente que la tabla de escritorio: dos textos
+                  distintos para el mismo vacío es cómo se arregla uno solo. */}
+              <CardContent className='p-0'>{vacio}</CardContent>
             </Card>
           ) : (
             displayData.map((tx) => {

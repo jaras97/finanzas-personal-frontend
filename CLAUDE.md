@@ -26,6 +26,8 @@ Toda esa lógica vive en `lib/categoryTree.ts`, con 32 tests. Es la capa donde y
 
 **La sesión vive en una cookie httpOnly** que fija el backend. El frontend nunca lee ni guarda el JWT. Para cerrar sesión, siempre `logout()` de `lib/api.ts` — nunca manipular cookies o storage a mano. `JWT_SECRET` debe coincidir con `SECRET_KEY` del backend.
 
+**Un estado vacío casi nunca es uno solo.** «Todavía no has registrado nada» y «tus filtros no devuelven nada» se ven igual y piden acciones opuestas; ofrecer la equivocada deja al usuario buscando un botón que no le sirve. Y la acción tiene que **hacer** algo: un botón «volver al rango por defecto» estando ya en él es un botón muerto.
+
 **No hay caché de servidor compartida.** Cada feature tiene su hook `useState`+`useEffect`+axios. Tras una escritura que afecte saldos o movimientos, llamar `notificarCambioDeDatos()` (`lib/dataRefresh.ts`) — **nunca `window.location.reload()`**, que tira scroll, filtros y formularios abiertos.
 
 **Los modales usan un `Dialog` propio sobre Headless UI**, no Radix Dialog. Radix pone `pointer-events: none` en el `<body>` mientras un `Select` suyo está abierto, y eso hacía que el segundo toque en móvil cerrara el modal entero; `DialogContent` ignora los cierres con esa firma exacta. No deshacer ese guard.
@@ -33,7 +35,7 @@ Toda esa lógica vive en `lib/categoryTree.ts`, con 32 tests. Es la capa donde y
 ## Cómo se trabaja acá
 
 - **Comentarios, textos de interfaz y mensajes de commit en español**, explicando el **porqué** y no el qué. Un mensaje de error dice qué pasó *y qué hacer*.
-- **Vitest + Testing Library**, tests junto al código (`x.test.ts` al lado de `x.ts`). 152 tests. Se cubre la lógica pura donde una regresión sería silenciosa y cara, no cobertura por cobertura.
+- **Vitest + Testing Library**, tests junto al código (`x.test.ts` al lado de `x.ts`). 157 tests. Se cubre la lógica pura donde una regresión sería silenciosa y cara, no cobertura por cobertura.
 - **Cada defecto corregido se verifica por mutación**: revertir el arreglo y confirmar que al menos un test falla.
 - **Verificar en un navegador real, no solo con tests.** Los bugs más visibles de este proyecto son estructuralmente invisibles para jsdom: jsdom no tiene motor de layout ni aplica media queries. Comprobar también a 390px de ancho.
 - Formularios con `useState` manual por campo. `react-hook-form`/`zod` están instalados pero **no se usan**; no adoptarlos a medias.
