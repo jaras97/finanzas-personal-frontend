@@ -9,6 +9,7 @@ import { categoryBadgeClasses } from '@/lib/transactionDisplay';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { extractErrorMessage } from '@/lib/extractErrorMessage';
+import { categoryIcon } from '@/lib/categoryIcon';
 import { ChevronDown, Loader2, Tag } from 'lucide-react';
 import type { Category, TransactionWithCategoryRead } from '@/types';
 
@@ -75,6 +76,16 @@ export default function CategoryChipEditor({
     ? categoryDisplayName(tx.category, categories)
     : 'Sin categorizar';
 
+  // El icono de una hoja suele estar vacío: lo lleva el grupo, que es quien
+  // tiene identidad visual. Sin este respaldo, casi todas las filas caerían
+  // al icono genérico y el color sería lo único que distinguiría una de otra.
+  const grupo = tx.category?.parent_id
+    ? categories.find((c) => c.id === tx.category!.parent_id)
+    : undefined;
+  const Icono = tx.category
+    ? categoryIcon(tx.category.icon ?? grupo?.icon)
+    : Tag;
+
   const chip = (
     <Badge
       className={cn(
@@ -86,7 +97,11 @@ export default function CategoryChipEditor({
         className,
       )}
     >
-      {!tx.category && <Tag className='mr-1 h-3 w-3 shrink-0' />}
+      {/* El icono de la categoría, no uno genérico: es lo que hace que la
+          lista se lea de un vistazo sin tener que leer cada nombre. El mapa
+          (`lib/categoryIcon`) ya existía y solo se usaba en Categorías y en
+          el donut. */}
+      <Icono className='mr-1 h-3 w-3 shrink-0' />
       <span className='truncate'>{etiqueta}</span>
       {editable &&
         (guardando ? (
