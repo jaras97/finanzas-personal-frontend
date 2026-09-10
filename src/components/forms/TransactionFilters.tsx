@@ -42,6 +42,7 @@ interface Props {
 // ya hizo invisible cada campo nuevo (color, icono, padre) en otros
 // formularios.
 import type { Category } from '@/types';
+import { CategoryPicker } from './CategoryPicker';
 
 export default function TransactionFilters({ value, onChange }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -101,26 +102,16 @@ export default function TransactionFilters({ value, onChange }: Props) {
 
         {/* Categoría */}
         <div className='min-w-0 md:col-span-4'>
-          <Select
-            value={value.categoryId ? String(value.categoryId) : ''}
-            onValueChange={(v) =>
+          <CategoryPicker
+                  categories={categories}
+                  value={value.categoryId ? String(value.categoryId) : ''}
+                  onChange={(v) =>
               onChange({
                 ...value,
                 categoryId: v ? parseInt(v, 10) : undefined,
-              })
-            }
-          >
-            <SelectTrigger className='w-full truncate'>
-              <SelectValue placeholder='Filtrar por categoría' />
-            </SelectTrigger>
-            <SelectContent className='z-[60] max-h-[50vh]'>
-              {postableCategories(categories).map((c) => (
-                <SelectItem key={c.id} value={String(c.id)}>
-                  {categoryDisplayName(c, categories)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              })}
+                  placeholder='Filtrar por categoría'
+                />
         </div>
 
         {/* Origen */}

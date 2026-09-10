@@ -20,18 +20,14 @@ import { cn } from '@/lib/utils';
 import InfoHint from '@/components/ui/info-hint';
 import { DatePicker } from '@/components/ui/date-picker';
 import { categoryDisplayName, postableCategories } from '@/lib/categoryTree';
+import { CategoryPicker } from './CategoryPicker';
+import type { Category } from '@/types';
 
 // Tipo local reducido. `parent_id`/`parent_name` son necesarios desde el
 // modelo grupo/hoja: sin ellos el selector ofrecería grupos, que no reciben
 // movimientos, y el guardado fallaría con un 400.
-type Category = {
-  id: number;
-  name: string;
-  type: 'income' | 'expense' | 'both';
-  is_system?: boolean;
-  parent_id?: number | null;
-  parent_name?: string | null;
-};
+// Se usa el tipo compartido: el local reducido ya hizo invisibles el color,
+// el icono y el padre, y ahora el selector necesita la categoría completa.
 
 interface Props {
   open: boolean;
@@ -201,29 +197,16 @@ export default function EditTransactionModal({
                   <b>Ambas</b>).
                 </InfoHint>
               </div>
-              <Select
-                value={categoryId}
-                onValueChange={setCategoryId}
-                disabled={saving || categories.length === 0}
-              >
-                <SelectTrigger id={idCat} className='bg-white'>
-                  <SelectValue
-                    placeholder={
-                      categories.length
+              <CategoryPicker
+                  categories={categories}
+                  value={categoryId}
+                  onChange={setCategoryId}
+                  disabled={saving || categories.length === 0}
+                  id={idCat}
+                  placeholder={categories.length
                         ? `Seleccionar categoría (${typeLabel})`
-                        : 'No hay categorías disponibles'
-                    }
-                  />
-                </SelectTrigger>
-                {/* z alto para ir sobre el modal (Dialog panel ~ z-[110]) */}
-                <SelectContent className='select-solid z-[140]'>
-                  {postableCategories(categories).map((c) => (
-                    <SelectItem key={c.id} value={c.id.toString()}>
-                      {categoryDisplayName(c, categories)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                        : 'No hay categorías disponibles'}
+                />
               {categories.length === 0 && (
                 <div className='text-xs text-amber-600'>
                   No tienes categorías activas de este tipo.
