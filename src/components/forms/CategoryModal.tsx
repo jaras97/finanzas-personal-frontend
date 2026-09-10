@@ -20,7 +20,7 @@ import { PALETTE_KEYS, categoryColor, type PaletteKey } from '@/lib/categoryStyl
 import { cn } from '@/lib/utils';
 import type { Category } from '@/types';
 import { ICON_NAMES, categoryIcon } from '@/lib/categoryIcon';
-import { possibleParents } from '@/lib/categoryTree';
+import { possibleParents, HOJA_SINTETICA } from '@/lib/categoryTree';
 
 type Props = {
   open: boolean;
@@ -49,6 +49,8 @@ export default function CategoryModal({
   const [color, setColor] = useState<PaletteKey | null>(null);
   const [icon, setIcon] = useState<string | null>(null);
   const [parentId, setParentId] = useState<string>('');
+  // Cómo se llamarán los movimientos que ya estaban sin desglosar.
+  const [nombreSueltos, setNombreSueltos] = useState('Otros');
   // Se piden todas (incluidas inactivas) porque el padre podría estar
   // desactivado y hay que seguir mostrándolo como el padre actual.
   const [todas, setTodas] = useState<Category[]>([]);
@@ -75,6 +77,7 @@ export default function CategoryModal({
       setColor(null);
       setIcon(null);
       setParentId(defaultParentId ? String(defaultParentId) : '');
+      setNombreSueltos('Otros');
     }
   }, [category, defaultParentId]);
 
@@ -108,15 +111,38 @@ export default function CategoryModal({
     return 'Error inesperado';
   };
 
+  // Grupo bajo el que se está creando (si lo hay) y su hoja sintética.
+  const grupoElegido = todas.find((c) => String(c.id) === parentId);
+  const hojaSintetica = grupoElegido
+    ? todas.find(
+        (c) =>
+          c.parent_id === grupoElegido.id &&
+          c.is_active &&
+          c.name === HOJA_SINTETICA,
+      )
+    : undefined;
+  // Solo hay algo que reubicar si esa hoja tiene movimientos. Si no, se
+  // borrará sola al crear la primera subcategoría de verdad.
+  const movimientosSueltos =
+    !category && hojaSintetica ? hojaSintetica.transactions_count ?? 0 : 0;
+
   const handleSubmit = async () => {
     if (loading) return;
-    if (!name.trim() || !type) {
+
+    // Al crear una subcategoría el tipo lo manda el grupo: el backend rechaza
+    // cualquier otro, así que ofrecerlo sería ofrecer un error. Se resuelve
+    // ANTES de validar: con el selector oculto, `type` queda vacío y la
+    // guarda cortaba el envío sin decir por qué.
+    const tipoFinal = grupoElegido && !category ? grupoElegido.type : type;
+
+    if (!name.trim() || !tipoFinal) {
       toast.error('Todos los campos son obligatorios');
       return;
     }
 
     setLoading(true);
     try {
+
       if (category) {
         await api.put(`/categories/${category.id}`, {
           name: name.trim(),
@@ -127,14 +153,30 @@ export default function CategoryModal({
         });
         toast.success('Categoría actualizada correctamente');
       } else {
-        await api.post('/categories', {
+        const { data: creada } = await api.post('/categories', {
           name: name.trim(),
-          type,
+          type: tipoFinal,
           color,
           icon,
           parent_id: parentId ? Number(parentId) : null,
         });
-        toast.success('Categoría creada correctamente');
+        if (movimientosSueltos > 0 && hojaSintetica) {
+          // Los movimientos que ya estaban sin desglosar necesitan un nombre
+          // propio: dejarlos como «General» expone un detalle interno que el
+          // usuario no debería ver nunca.
+          await api.put(`/categories/${hojaSintetica.id}`, {
+            name: nombreSueltos.trim() || 'Otros',
+            type: hojaSintetica.type,
+            color: hojaSintetica.color ?? null,
+            icon: hojaSintetica.icon ?? null,
+            parent_id: hojaSintetica.parent_id,
+          });
+        }
+        toast.success(
+          movimientosSueltos > 0
+            ? `Subcategoría creada. Tus ${movimientosSueltos} movimientos anteriores quedaron en «${nombreSueltos.trim() || 'Otros'}».`
+            : 'Categoría creada correctamente',
+        );
       }
       onCreated();
       onOpenChange(false);
@@ -151,7 +193,13 @@ export default function CategoryModal({
       onOpenChange={(o) => !loading && onOpenChange(o)}
       size='md'
       className='w-[min(100vw-1rem,520px)]'
-      title={category ? 'Editar categoría' : 'Nueva categoría'}
+      title={
+        category
+          ? 'Editar categoría'
+          : grupoElegido
+          ? `Nueva subcategoría de «${grupoElegido.name}»`
+          : 'Nueva categoría'
+      }
       footer={
         <>
           <DialogClose asChild>
@@ -210,6 +258,20 @@ export default function CategoryModal({
                   cambiar el tipo.
                 </InfoHint>
               </div>
+              {grupoElegido && !category ? (
+                // Heredado: el backend rechaza cualquier otro tipo, así que
+                // ofrecer la elección sería ofrecer un error.
+                <div className='h-9 flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600'>
+                  {grupoElegido.type === 'income'
+                    ? 'Ingreso'
+                    : grupoElegido.type === 'expense'
+                    ? 'Egreso'
+                    : 'Ambos'}
+                  <span className='text-xs text-muted-foreground'>
+                    · lo hereda de «{grupoElegido.name}»
+                  </span>
+                </div>
+              ) : (
               <Select
                 value={type}
                 onValueChange={(v) =>
@@ -226,6 +288,7 @@ export default function CategoryModal({
                   <SelectItem value='both'>Ambos</SelectItem>
                 </SelectContent>
               </Select>
+              )}
             </div>
 
             {/* Categoría padre */}
@@ -258,6 +321,27 @@ export default function CategoryModal({
                     Elige primero el tipo para ver los padres compatibles.
                   </p>
                 )}
+              </div>
+            )}
+
+            {movimientosSueltos > 0 && (
+              <div className='space-y-1 rounded-lg border border-amber-200 bg-amber-50/60 p-3'>
+                <label htmlFor='cat-sueltos' className='text-sm font-medium'>
+                  ¿Cómo llamas a lo que ya tenías?
+                </label>
+                <p className='text-xs text-muted-foreground'>
+                  «{grupoElegido?.name}» tiene {movimientosSueltos}{' '}
+                  {movimientosSueltos === 1 ? 'movimiento' : 'movimientos'} sin
+                  desglosar. Al crear esta subcategoría necesitan un nombre propio.
+                </p>
+                <Input
+                  id='cat-sueltos'
+                  value={nombreSueltos}
+                  onChange={(e) => setNombreSueltos(e.target.value)}
+                  disabled={loading}
+                  className='bg-white'
+                  placeholder='Otros'
+                />
               </div>
             )}
 

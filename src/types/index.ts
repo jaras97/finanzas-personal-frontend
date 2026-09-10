@@ -26,6 +26,11 @@ export type Category = {
   /** Nulo = categoría de primer nivel. La jerarquía es de dos niveles. */
   parent_id?: number | null;
   parent_name?: string | null;
+  /** Primer nivel = grupo: agrupa, no recibe movimientos. */
+  is_group?: boolean;
+  /** Para un grupo de una sola hoja: dónde se registra realmente. */
+  default_leaf_id?: number | null;
+  transactions_count?: number;
 };
 
 export type SuggestedCategoriesResult = {
