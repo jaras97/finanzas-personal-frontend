@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PendientesPage from './page';
 
@@ -14,10 +14,12 @@ import PendientesPage from './page';
 
 const get = vi.fn();
 const patch = vi.fn();
+const post = vi.fn();
 vi.mock('@/lib/api', () => ({
   default: {
     get: (...a: unknown[]) => get(...a),
     patch: (...a: unknown[]) => patch(...a),
+    post: (...a: unknown[]) => post(...a),
   },
 }));
 const toastSuccess = vi.fn();
@@ -61,6 +63,7 @@ const ITEMS = [tx(1, 'Éxito'), tx(2, 'Panadería'), tx(3, 'Nómina', 'income')]
 beforeEach(() => {
   get.mockReset();
   patch.mockReset();
+  post.mockReset();
   toastSuccess.mockReset();
   toastWarning.mockReset();
   get.mockImplementation((url: string) => {
@@ -188,5 +191,100 @@ describe('bandeja de pendientes', () => {
     });
     render(<PendientesPage />);
     expect(await screen.findByText(/no queda nada por clasificar/i)).toBeInTheDocument();
+  });
+});
+
+/**
+ * La bandeja que aprende: al clasificar un movimiento cuyo comercio se repite,
+ * ofrece la regla que cubriría los demás. Lo que importa no es el banner sino
+ * cuándo aparece -- ofrecerlo siempre lo convierte en ruido que nadie lee.
+ */
+describe('sugerencia de regla', () => {
+  const REPETIDOS = [
+    tx(1, 'RAPPI*BOGOTA 4471'),
+    tx(2, 'RAPPI*MEDELLIN 998'),
+    tx(3, 'RAPPI*CALI 221'),
+    tx(4, 'Panadería'),
+  ];
+
+  const montarCon = (items: ReturnType<typeof tx>[]) => {
+    get.mockImplementation((url: string) => {
+      if (url.includes('/transactions/with-category'))
+        return Promise.resolve({
+          data: { items, total: items.length, page: 1, totalPages: 1 },
+        });
+      if (url === '/categories') return Promise.resolve({ data: CATEGORIAS });
+      return Promise.resolve({ data: { count: items.length } });
+    });
+    return render(<PendientesPage />);
+  };
+
+  /** Clasifica la fila n (0-based) en «Restaurantes». */
+  const clasificarFila = async (n: number) => {
+    const selectores = screen.getAllByRole('combobox');
+    await userEvent.click(selectores[n]);
+    await userEvent.click(await screen.findByRole('button', { name: 'Restaurantes' }));
+  };
+
+  it('ofrece la regla contando los otros movimientos del mismo comercio', async () => {
+    patch.mockResolvedValue({ data: {} });
+    montarCon(REPETIDOS);
+    await screen.findByText('RAPPI*BOGOTA 4471');
+
+    await clasificarFila(0);
+
+    // Dos restantes, no tres: la que se acaba de clasificar ya no cuenta.
+    expect(await screen.findByText(/Hay 2 movimientos más con «RAPPI»/i)).toBeInTheDocument();
+  });
+
+  it('no ofrece nada cuando el movimiento no se repite', async () => {
+    patch.mockResolvedValue({ data: {} });
+    montarCon([tx(1, 'Panadería'), tx(2, 'Éxito')]);
+    await screen.findByText('Panadería');
+
+    await clasificarFila(0);
+    await waitFor(() => expect(patch).toHaveBeenCalled());
+
+    expect(screen.queryByText(/movimientos más con/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: /crear regla/i })).toBeNull();
+  });
+
+  it('«Ahora no» la descarta sin crear nada', async () => {
+    patch.mockResolvedValue({ data: {} });
+    montarCon(REPETIDOS);
+    await screen.findByText('RAPPI*BOGOTA 4471');
+    await clasificarFila(0);
+    await screen.findByText(/Hay 2 movimientos más/i);
+
+    await userEvent.click(screen.getByRole('button', { name: /ahora no/i }));
+
+    expect(screen.queryByText(/movimientos más con/i)).toBeNull();
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('tras crear la regla la aplica a lo que ya estaba pendiente', async () => {
+    // Crear la regla sin aplicarla deja al usuario mirando la misma bandeja
+    // llena: la promesa incumplida que hace que nadie vuelva a usar reglas.
+    patch.mockResolvedValue({ data: {} });
+    post.mockImplementation((url: string) =>
+      url === '/category-rules/apply'
+        ? Promise.resolve({ data: { updated: 2 } })
+        : Promise.resolve({ data: { id: 9 } }),
+    );
+    montarCon(REPETIDOS);
+    await screen.findByText('RAPPI*BOGOTA 4471');
+    await clasificarFila(0);
+    await screen.findByText(/Hay 2 movimientos más/i);
+
+    await userEvent.click(screen.getByRole('button', { name: /crear regla/i }));
+    // El CTA del modal se llama igual que el del banner, así que hay que
+    // acotar la búsqueda al diálogo.
+    const modal = within(await screen.findByRole('dialog'));
+    await userEvent.click(modal.getByRole('button', { name: /crear regla/i }));
+
+    await waitFor(() =>
+      expect(post).toHaveBeenCalledWith('/category-rules/apply'),
+    );
+    expect(toastSuccess).toHaveBeenCalledWith(expect.stringMatching(/2 movimientos/));
   });
 });

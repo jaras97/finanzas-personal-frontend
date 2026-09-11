@@ -43,21 +43,10 @@ interface Props {
 // formularios.
 import type { Category } from '@/types';
 import { CategoryPicker } from './CategoryPicker';
+import { useCategories } from '@/hooks/useCategories';
 
 export default function TransactionFilters({ value, onChange }: Props) {
-  const [categories, setCategories] = useState<Category[]>([]);
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const { data } = await api.get('/categories');
-        setCategories(data);
-      } catch {
-        toast.error('Error al cargar categorías');
-      }
-    };
-    fetchCategories();
-  }, []);
+  const { categories } = useCategories();
 
   const range = {
     startDate: value.startDate ? new Date(value.startDate) : new Date(),

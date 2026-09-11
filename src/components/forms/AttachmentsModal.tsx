@@ -9,6 +9,13 @@ import api from '@/lib/api';
 import axios from 'axios';
 import type { Attachment } from '@/types';
 import { FileText, ImageIcon, Trash2, Upload, ExternalLink } from 'lucide-react';
+import {
+  ACCEPT_COMPROBANTE,
+  MAX_COMPROBANTE_MB,
+  MAX_COMPROBANTES_POR_MOVIMIENTO,
+  motivoRechazoComprobante,
+  subirComprobante,
+} from '@/lib/attachments';
 
 interface Props {
   open: boolean;
@@ -19,7 +26,7 @@ interface Props {
   onChanged?: () => void;
 }
 
-const MAX_MB = 5;
+const MAX_MB = MAX_COMPROBANTE_MB;
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -62,11 +69,17 @@ export default function AttachmentsModal({
 
   const handleUpload = async (file: File) => {
     if (!transactionId) return;
+    // Mismas reglas que el formulario de creación: un archivo que allá se
+    // rechaza no puede colarse acá, ni al revés.
+    const motivo = motivoRechazoComprobante(file);
+    if (motivo) {
+      toast.error(motivo);
+      if (fileInput.current) fileInput.current.value = '';
+      return;
+    }
     setUploading(true);
     try {
-      const form = new FormData();
-      form.append('file', file);
-      await api.post(`/transactions/${transactionId}/attachments`, form);
+      await subirComprobante(transactionId, file);
       toast.success('Comprobante adjuntado');
       await fetchItems();
       onChanged?.();
@@ -110,7 +123,7 @@ export default function AttachmentsModal({
           Comprobantes
           <InfoHint side='top'>
             Adjunta la foto del recibo o el PDF del banco. Imágenes o PDF, hasta {MAX_MB} MB,
-            máximo 5 por movimiento.
+            máximo {MAX_COMPROBANTES_POR_MOVIMIENTO} por movimiento.
           </InfoHint>
         </>
       }
@@ -123,7 +136,7 @@ export default function AttachmentsModal({
         <input
           ref={fileInput}
           type='file'
-          accept='image/jpeg,image/png,image/webp,image/heic,application/pdf'
+          accept={ACCEPT_COMPROBANTE}
           className='hidden'
           onChange={(e) => {
             const file = e.target.files?.[0];
@@ -134,14 +147,14 @@ export default function AttachmentsModal({
         <Button
           variant='soft-sky'
           className='w-full'
-          disabled={uploading || items.length >= 5}
+          disabled={uploading || items.length >= MAX_COMPROBANTES_POR_MOVIMIENTO}
           onClick={() => fileInput.current?.click()}
         >
           <Upload className='h-4 w-4 mr-2' />
           {uploading
             ? 'Subiendo…'
-            : items.length >= 5
-            ? 'Máximo alcanzado (5)'
+            : items.length >= MAX_COMPROBANTES_POR_MOVIMIENTO
+            ? `Máximo alcanzado (${MAX_COMPROBANTES_POR_MOVIMIENTO})`
             : 'Adjuntar comprobante'}
         </Button>
 

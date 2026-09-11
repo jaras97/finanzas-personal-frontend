@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import api from '@/lib/api';
 import axios from 'axios';
 import { cn } from '@/lib/utils';
+import { useCategories } from '@/hooks/useCategories';
 import { formatCurrency } from '@/lib/format';
 import { useSavingAccounts } from '@/hooks/useSavingAccounts';
 import type {
@@ -73,22 +74,16 @@ export default function ImportPage() {
   const [errorCount, setErrorCount] = useState(0);
   const [result, setResult] = useState<{ created: number; skipped: number } | null>(null);
 
-  const [categories, setCategories] = useState<Category[]>([]);
-
-  const fetchCategories = async () => {
-    try {
-      const { data } = await api.get('/categories', { params: { status: 'active' } });
-      setCategories(
-        (data as Category[]).filter((c) => !c.is_system || c.system_key === 'uncategorized'),
-      );
-    } catch {
-      toast.error('Error al cargar categorías');
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  const { categories: todasLasCategorias, refresh: recargarCategorias } = useCategories({
+    status: 'active',
+  });
+  // Se conserva «Sin categorizar»: es donde el parseo deja lo que ninguna regla
+  // resuelve, así que el usuario tiene que poder verla y elegirla por fila.
+  const categories = useMemo(
+    () =>
+      todasLasCategorias.filter((c) => !c.is_system || c.system_key === 'uncategorized'),
+    [todasLasCategorias],
+  );
 
   const selectedAccount = activeAccounts.find((a) => String(a.id) === accountId);
 
@@ -137,7 +132,7 @@ export default function ImportPage() {
       );
       if (data.mode !== 'review') return;
 
-      await fetchCategories();
+      recargarCategorias();
 
       const uncategorized = data.rows[0]?.category_id;
       setRows(
