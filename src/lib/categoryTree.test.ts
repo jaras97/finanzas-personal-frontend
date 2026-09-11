@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  categoryLabel, categoryDisplayName, categoryRows, groupCategories, possibleParents, postableCategories,
+  categoryDisplayName, categoryRows, groupCategories, possibleParents, postableCategories,
   buildPickerSections, flattenSections,
 } from './categoryTree';
 import type { Category } from '@/types';
@@ -13,13 +13,6 @@ const transporte = cat({ id: 1, name: 'Transporte' });
 const gasolina = cat({ id: 2, name: 'Gasolina', parent_id: 1, parent_name: 'Transporte' });
 const salario = cat({ id: 3, name: 'Salario', type: 'income' });
 const transferencia = cat({ id: 4, name: 'Transferencia', type: 'both', is_system: true });
-
-describe('etiqueta', () => {
-  it('muestra el padre cuando es subcategoría', () => {
-    expect(categoryLabel(gasolina)).toBe('Transporte › Gasolina');
-    expect(categoryLabel(transporte)).toBe('Transporte');
-  });
-});
 
 describe('agrupación', () => {
   it('cuelga cada hija de su padre', () => {

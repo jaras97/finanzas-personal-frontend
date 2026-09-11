@@ -9,17 +9,6 @@ import type { Category } from '@/types';
  */
 
 /**
- * Nombre para mostrar en una lista plana: "Transporte › Gasolina".
- *
- * Pide la forma mínima, no `Category` entero: varios formularios declaran su
- * propio tipo local reducido y exigirles el completo obligaría a refactorizar
- * seis archivos para mostrar un texto.
- */
-export function categoryLabel(c: { name: string; parent_name?: string | null }): string {
-  return c.parent_name ? `${c.parent_name} › ${c.name}` : c.name;
-}
-
-/**
  * Solo las HOJAS reciben movimientos: los grupos agrupan.
  *
  * Filtrar acá y no en cada formulario evita que un selector ofrezca un grupo

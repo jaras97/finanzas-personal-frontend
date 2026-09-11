@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DialogClose } from '@/components/ui/dialog';
 import { FormModal } from '@/components/ui/form-modal';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import axios from 'axios';
 import type { Category, CategoryRule } from '@/types';
 import { categoryDisplayName, postableCategories } from '@/lib/categoryTree';
 import { CategoryPicker } from './CategoryPicker';
+import { useCategories } from '@/hooks/useCategories';
 
 interface Props {
   open: boolean;
@@ -35,7 +36,6 @@ export default function RuleModal({ open, onOpenChange, editing, initial, onSave
   const [matchText, setMatchText] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [saving, setSaving] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -48,17 +48,10 @@ export default function RuleModal({ open, onOpenChange, editing, initial, onSave
     }
   }, [open, editing, initial]);
 
-  useEffect(() => {
-    if (!open) return;
-    (async () => {
-      try {
-        const { data } = await api.get('/categories', { params: { status: 'active' } });
-        setCategories((data as Category[]).filter((c) => !c.is_system));
-      } catch {
-        toast.error('Error al cargar categorías');
-      }
-    })();
-  }, [open]);
+  const { categories: todas } = useCategories({ status: 'active', enabled: open });
+  // Las de sistema (Transferencia, Sin categorizar...) son operativas: una regla
+  // que apunte a ellas archivaría movimientos donde el usuario no los busca.
+  const categories = useMemo(() => todas.filter((c) => !c.is_system), [todas]);
 
   const canSubmit = !!matchText.trim() && !!categoryId && !saving;
 

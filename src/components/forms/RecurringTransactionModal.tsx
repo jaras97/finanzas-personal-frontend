@@ -22,6 +22,7 @@ import { useCurrencies } from '@/hooks/useCurrencies';
 import { formatCurrency } from '@/lib/format';
 import { categoryDisplayName, postableCategories } from '@/lib/categoryTree';
 import { CategoryPicker } from './CategoryPicker';
+import { useCategories } from '@/hooks/useCategories';
 import type {
   Category,
   RecurrenceFrequency,
@@ -73,7 +74,6 @@ export default function RecurringTransactionModal({
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [saving, setSaving] = useState(false);
 
-  const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<SavingAccount[]>([]);
   const { currencies } = useCurrencies();
 
@@ -103,23 +103,29 @@ export default function RecurringTransactionModal({
     }
   }, [open, editing]);
 
+  const { categories: todasLasCategorias } = useCategories({
+    type: type as 'income' | 'expense',
+    status: 'active',
+    enabled: open && !!type,
+  });
+  const categories = useMemo(
+    () => todasLasCategorias.filter((c) => !c.is_system),
+    [todasLasCategorias],
+  );
+
   useEffect(() => {
     if (!open) return;
     (async () => {
       try {
-        const [catRes, accRes] = await Promise.all([
-          api.get('/categories', { params: { type, status: 'active' } }),
-          api.get('/saving-accounts'),
-        ]);
-        setCategories((catRes.data as Category[]).filter((c) => !c.is_system));
+        const accRes = await api.get('/saving-accounts');
         setAccounts(
           (accRes.data as SavingAccount[]).filter((a) => a.status === 'active'),
         );
       } catch {
-        toast.error('Error al cargar cuentas o categorías');
+        toast.error('Error al cargar cuentas');
       }
     })();
-  }, [open, type]);
+  }, [open]);
 
   const selectedAccount = accounts.find((a) => String(a.id) === accountId);
   const decimalScale =

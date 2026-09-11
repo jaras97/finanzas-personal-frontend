@@ -35,7 +35,7 @@ Toda esa lógica vive en `lib/categoryTree.ts`, con 32 tests. Es la capa donde y
 ## Cómo se trabaja acá
 
 - **Comentarios, textos de interfaz y mensajes de commit en español**, explicando el **porqué** y no el qué. Un mensaje de error dice qué pasó *y qué hacer*.
-- **Vitest + Testing Library**, tests junto al código (`x.test.ts` al lado de `x.ts`). 157 tests. Se cubre la lógica pura donde una regresión sería silenciosa y cara, no cobertura por cobertura.
+- **Vitest + Testing Library**, tests junto al código (`x.test.ts` al lado de `x.ts`). 186 tests. Se cubre la lógica pura donde una regresión sería silenciosa y cara, no cobertura por cobertura.
 - **Cada defecto corregido se verifica por mutación**: revertir el arreglo y confirmar que al menos un test falla.
 - **Verificar en un navegador real, no solo con tests.** Los bugs más visibles de este proyecto son estructuralmente invisibles para jsdom: jsdom no tiene motor de layout ni aplica media queries. Comprobar también a 390px de ancho.
 - Formularios con `useState` manual por campo. `react-hook-form`/`zod` están instalados pero **no se usan**; no adoptarlos a medias.

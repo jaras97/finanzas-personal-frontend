@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DialogClose } from '@/components/ui/dialog';
 import { FormModal } from '@/components/ui/form-modal';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import { useCurrencies } from '@/hooks/useCurrencies';
 import type { Budget, Category } from '@/types';
 import { categoryDisplayName, postableCategories } from '@/lib/categoryTree';
 import { CategoryPicker } from './CategoryPicker';
+import { useCategories } from '@/hooks/useCategories';
 
 interface Props {
   open: boolean;
@@ -39,7 +40,6 @@ export default function BudgetModal({ open, onOpenChange, editing, onSaved }: Pr
   const [amountNum, setAmountNum] = useState<number | undefined>(undefined);
   const [saving, setSaving] = useState(false);
 
-  const [categories, setCategories] = useState<Category[]>([]);
   const { currencies } = useCurrencies();
 
   useEffect(() => {
@@ -57,19 +57,13 @@ export default function BudgetModal({ open, onOpenChange, editing, onSaved }: Pr
     }
   }, [open, editing]);
 
-  useEffect(() => {
-    if (!open) return;
-    (async () => {
-      try {
-        const { data } = await api.get('/categories', {
-          params: { type: 'expense', status: 'active' },
-        });
-        setCategories((data as Category[]).filter((c) => !c.is_system));
-      } catch {
-        toast.error('Error al cargar categorías');
-      }
-    })();
-  }, [open]);
+  const { categories: todas } = useCategories({
+    type: 'expense',
+    status: 'active',
+    enabled: open,
+  });
+  // Un presupuesto es sobre gasto del usuario: las de sistema no se presupuestan.
+  const categories = useMemo(() => todas.filter((c) => !c.is_system), [todas]);
 
   const decimalScale = currencies.find((c) => c.code === currency)?.decimal_digits ?? 2;
 

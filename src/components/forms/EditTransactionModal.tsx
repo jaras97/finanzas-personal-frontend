@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DialogClose } from '@/components/ui/dialog';
 import { FormModal } from '@/components/ui/form-modal';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import InfoHint from '@/components/ui/info-hint';
 import { DatePicker } from '@/components/ui/date-picker';
 import { categoryDisplayName, postableCategories } from '@/lib/categoryTree';
 import { CategoryPicker } from './CategoryPicker';
+import { useCategories } from '@/hooks/useCategories';
 import type { Category } from '@/types';
 
 // Tipo local reducido. `parent_id`/`parent_name` son necesarios desde el
@@ -49,7 +50,6 @@ export default function EditTransactionModal({
   const [date, setDate] = useState<Date | undefined>(
     transaction.date ? new Date(transaction.date) : new Date(),
   );
-  const [categories, setCategories] = useState<Category[]>([]);
   const [saving, setSaving] = useState(false);
 
   const idDesc = 'edit-tx-desc';
@@ -76,20 +76,17 @@ export default function EditTransactionModal({
       ? 'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-300'
       : 'bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-300';
 
-  // Cargar categorías activas del tipo
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const { data } = await api.get<Category[]>('/categories', {
-          params: { type: transaction.type, status: 'active' },
-        });
-        setCategories((data || []).filter((c) => !c.is_system));
-      } catch {
-        toast.error('Error al cargar categorías');
-      }
-    };
-    if (open) fetchCategories();
-  }, [open, transaction.type]);
+  // Categorías activas del tipo del movimiento. Las de sistema no se ofrecen:
+  // mover un gasto a «Transferencia» lo escondería de su propio desglose.
+  const { categories: todasLasCategorias } = useCategories({
+    type: transaction.type as 'income' | 'expense',
+    status: 'active',
+    enabled: open,
+  });
+  const categories = useMemo(
+    () => todasLasCategorias.filter((c) => !c.is_system),
+    [todasLasCategorias],
+  );
 
   // Reset cuando cambia la transacción
   useEffect(() => {
