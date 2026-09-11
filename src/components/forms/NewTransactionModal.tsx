@@ -25,6 +25,14 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { readTxPreferences, rememberTx } from '@/lib/txPreferences';
 import { categoryDisplayName, postableCategories } from '@/lib/categoryTree';
 import { CategoryPicker } from './CategoryPicker';
+import { useCategories } from '@/hooks/useCategories';
+import {
+  ACCEPT_COMPROBANTE,
+  MAX_COMPROBANTE_MB,
+  motivoRechazoComprobante,
+  subirComprobante,
+} from '@/lib/attachments';
+import { Paperclip, X } from 'lucide-react';
 
 type UiAccount = { id: string; name: string; currency?: currencyType };
 
@@ -68,10 +76,15 @@ export default function NewTransactionModal({
   const [accountId, setAccountId] = useState<string>('');
   const [date, setDate] = useState<Date | undefined>(new Date());
 
-  const [categories, setCategories] = useState<Category[]>([]);
+  // El comprobante se guarda en memoria y se sube DESPUÉS de crear: el adjunto
+  // cuelga de un `transaction_id` que todavía no existe mientras se llena el
+  // formulario.
+  const [comprobante, setComprobante] = useState<File | null>(null);
+  const [subiendoComprobante, setSubiendoComprobante] = useState(false);
+  const comprobanteInput = useRef<HTMLInputElement | null>(null);
+
   const [accounts, setAccounts] = useState<UiAccount[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
-  const [loadingCategories, setLoadingCategories] = useState(false);
 
   type SavingAccountApiResponse = {
     id: number;
@@ -186,40 +199,41 @@ export default function NewTransactionModal({
     }
   }, [type, open]);
 
+  const { categories: todasLasCategorias, loading: cargandoCategorias } =
+    useCategories({
+      type: type || undefined,
+      status: 'active',
+      enabled: !!type,
+    });
+  // Las de sistema no se ofrecen: mandar un gasto a «Transferencia» lo
+  // escondería de su propio desglose.
+  const categories = useMemo(
+    () => (type ? todasLasCategorias.filter((c) => !c.is_system) : []),
+    [todasLasCategorias, type],
+  );
+  const loadingCategories = !!type && cargandoCategorias;
+
+  // La carga y la reconciliación de la selección son cosas distintas: lo
+  // primero lo hace el hook, y acá solo se decide si la categoría elegida sigue
+  // siendo válida o hay que recuperar la recordada.
   useEffect(() => {
-    const fetchCategories = async () => {
-      if (!type) {
-        setCategories([]);
-        setCategoryId('');
-        return;
-      }
-      setLoadingCategories(true);
-      try {
-        const { data } = await api.get('/categories', {
-          params: { type, status: 'active' },
-        });
-        const userCategories = (data as Category[]).filter((c) => !c.is_system);
-        setCategories(userCategories);
-        if (userCategories.length === 0) {
-          setCategoryId('');
-        } else {
-          setCategoryId((prev) => {
-            if (userCategories.some((c) => String(c.id) === prev)) return prev;
-            const remembered = readTxPreferences().categoryByType?.[type];
-            return remembered &&
-              userCategories.some((c) => String(c.id) === remembered)
-              ? remembered
-              : '';
-          });
-        }
-      } catch {
-        toast.error('Error al cargar categorías');
-      } finally {
-        setLoadingCategories(false);
-      }
-    };
-    fetchCategories();
-  }, [type]);
+    if (!type) {
+      setCategoryId('');
+      return;
+    }
+    if (cargandoCategorias) return;
+    if (categories.length === 0) {
+      setCategoryId('');
+      return;
+    }
+    setCategoryId((prev) => {
+      if (categories.some((c) => String(c.id) === prev)) return prev;
+      const remembered = readTxPreferences().categoryByType?.[type];
+      return remembered && categories.some((c) => String(c.id) === remembered)
+        ? remembered
+        : '';
+    });
+  }, [type, categories, cargandoCategorias]);
 
   const selectedCurrency = useMemo(
     () => accounts.find((a) => a.id === accountId)?.currency ?? 'COP',
@@ -240,22 +254,47 @@ export default function NewTransactionModal({
     !!date &&
     !submitting;
 
+  const limpiarComprobante = () => {
+    setComprobante(null);
+    // Sin esto, volver a elegir el mismo archivo no dispara `change` y el
+    // usuario ve que no pasa nada.
+    if (comprobanteInput.current) comprobanteInput.current.value = '';
+  };
+
+  const elegirComprobante = (file: File) => {
+    // Se valida ANTES de crear el movimiento, a propósito: descubrir que el
+    // archivo no sirve cuando la transacción ya está registrada deja al usuario
+    // con un problema que ya no puede resolver desde este formulario.
+    const motivo = motivoRechazoComprobante(file);
+    if (motivo) {
+      toast.error(motivo);
+      limpiarComprobante();
+      return;
+    }
+    setComprobante(file);
+  };
+
   const handleSubmit = async (e?: FormEvent) => {
     e?.preventDefault();
     if (!canSubmit) return toast.error('Completa todos los campos');
 
     setSubmitting(true);
     try {
+      let creada: { id: number };
       if (accountId.startsWith('debt-')) {
         const debtId = parseInt(accountId.replace('debt-', ''), 10);
-        await api.post(`/debts/${debtId}/purchase`, {
-          amount: amountNum,
-          description,
-          category_id: parseInt(categoryId, 10),
-          date: dateToIsoAtLocalNoon(date!),
-        });
+        const { data } = await api.post<{ id: number }>(
+          `/debts/${debtId}/purchase`,
+          {
+            amount: amountNum,
+            description,
+            category_id: parseInt(categoryId, 10),
+            date: dateToIsoAtLocalNoon(date!),
+          },
+        );
+        creada = data;
       } else {
-        await api.post('/transactions', {
+        const { data } = await api.post<{ id: number }>('/transactions', {
           description,
           amount: amountNum,
           type,
@@ -263,9 +302,33 @@ export default function NewTransactionModal({
           saving_account_id: parseInt(accountId, 10),
           date: dateToIsoAtLocalNoon(date!),
         });
+        creada = data;
       }
 
-      toast.success('Transacción creada correctamente');
+      // A partir de acá el movimiento YA existe. Nada de lo que siga puede
+      // reportarse como "no se pudo crear": quien lea eso lo registraría de
+      // nuevo y terminaría con el gasto duplicado.
+      if (comprobante) {
+        setSubiendoComprobante(true);
+        try {
+          await subirComprobante(creada.id, comprobante);
+          toast.success('Transacción creada con su comprobante');
+        } catch (error) {
+          // El comprobante es evidencia que se añade al hecho contable, no
+          // parte de él: perderlo no justifica deshacer el movimiento. Pero el
+          // aviso tiene que decir dónde recuperarlo.
+          toast.warning(
+            axios.isAxiosError(error) && error?.response?.data?.detail
+              ? `Movimiento registrado, pero el comprobante no se adjuntó: ${error.response.data.detail} Puedes adjuntarlo desde la lista de movimientos.`
+              : 'Movimiento registrado, pero el comprobante no se pudo adjuntar. Puedes adjuntarlo desde la lista de movimientos.',
+            { duration: 8000 },
+          );
+        } finally {
+          setSubiendoComprobante(false);
+        }
+      } else {
+        toast.success('Transacción creada correctamente');
+      }
 
       // Recordar estas selecciones para la próxima vez. Se guardan solo tras
       // un guardado exitoso: si la request falló, no queremos "aprender" una
@@ -276,13 +339,15 @@ export default function NewTransactionModal({
         categoryId,
       });
 
-      // El monto y la descripción sí se limpian (son distintos cada vez);
-      // tipo/cuenta/categoría se conservan para encadenar varios registros
-      // seguidos sin rearmar el formulario.
+      // El monto, la descripción y el comprobante sí se limpian (son distintos
+      // cada vez); tipo/cuenta/categoría se conservan para encadenar varios
+      // registros seguidos sin rearmar el formulario. Dejar el comprobante
+      // pegado lo adjuntaría al movimiento siguiente, sin que nada lo delate.
       setDescription('');
       setAmount('');
       setAmountNum(undefined);
       setDate(new Date());
+      limpiarComprobante();
       setOpen(false);
       onCreated();
     } catch (error) {
@@ -349,7 +414,9 @@ export default function NewTransactionModal({
             aria-disabled={!canSubmit}
             className={cn('sm:min-w-[160px]', ctaClass)}
           >
-            {submitting
+            {subiendoComprobante
+              ? 'Adjuntando…'
+              : submitting
               ? 'Creando…'
               : isCreditCardPurchase
               ? 'Registrar compra'
@@ -560,6 +627,69 @@ export default function NewTransactionModal({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Comprobante (opcional) */}
+              <div className='md:col-span-2 space-y-1'>
+                <div className='flex items-center gap-2'>
+                  <span className='text-sm font-medium'>
+                    Comprobante{' '}
+                    <span className='font-normal text-muted-foreground'>
+                      (opcional)
+                    </span>
+                  </span>
+                  <InfoHint side='top'>
+                    La foto del recibo o el PDF del banco. Hasta{' '}
+                    {MAX_COMPROBANTE_MB} MB. Se adjunta al guardar el
+                    movimiento.
+                  </InfoHint>
+                </div>
+
+                {/* Sin `capture`: forzar la cámara dejaría fuera el PDF del
+                    banco y las fotos ya tomadas. Sin el atributo, el móvil
+                    ofrece cámara, galería y archivos. */}
+                <input
+                  ref={comprobanteInput}
+                  type='file'
+                  accept={ACCEPT_COMPROBANTE}
+                  className='hidden'
+                  data-testid='tx-comprobante'
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) elegirComprobante(file);
+                  }}
+                />
+
+                {comprobante ? (
+                  <div className='flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2'>
+                    <Paperclip className='h-4 w-4 shrink-0 text-sky-600' />
+                    <span className='min-w-0 flex-1 truncate text-sm'>
+                      {comprobante.name}
+                    </span>
+                    <Button
+                      type='button'
+                      size='sm'
+                      variant='soft-slate'
+                      className='h-11 w-11 shrink-0 sm:h-8 sm:w-8'
+                      onClick={limpiarComprobante}
+                      disabled={submitting || disabled}
+                      aria-label='Quitar comprobante'
+                    >
+                      <X className='h-4 w-4' />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type='button'
+                    variant='outline'
+                    className='h-11 w-full justify-start bg-white sm:h-9'
+                    onClick={() => comprobanteInput.current?.click()}
+                    disabled={submitting || disabled}
+                  >
+                    <Paperclip className='mr-2 h-4 w-4' />
+                    Adjuntar comprobante
+                  </Button>
+                )}
               </div>
             </div>
       </form>
