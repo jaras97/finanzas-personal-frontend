@@ -20,6 +20,8 @@ import { Pagination } from '@/components/ui/pagination';
 import DateTimeDisplay from '@/components/ui/DateTimeDisplay';
 import { CategoryPicker } from '@/components/forms/CategoryPicker';
 import { getTxCurrency } from '@/lib/transactionDisplay';
+import RuleModal from '@/components/forms/RuleModal';
+import { patronDe, cuantosCubre } from '@/lib/reglaSugerida';
 import type { TransactionWithCategoryRead } from '@/types';
 
 /**
@@ -37,6 +39,11 @@ import type { TransactionWithCategoryRead } from '@/types';
  *  - **La operación masiva no es todo-o-nada.** Si de veinte seleccionados uno
  *    no admite la categoría (un ingreso hacia una categoría de gasto), se
  *    aplican los diecinueve y se dice cuál quedó fuera.
+ *  - **La bandeja aprende.** Al clasificar un movimiento, si otros pendientes
+ *    comparten su comercio, ofrece crear la regla que los cubriría. Clasificar
+ *    treinta «RAPPI» uno por uno era el trabajo que las reglas ya sabían
+ *    evitar, pero el atajo para crearlas solo existía en la lista de
+ *    movimientos -- y el patrón se ve justo acá, no allá.
  */
 
 const POR_PAGINA = 50;
@@ -57,6 +64,15 @@ export default function PendientesPage() {
   const [aplicando, setAplicando] = useState(false);
   /** id -> nombre de la categoría asignada, mientras se muestra el «listo». */
   const [resueltos, setResueltos] = useState<Record<number, string>>({});
+
+  /** Regla que se ofrece tras clasificar, cuando el patrón se repite. */
+  const [sugerencia, setSugerencia] = useState<{
+    patron: string;
+    categoryId: number;
+    categoria: string;
+    cubre: number;
+  } | null>(null);
+  const [reglaAbierta, setReglaAbierta] = useState(false);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -138,6 +154,17 @@ export default function PendientesPage() {
     try {
       await api.patch(`/transactions/${tx.id}`, { category_id: id });
       retirar([tx.id], nombre);
+
+      // ¿Vale la pena una regla? Solo si de verdad ahorra trabajo: proponerla
+      // para un movimiento suelto es ruido, y a la tercera vez el usuario deja
+      // de leer los avisos.
+      const patron = patronDe(tx.description);
+      if (patron) {
+        const cubre = cuantosCubre(patron, items, tx.id);
+        if (cubre > 0) {
+          setSugerencia({ patron, categoryId: id, categoria: nombre, cubre });
+        }
+      }
     } catch (err) {
       toast.error(extractErrorMessage(err));
     }
@@ -183,6 +210,32 @@ export default function PendientesPage() {
     }
   };
 
+  /**
+   * Crear la regla no basta: si no se aplica, el usuario la crea y ve la misma
+   * bandeja llena, que es exactamente la promesa incumplida que hace que nadie
+   * vuelva a usar las reglas.
+   */
+  const aplicarReglaReciencreada = async () => {
+    setReglaAbierta(false);
+    setSugerencia(null);
+    try {
+      const { data } = await api.post('/category-rules/apply');
+      const n = data?.updated ?? 0;
+      toast.success(
+        n === 0
+          ? 'Regla creada. No quedaban movimientos pendientes que coincidieran.'
+          : `Regla creada y aplicada a ${n} ${n === 1 ? 'movimiento' : 'movimientos'}.`,
+      );
+      await cargar();
+      notificarCambioDeDatos();
+    } catch (err) {
+      // La regla sí quedó creada: decir «no se pudo» mandaría a crearla otra vez.
+      toast.warning(
+        `Regla creada, pero no se pudo aplicar a lo ya existente: ${extractErrorMessage(err)}`,
+      );
+    }
+  };
+
   const vacio = !cargando && visibles.length === 0 && page === 1;
 
   return (
@@ -192,6 +245,48 @@ export default function PendientesPage() {
         subtitle='Movimientos que todavía no entran en el desglose por categoría.'
       />
       <TransactionsTabs />
+
+      {/* La sugerencia de regla. Es un banner y no un toast a propósito: quien
+          está vaciando la bandeja encadena clasificaciones, y un aviso que se
+          desvanece solo se pierde justo cuando más sirve. */}
+      {sugerencia && (
+        <Card variant='white' className='border-sky-200 bg-sky-50/60'>
+          <CardContent className='flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between'>
+            <div className='flex items-start gap-3'>
+              <span className='mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700'>
+                <Sparkles className='h-4 w-4' />
+              </span>
+              <div className='min-w-0'>
+                <p className='text-sm font-medium'>
+                  {sugerencia.cubre === 1
+                    ? `Hay 1 movimiento más con «${sugerencia.patron}»`
+                    : `Hay ${sugerencia.cubre} movimientos más con «${sugerencia.patron}»`}
+                </p>
+                <p className='mt-0.5 text-sm text-muted-foreground'>
+                  Crea una regla y se clasifican solos en «{sugerencia.categoria}
+                  », ahora y en lo que importes después.
+                </p>
+              </div>
+            </div>
+            <div className='flex shrink-0 gap-2'>
+              <Button
+                variant='soft-slate'
+                className='h-11 sm:h-9'
+                onClick={() => setSugerencia(null)}
+              >
+                Ahora no
+              </Button>
+              <Button
+                variant='soft-sky'
+                className='h-11 sm:h-9'
+                onClick={() => setReglaAbierta(true)}
+              >
+                Crear regla
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {vacio ? (
         <Card variant='white'>
@@ -351,6 +446,18 @@ export default function PendientesPage() {
             </Button>
           </div>
         </div>
+      )}
+
+      {sugerencia && (
+        <RuleModal
+          open={reglaAbierta}
+          onOpenChange={setReglaAbierta}
+          initial={{
+            matchText: sugerencia.patron,
+            categoryId: sugerencia.categoryId,
+          }}
+          onSaved={aplicarReglaReciencreada}
+        />
       )}
     </div>
   );
